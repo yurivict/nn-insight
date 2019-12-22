@@ -6,11 +6,15 @@
 #include <QPainterPath>
 #include <QByteArray>
 #include <QBuffer>
-#include <QRectF>
 #include <QMarginsF>
 #include <QFontMetrics>
+#include <QRectF>
+#include <QRect>
+#include <QPointF>
 
 #include <vector>
+
+#include <assert.h>
 
 #include "model-functions.h"
 #include "misc.h"
@@ -35,13 +39,14 @@ public:
 	}
 };
 
-QByteArray generateModelSvg(const PluginInterface::Model *model) {
+QByteArray generateModelSvg(const PluginInterface::Model *model, const std::tuple<std::vector<QRectF>&,std::vector<QRectF>&> outIndexes) {
 	// options
 	qreal  operatorBoxRadius          = 5;
 	qreal  operatorBoxBorderWidth     = 2;
 	QColor clrOperatorBorder          = Qt::black;
 	QColor clrOperatorTitleText       = Qt::white;
 	QColor clrOperatorTitleBackground = Qt::blue;
+	QColor clrTensorLine              = Qt::black;
 	QColor clrTensorLabel             = Qt::black;
 
 /*
@@ -85,7 +90,8 @@ QByteArray generateModelSvg(const PluginInterface::Model *model) {
 	// render the model to the coordinates
 	ModelFunctions::Box2 bbox;
 	std::vector<ModelFunctions::Box4> operatorBoxes;
-	std::vector<QPoint> tensorLabelPositions;
+	std::vector<std::vector<QPointF>> tensorLineCubicSplines;
+	std::vector<QPointF> tensorLabelPositions;
 	{
 		QFontMetrics fm(Fonts::fontOperatorTitle);
 		qreal dpi = (qreal)Util::getScreenDPI();
@@ -97,6 +103,7 @@ QByteArray generateModelSvg(const PluginInterface::Model *model) {
 			},
 			bbox,
 			operatorBoxes,
+			tensorLineCubicSplines,
 			tensorLabelPositions
 		);
 	}
@@ -112,6 +119,15 @@ QByteArray generateModelSvg(const PluginInterface::Model *model) {
 	auto dotYToQtY = [&bbox](float Y) {
 		return bbox[1][1]-Y;
 	};
+	auto dotQPointToQtQPoint = [&](const QPointF &pt) {
+		return QPointF(pt.x(), dotYToQtY(pt.y()));
+	};
+	auto dotVectorQPointToQtVectorQPoint = [&](const std::vector<QPointF> &pts) {
+		std::vector<QPointF> res;
+		for (auto &p : pts)
+			res.push_back(dotQPointToQtQPoint(p));
+		return res;
+	};
 	auto dotBoxToQtBox = [&](const ModelFunctions::Box4 &box4) {
 		assert(box4[0][0]==box4[3][0]);
 		assert(box4[0][1]==box4[1][1]);
@@ -122,13 +138,15 @@ QByteArray generateModelSvg(const PluginInterface::Model *model) {
 			{box4[0][0]-box4[1][0], box4[1][1]-box4[2][1]}
 		}});
 	};
+	auto boxToQRectF = [](const ModelFunctions::Box2 &box) {
+		return QRectF(box[0][0], box[0][1], box[1][0], box[1][1]);
+	};
 	auto drawOperator = [&](QPainter &painter,
-	                        const ModelFunctions::Box2 &box,
+	                        const QRectF &bbox,
 	                        const std::string &title,
 	                        const std::vector<std::string> &inputDescriptions,
 	                        const std::string &fusedDescription)
 	{
-		QRectF bbox(box[0][0], box[0][1], box[1][0], box[1][1]);
 		// border
 		QPainterPath path;
 		path.addRoundedRect(bbox, operatorBoxRadius, operatorBoxRadius);
@@ -141,21 +159,57 @@ QByteArray generateModelSvg(const PluginInterface::Model *model) {
 		painter.setFont(Fonts::fontOperatorTitle);
 		painter.drawText(bbox, Qt::AlignCenter, S2Q(title));
 	};
+	auto drawTensorSplines = [&](QPainter &painter,
+	                             const std::vector<QPointF> &splines)
+	{
+		assert(splines.size()%3 == 1);
+
+		QPainterPath path;
+		path.moveTo(splines[0]);
+		for (unsigned i = 1; i < splines.size(); i += 3)
+			path.cubicTo(splines[i+0], splines[i+1], splines[i+2]);
+		painter.drawPath(path);
+	};
 	auto drawTensorLabel = [&](QPainter &painter,
-	                           const QPoint &pt,
+	                           const QPointF &pt,
 	                           const std::string &label,
-	                           const QFontMetrics &fm)
+	                           const QFontMetrics &fm,
+				   QRectF &outTextRect
+				   )
 	{
 		// ASSUME that painter.setPen and painter.setFont have been called by the caller
 		auto textSize = fm.size(Qt::TextSingleLine, S2Q(label));
-		QPoint textSizeHalf(textSize.width()/2, textSize.height()/2);
-		painter.drawText(QRect(QPoint(pt - textSizeHalf), QPoint(pt + textSizeHalf)), Qt::AlignCenter, S2Q(label));
+		QPointF textSizeHalf(textSize.width()/2, textSize.height()/2);
+		painter.drawText(
+			outTextRect = QRectF(QPointF(pt - textSizeHalf), QPointF(pt + textSizeHalf)),
+			Qt::AlignCenter,
+			S2Q(label)
+		);
 	};
+
+	// resize indexes
+	std::get<0>(outIndexes).resize(model->numOperators());
+	std::get<1>(outIndexes).resize(model->numTensors());
 
 	{ // draw operator boxes
 		PluginInterface::OperatorId oid = 0;
-		for (auto &dotBox : operatorBoxes)
-			drawOperator(painter, dotBoxToQtBox(dotBox), STR(model->getOperatorKind(oid++)), {}, "");
+		for (auto &dotBox : operatorBoxes) {
+			// draw and add to the index
+			drawOperator(painter,
+				std::get<0>(outIndexes)[oid] = boxToQRectF(dotBoxToQtBox(dotBox)),
+				STR(model->getOperatorKind(oid)),
+				{},
+				""
+			);
+			oid++;
+		}
+	}
+
+	{ // draw tensor splines
+		painter.setPen(clrTensorLine);
+		for (auto &tensorLineCubicSpline : tensorLineCubicSplines)
+			if (!tensorLineCubicSpline.empty()) // not all tensors are between operators
+				drawTensorSplines(painter, dotVectorQPointToQtVectorQPoint(tensorLineCubicSpline));
 	}
 
 	{ // draw tensor labels
@@ -163,9 +217,20 @@ QByteArray generateModelSvg(const PluginInterface::Model *model) {
 		painter.setFont(Fonts::fontTensorLabel);
 		QFontMetrics fm(Fonts::fontTensorLabel);
 		PluginInterface::TensorId tid = 0;
-		for (auto &tensorLabelPosition : tensorLabelPositions)
-			if (tensorLabelPosition != QPoint()) // not all tensors are between operators
-				drawTensorLabel(painter, tensorLabelPosition, STR(model->getTensorShape(tid++)), fm);
+		for (auto &tensorLabelPosition : tensorLabelPositions) {
+			if (tensorLabelPosition != QPointF()) { // not all tensors are between operators
+				QRectF outTextRect;
+				drawTensorLabel(painter,
+					dotQPointToQtQPoint(tensorLabelPosition),
+					STR(model->getTensorShape(tid)),
+					fm,
+					outTextRect
+				);
+				// add to the index
+				std::get<1>(outIndexes)[tid] = outTextRect;
+			}
+			tid++;
+		}
 	}
 
 	painter.end();

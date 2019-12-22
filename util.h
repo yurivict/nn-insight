@@ -4,6 +4,7 @@
 #include <QString>
 
 #include <string>
+#include <vector>
 #include <ostream>
 #include <sstream>
 
@@ -15,8 +16,17 @@ std::string QStringToStlString(const QString &qs);
 bool warningOk(QWidget *parent, const char *msg);
 int getScreenDPI();
 
+std::string formatUIntHumanReadable(size_t u);
+
+inline void splitString(const std::string& str, std::vector<std::string> &cont, char delim = ' ') {
+	std::stringstream ss(str);
+	std::string token;
+	while (std::getline(ss, token, delim))
+		cont.push_back(token);
+}
+
 template <class Container, class Conv>
-void splitString(const std::string& str, Container &cont, char delim = ' ') {
+inline void splitString(const std::string& str, Container &cont, char delim = ' ') {
 	std::stringstream ss(str);
 	std::string token;
 	while (std::getline(ss, token, delim))

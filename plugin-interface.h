@@ -55,7 +55,7 @@ public:
   // inner-classes
   class Model { // Model represents one of potentially many models contained in the file
   protected:
-    ~Model() { }
+	virtual ~Model() { } // has to be inlined for plugins to contain it too
   public: // interface
 	virtual unsigned                numInputs() const = 0;                                                          // how many inputs does this model have
 	virtual std::vector<TensorId>   getInputs() const = 0;                                                          // input indexes
@@ -65,7 +65,10 @@ public:
 	virtual void                    getOperatorIo(unsigned operatorIdx, std::vector<TensorId> &inputs, std::vector<TensorId> &outputs) const = 0;
 	virtual OperatorKind            getOperatorKind(unsigned operatorIdx) const = 0;
 	virtual unsigned                numTensors() const = 0;                                                         // number of tensors in this model
-	virtual std::vector<unsigned>   getTensorShape(TensorId operatorId) const = 0;
+	virtual TensorShape             getTensorShape(TensorId tensorId) const = 0;
+	virtual std::string             getTensorName(TensorId tensorId) const = 0;
+	virtual bool                    getTensorHasData(TensorId tensorId) const = 0;                                  // tensors that are fixed have buffers
+	virtual bool                    getTensorIsVariableFlag(TensorId tensorId) const = 0;                           // some tensors are variables that can be altered
   };
 
   // custom interface

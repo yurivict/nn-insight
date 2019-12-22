@@ -2,7 +2,9 @@
 
 #include <QSvgWidget>
 #include <QSize>
+#include <QPointF>
 class QShowEvent;
+class QMouseEvent;
 class QWheelEvent;
 
 class ZoomableSvgWidget : public QSvgWidget {
@@ -13,12 +15,14 @@ class ZoomableSvgWidget : public QSvgWidget {
 public:
 	ZoomableSvgWidget(QWidget *parent);
 
-public: // overridable
+protected: // overridables
 	void showEvent(QShowEvent *event);
-
-protected:
+	void mousePressEvent(QMouseEvent* event);
 	void wheelEvent(QWheelEvent* event);
 
-private: // 
+private: // private methods
 	void fixWindowSize(QSize sz);
+
+signals:
+	void mousePressOccurred(QPointF pt);
 };

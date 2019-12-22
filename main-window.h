@@ -3,15 +3,20 @@
 #include <QMainWindow>
 #include <QSplitter>
 #include <QScrollArea>
+#include <QStackedWidget>
+#include <QGroupBox>
 #include "ZoomableSvgWidget.h"
 #include <QLabel>
 #include <QVBoxLayout>
+#include <QGridLayout>
+#include <QRectF>
 class QEvent;
 
 #include "plugin-manager.h"
 #include "plugin-interface.h"
 
-
+#include <vector>
+#include <memory>
 
 class MainWindow : public QMainWindow {
 	Q_OBJECT
@@ -22,17 +27,43 @@ public:
 
 	bool loadModelFile(const QString &filePath);
 
-private:
+private: // fields
 	// widgets
 	QSplitter                        mainSplitter;
 	QScrollArea                        svgScrollArea;
 	ZoomableSvgWidget                  svgWidget;
 	QWidget                            rhsWidget;
 	QVBoxLayout                          rhsLayout;
-	QLabel                               blankRhsLabel;
+	QStackedWidget                       detailsStack;
+	QGroupBox                              noDetails;       // page#0
+	QGroupBox                              operatorDetails; // page#1
+	QGridLayout                              operatorDetailsLayout;
+	QLabel                                   operatorTypeLabel;
+	QLabel                                   operatorTypeValue;
+	QLabel                                   operatorInputsLabel;
+	QLabel                                   operatorOutputsLabel;
+	QGroupBox                              tensorDetails;   // page#2
+	QLabel                               blankRhsLabel; // leftover label
 
 	const PluginManager::Plugin*     plugin;    // plugin in use for the model
 	std::unique_ptr<PluginInterface> pluginInterface; // the file is opened through this handle
 	const PluginInterface::Model*    model;     // the model from the file that is currently open
+
+	struct {
+		std::vector<QRectF> allOperatorBoxes; // indexed based on OperatorId
+		std::vector<QRectF> allTensorLabelBoxes; // indexed based on TensorId
+	} modelIndexes;
+	std::vector<std::unique_ptr<QWidget>>   tempDetailWidgets;
+
+private: // types
+	struct AnyObject {
+		int operatorId;
+		int tensorId;
+	};
+
+private: // private methods
+	AnyObject findObjectAtThePoint(const QPointF &pt);
+	void showOperatorDetails(PluginInterface::OperatorId operatorId);
+	void showTensorDetails(PluginInterface::TensorId tensorId);
 };
 

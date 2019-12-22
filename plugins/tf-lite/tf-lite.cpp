@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
+#include <assert.h>
 #include <errno.h>
 
 #include "tflite_schema_generated.h" // a complete definition of TF Lite format based on the .fbs file from the TD Lite source tree
@@ -91,10 +92,21 @@ class TfLitePlugin : public PluginInterface {
 			unsigned numTensors() const override {
 				return subgraph->tensors()->size();
 			}
-			std::vector<unsigned> getTensorShape(TensorId tensorId) const override {
+			TensorShape getTensorShape(TensorId tensorId) const override {
 				std::vector<unsigned> shape;
 				Helpers::convertContainers(*subgraph->tensors()->Get(tensorId)->shape(), shape);
 				return shape;
+			}
+			std::string getTensorName(TensorId tensorId) const override {
+				return subgraph->tensors()->Get(tensorId)->name()->c_str();
+			}
+			bool getTensorIsVariableFlag(TensorId tensorId) const override {
+				return subgraph->tensors()->Get(tensorId)->is_variable();
+			}
+			bool getTensorHasData(TensorId tensorId) const override {
+				auto buffer = subgraph->tensors()->Get(tensorId)->buffer();
+				assert(buffer < plugin->model->buffers()->size());
+				return plugin->model->buffers()->Get(buffer)->data() != nullptr;
 			}
 	};
 

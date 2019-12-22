@@ -9,7 +9,7 @@ set(CMAKE_AUTOUIC ON)
 ##
 ## C++ standard that we use is the highest possible
 ##
-set(CMAKE_CXX_FLAGS "-std=c++2a")
+set(CMAKE_CXX_FLAGS "-std=c++2a -Wall")
 
 ##
 ## Build type
@@ -37,6 +37,7 @@ add_executable(nn-insight
 	plugin-interface.cpp
 	util.cpp
 	fonts.cpp
+	nn-types.cpp
 	render-model-to-coordinates.cpp
 	svg-graphics-generator.cpp
 	ZoomableSvgWidget.cpp

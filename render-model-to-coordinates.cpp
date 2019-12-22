@@ -9,6 +9,7 @@
 #include <nlohmann/json.hpp>
 
 #include <stdio.h>
+#include <assert.h>
 
 #include "model-functions.h"
 #include "plugin-interface.h"
@@ -16,7 +17,7 @@
 #include "util.h"
 
 #include <QSizeF>
-#include <QPoint>
+#include <QPointF>
 
 // helper classes
 class ConvStrToFloat {
@@ -33,7 +34,8 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 	std::function<QSizeF(PluginInterface::OperatorId)> operatorBoxFn, // operator boxes in inches
 	Box2 &bbox,
 	std::vector<Box4> &operatorBoxes,
-	std::vector<QPoint> &tensorLabelPositions
+	std::vector<std::vector<QPointF>> &tensorLineCubicSplines,
+	std::vector<QPointF> &tensorLabelPositions
 ) {
 
 	// map tensors to operators
@@ -132,6 +134,21 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 				dst1[i2] = src1[i2];
 		}
 	};
+	auto parseSplines = [](const std::string &splines) {
+		std::vector<std::string> strpts;
+		Util::splitString(splines, strpts, ' ');
+		assert(strpts.size() % 3 == 2); // n = 1 (mod 3) for splines, and the e,Pt endpoint
+
+		std::vector<QPointF> pts;
+		for (auto &s : strpts)
+			if (s[0] != 'e') { // ignore it for now
+				std::vector<float> ptFloats;
+				Util::splitString<std::vector<float>, ConvStrToFloat>(s, ptFloats, ',');
+				assert(ptFloats.size() == 2);
+				pts.push_back(QPointF(ptFloats[0], ptFloats[1]));
+			}
+		return pts;
+	};
 
 	// bbox
 	std::vector<float> boxFloats;
@@ -157,6 +174,19 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 
 	// edges
 	tensorLabelPositions.resize(model->numTensors());
+	tensorLineCubicSplines.resize(model->numTensors());
+	for (auto edge : j["edges"]) {
+		// tid
+		PluginInterface::TensorId tid = std::stoi(edge["id"].get<std::string>());
+		assert(tid < tensorLabelPositions.size());
+		// splines
+		tensorLineCubicSplines[tid] = parseSplines(edge["pos"].get<std::string>());
+		// label position
+		std::vector<float> posFloats;
+		Util::splitString<std::vector<float>, ConvStrToFloat>(edge["lp"].get<std::string>(), posFloats, ',');
+		assert(posFloats.size() == 2);
+		tensorLabelPositions[tid] = QPointF(posFloats[0], posFloats[1]);
+	}
 }
 
 }

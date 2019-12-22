@@ -7,11 +7,15 @@
 #include "svg-graphics-generator.h"
 #include "util.h"
 #include "misc.h"
+#include "nn-types.h"
 
 #include <QEvent>
 #include <QWheelEvent>
 #include <QDebug>
 #include <QSvgRenderer>
+#include <QPushButton>
+#include <QFontMetrics>
+//#include <QMargins>
 
 #include <memory>
 
@@ -22,6 +26,15 @@ MainWindow::MainWindow()
 ,     svgWidget(&mainSplitter)
 ,   rhsWidget(&mainSplitter)
 ,      rhsLayout(&rhsWidget)
+,      detailsStack(&rhsWidget)
+,        noDetails("Details", &detailsStack)
+,        operatorDetails(&detailsStack)
+,          operatorDetailsLayout(&operatorDetails)
+,          operatorTypeLabel("Operator Type", &operatorDetails)
+,          operatorTypeValue(&operatorDetails)
+,          operatorInputsLabel("Inputs", &operatorDetails)
+,          operatorOutputsLabel("Outputs", &operatorDetails)
+,        tensorDetails(&detailsStack)
 ,      blankRhsLabel("Select some operator", &rhsWidget)
 , plugin(nullptr)
 {
@@ -30,15 +43,44 @@ MainWindow::MainWindow()
 	  svgScrollArea.setWidget(&svgWidget);
 	mainSplitter.addWidget(&rhsWidget);
 
+	rhsLayout.addWidget(&detailsStack);
 	rhsLayout.addWidget(&blankRhsLabel);
+	detailsStack.addWidget(&noDetails);
+	detailsStack.addWidget(&operatorDetails);
+		operatorDetails.setLayout(&operatorDetailsLayout);
+	detailsStack.addWidget(&tensorDetails);
 
 	svgScrollArea.setWidgetResizable(true);
 	svgScrollArea.setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
 	svgScrollArea.setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
 
-	svgScrollArea.setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
+	// tooltips
+	operatorTypeLabel.setToolTip("Operator type: what kind of operation does it perform");
 
-	qDebug() << "SVG: defaultSize()=" << svgWidget.renderer()->defaultSize();
+	// size policies
+	svgScrollArea.setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
+	detailsStack.setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+
+	// widget options and flags
+	noDetails.setEnabled(false); // always grayed out
+
+	// fonts
+	for (auto widget : {&operatorTypeLabel, &operatorInputsLabel, &operatorOutputsLabel})
+		widget->setStyleSheet("font-weight: bold;");
+
+	// connect signals
+	connect(&svgWidget, &ZoomableSvgWidget::mousePressOccurred, [this](QPointF pt) {
+		if (model) {
+			auto searchResult = findObjectAtThePoint(pt);
+			if (searchResult.operatorId != -1)
+				showOperatorDetails((PluginInterface::OperatorId)searchResult.operatorId);
+			else if (searchResult.tensorId != -1)
+				showTensorDetails((PluginInterface::TensorId)searchResult.tensorId);
+			else {
+				// no object was found: ignore the signal
+			}
+		}
+	});
 }
 
 MainWindow::~MainWindow() {
@@ -81,8 +123,118 @@ bool MainWindow::loadModelFile(const QString &filePath) {
 		FAIL("multi-model files aren't supported yet")
 	model = pluginInterface->getModel(0);
 
-	svgWidget.load(SvgGraphics::generateModelSvg(model));
+	// render the model as an SVG image
+	svgWidget.load(SvgGraphics::generateModelSvg(model, {modelIndexes.allOperatorBoxes, modelIndexes.allTensorLabelBoxes}));
+
+	// set window title
+	setWindowTitle(QString("NN Insight: %1").arg(filePath));
 
 	return true; // success
 }
 
+/// private methods
+
+MainWindow::AnyObject MainWindow::findObjectAtThePoint(const QPointF &pt) {
+	// XXX ad hoc algorithm until we find some good geoindexing implementation
+
+	// operator?
+	for (PluginInterface::OperatorId oid = 0, oide = modelIndexes.allOperatorBoxes.size(); oid < oide; oid++)
+		if (modelIndexes.allOperatorBoxes[oid].contains(pt))
+			return {(int)oid,-1};
+
+	// tensor label?
+	for (PluginInterface::TensorId tid = 0, tide = modelIndexes.allTensorLabelBoxes.size(); tid < tide; tid++)
+		if (modelIndexes.allTensorLabelBoxes[tid].contains(pt))
+			return {-1,(int)tid};
+
+	return {-1,-1}; // not found
+}
+
+void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
+	// switch to the details page, set title
+	detailsStack.setCurrentIndex(/*page#1*/1);
+	operatorDetails.setTitle(QString("Operator#%1").arg(operatorId));
+
+	// clear items
+	while (operatorDetailsLayout.count() > 0)
+		operatorDetailsLayout.removeItem(operatorDetailsLayout.itemAt(0));
+	tempDetailWidgets.clear();
+
+	// helper
+	auto addTensorLines = [this](auto &tensors, unsigned &row) {
+		for (auto t : tensors) {
+			row++;
+			// tensor number
+			auto label = new QLabel(QString("tensor#%1:").arg(t), &operatorDetails);
+			label->setToolTip("Tensor number");
+			label->setAlignment(Qt::AlignRight);
+			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
+			operatorDetailsLayout.addWidget(label,         row,   0/*column*/);
+			// tensor name
+			label = new QLabel(S2Q(model->getTensorName(t)), &operatorDetails);
+			label->setToolTip("Tensor name");
+			label->setAlignment(Qt::AlignLeft);
+			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
+			operatorDetailsLayout.addWidget(label,         row,   1/*column*/);
+			// tensor shape
+			auto describeShape = [](const TensorShape &shape) {
+				auto flatSize = tensorFlatSize(shape);
+				return STR(shape <<
+				         " (" <<
+				             Util::formatUIntHumanReadable(flatSize) << " floats, " <<
+				             Util::formatUIntHumanReadable(flatSize*sizeof(float)) << " bytes" <<
+				          ")"
+				);
+			};
+			label = new QLabel(S2Q(describeShape(model->getTensorShape(t))), &operatorDetails);
+			label->setToolTip("Tensor shape and data size");
+			label->setAlignment(Qt::AlignLeft);
+			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
+			operatorDetailsLayout.addWidget(label,         row,   2/*column*/);
+			// has buffer? is variable?
+			auto hasData    = model->getTensorHasData(t);
+			auto isVariable = model->getTensorIsVariableFlag(t);
+			assert(!(hasData && isVariable)); // can't both have data and be a variable
+			label = new QLabel(hasData ? "has data" : (!isVariable ? "is input" : "is variable") , &operatorDetails);
+			label->setToolTip("Tensor type");
+			label->setAlignment(Qt::AlignCenter);
+			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
+			operatorDetailsLayout.addWidget(label,         row,   3/*column*/);
+			// button
+			if (hasData) {
+				auto button = new QPushButton("➞", &operatorDetails);
+				button->setContentsMargins(0,0,0,0);
+				button->setStyleSheet("color: blue;");
+				button->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+				//button->setMaximumSize(QFontMetrics(button->font()).size(Qt::TextSingleLine, button->text()).grownBy(QMargins(4,0,4,0)));
+				button->setMaximumSize(QFontMetrics(button->font()).size(Qt::TextSingleLine, button->text())+QSize(8,0));
+				button->setToolTip("Show the tensor data as a table");
+				tempDetailWidgets.push_back(std::unique_ptr<QWidget>(button));
+				operatorDetailsLayout.addWidget(button,         row,   4/*column*/);
+			}
+		}
+	};
+
+	// read operator inputs/outputs from the model
+	std::vector<PluginInterface::TensorId> inputs, outputs;
+	model->getOperatorIo(operatorId, inputs, outputs);
+
+	// add items
+	unsigned row = 0;
+	operatorDetailsLayout.addWidget(&operatorTypeLabel,    row,   0/*column*/);
+	operatorDetailsLayout.addWidget(&operatorTypeValue,    row,   1/*column*/);
+	row++;
+	operatorDetailsLayout.addWidget(&operatorInputsLabel,  row,   0/*column*/);
+	addTensorLines(inputs, row);
+	row++;
+	operatorDetailsLayout.addWidget(&operatorOutputsLabel, row,   0/*column*/);
+	addTensorLines(outputs, row);
+
+	// set texts
+	operatorTypeValue.setText(S2Q(STR(model->getOperatorKind(operatorId))));
+}
+
+void MainWindow::showTensorDetails(PluginInterface::TensorId tensorId) {
+	detailsStack.setCurrentIndex(/*page#*/2);
+	tensorDetails.setTitle(QString("Tensor#%1: %2").arg(tensorId).arg(S2Q(model->getTensorName(tensorId))));
+}

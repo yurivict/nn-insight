@@ -1,5 +1,6 @@
 
 #include "util.h"
+#include "misc.h"
 
 #include <QApplication>
 #include <QScreen>
@@ -19,6 +20,17 @@ bool warningOk(QWidget *parent, const char *msg) {
 
 int getScreenDPI() {
 	return QApplication::screens().at(0)->logicalDotsPerInch();
+}
+
+std::string formatUIntHumanReadable(size_t u) {
+	if (u <= 999)
+		return STR(u);
+	else {
+		auto ddd = STR(u%1000);
+		while (ddd.size() < 3)
+			ddd = std::string("0")+ddd;
+		return STR(formatUIntHumanReadable(u/1000) << "," << ddd);
+	}
 }
 
 }

@@ -2,7 +2,6 @@
 
 #include "plugin-interface.h"
 
-
 std::ostream& operator<<(std::ostream &os, PluginInterface::OperatorKind okind) {
 #define CASE(kind) case PluginInterface::Kind##kind: os << #kind; break;
 	switch (okind) {

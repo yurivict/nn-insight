@@ -21,6 +21,12 @@ set(CMAKE_BUILD_TYPE Release)
 ##
 find_package(Qt5 COMPONENTS Core Gui Widgets Svg REQUIRED)
 find_package(nlohmann_json 3.2.0 REQUIRED)
+find_program(DOT_PROGRAM NAMES dot)
+if (NOT DOT_PROGRAM)
+	message(FATAL_ERROR "Failed to find dot")
+else()
+	message(STATUS "Found the dot program: ${DOT_PROGRAM}")
+endif()
 
 ##
 ## Targets

@@ -1,0 +1,46 @@
+cmake_minimum_required(VERSION 3.1.0)
+
+project(nn-insight)
+
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+
+##
+## C++ standard that we use is the highest possible
+##
+set(CMAKE_CXX_FLAGS "-std=c++2a")
+
+##
+## Build type
+##
+set(CMAKE_BUILD_TYPE Release)
+
+##
+## Find the required dependencies
+##
+find_package(Qt5 COMPONENTS Core Gui Widgets Svg REQUIRED)
+find_package(nlohmann_json 3.2.0 REQUIRED)
+
+##
+## Targets
+##
+add_executable(nn-insight
+	main.cpp main-window.cpp nn-model-viewer.cpp
+	plugin-manager.cpp
+	plugin-interface.cpp
+	util.cpp
+	fonts.cpp
+	render-model-to-coordinates.cpp
+	svg-graphics-generator.cpp
+	ZoomableSvgWidget.cpp
+)
+target_link_libraries(nn-insight
+	Qt5::Widgets Qt5::Svg
+	nlohmann_json::nlohmann_json
+)
+
+##
+## Subdirectories
+##
+subdirs(plugins)

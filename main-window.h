@@ -10,8 +10,12 @@
 #include <QLabel>
 #include <QVBoxLayout>
 #include <QGridLayout>
+#include <QStatusBar>
 #include <QRectF>
 class QEvent;
+#if defined(USE_PERFTOOLS)
+#include <QTimer>
+#endif
 
 #include "plugin-manager.h"
 #include "plugin-interface.h"
@@ -46,6 +50,12 @@ private: // fields
 	QGroupBox                              tensorDetails;   // page#2
 	QLabel                               blankRhsLabel; // leftover label
 	std::unique_ptr<DataTable2D>         dataTable;
+
+	QStatusBar                     statusBar;
+#if defined(USE_PERFTOOLS)
+	QLabel                         memoryUseLabel;
+	QTimer                         memoryUseTimer;
+#endif
 
 	const PluginManager::Plugin*     plugin;    // plugin in use for the model
 	std::unique_ptr<PluginInterface> pluginInterface; // the file is opened through this handle

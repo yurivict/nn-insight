@@ -21,6 +21,10 @@
 
 #include <memory>
 
+#if defined(USE_PERFTOOLS)
+#include <gperftools/malloc_extension.h>
+#endif
+
 
 MainWindow::MainWindow()
 : mainSplitter(this)
@@ -38,6 +42,11 @@ MainWindow::MainWindow()
 ,          operatorOutputsLabel("Outputs", &operatorDetails)
 ,        tensorDetails(&detailsStack)
 ,      blankRhsLabel("Select some operator", &rhsWidget)
+, statusBar(this)
+#if defined(USE_PERFTOOLS)
+,   memoryUseLabel(&statusBar)
+,   memoryUseTimer(&statusBar)
+#endif
 , plugin(nullptr)
 {
 	// window size and position
@@ -63,6 +72,11 @@ MainWindow::MainWindow()
 	svgScrollArea.setWidgetResizable(true);
 	svgScrollArea.setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
 	svgScrollArea.setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+
+	setStatusBar(&statusBar);
+#if defined(USE_PERFTOOLS)
+	statusBar.addWidget(&memoryUseLabel);
+#endif
 
 	// tooltips
 	operatorTypeLabel.setToolTip("Operator type: what kind of operation does it perform");
@@ -91,6 +105,16 @@ MainWindow::MainWindow()
 			}
 		}
 	});
+
+	// monitor memory use
+#if defined(USE_PERFTOOLS)
+	connect(&memoryUseTimer, &QTimer::timeout, [this]() {
+		size_t inuseBytes = 0;
+		(void)MallocExtension::instance()->GetNumericProperty("generic.current_allocated_bytes", &inuseBytes);
+		memoryUseLabel.setText(QString("Memory use: %1 bytes").arg(S2Q(Util::formatUIntHumanReadable(inuseBytes))));
+	});
+	memoryUseTimer.start(1000);
+#endif
 }
 
 MainWindow::~MainWindow() {

@@ -111,7 +111,7 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::tupl
 	ModelFunctions::Box2 bbox;
 	std::vector<ModelFunctions::Box4> operatorBoxes;
 	std::vector<std::vector<std::vector<QPointF>>> tensorLineCubicSplines;
-	std::vector<QPointF> tensorLabelPositions;
+	std::vector<std::vector<QPointF>> tensorLabelPositions;
 	{
 		QFontMetrics fm(Fonts::fontOperatorTitle);
 		qreal dpi = (qreal)Util::getScreenDPI();
@@ -240,8 +240,8 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::tupl
 		painter.setFont(Fonts::fontTensorLabel);
 		QFontMetrics fm(Fonts::fontTensorLabel);
 		PluginInterface::TensorId tid = 0;
-		for (auto &tensorLabelPosition : tensorLabelPositions) {
-			if (tensorLabelPosition != QPointF()) { // not all tensors are between operators
+		for (auto &tensorLabelPositionsList : tensorLabelPositions) {
+			for (auto &tensorLabelPosition : tensorLabelPositionsList) { // not all tensors are between operators, so the label list here can be empty
 				QRectF outTextRect;
 				drawTensorLabel(painter,
 					dotQPointToQtQPoint(tensorLabelPosition),

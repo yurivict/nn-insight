@@ -35,7 +35,7 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 	Box2 &bbox,
 	std::vector<Box4> &operatorBoxes,
 	std::vector<std::vector<std::vector<QPointF>>> &tensorLineCubicSplines,
-	std::vector<QPointF> &tensorLabelPositions
+	std::vector<std::vector<QPointF>> &tensorLabelPositions
 ) {
 
 	// map tensors to operators
@@ -193,7 +193,7 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 		std::vector<float> posFloats;
 		Util::splitString<std::vector<float>, ConvStrToFloat>(edge["lp"].get<std::string>(), posFloats, ',');
 		assert(posFloats.size() == 2);
-		tensorLabelPositions[tid] = QPointF(posFloats[0], posFloats[1]);
+		tensorLabelPositions[tid].push_back(QPointF(posFloats[0], posFloats[1]));
 	}
 }
 

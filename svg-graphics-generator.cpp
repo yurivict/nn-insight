@@ -45,9 +45,29 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::tupl
 	qreal  operatorBoxBorderWidth     = 2;
 	QColor clrOperatorBorder          = Qt::black;
 	QColor clrOperatorTitleText       = Qt::white;
-	QColor clrOperatorTitleBackground = Qt::blue;
 	QColor clrTensorLine              = Qt::black;
 	QColor clrTensorLabel             = Qt::black;
+	auto clrOperatorTitleBackground = [](PluginInterface::OperatorKind okind) -> QColor {
+		switch (okind) {
+		case PluginInterface::KindConv2D:
+			return Qt::blue;
+		case PluginInterface::KindDepthwiseConv2D:
+			return QColor(100,100,255);
+		case PluginInterface::KindFullyConnected:
+			return QColor(50,50,150);
+		case PluginInterface::KindMaxPool:
+		case PluginInterface::KindAveragePool:
+			return QColor(50,150,50);
+		case PluginInterface::KindAdd:
+			return QColor(200,200,255);
+		case PluginInterface::KindRelu:
+		case PluginInterface::KindRelu6:
+		case PluginInterface::KindLeakyRelu:
+			return QColor(200,100,100);
+		default: // unknown?
+			return Qt::red;
+		}
+	};
 
 /*
 	auto inputs = model->getInputs();
@@ -144,6 +164,7 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::tupl
 	auto drawOperator = [&](QPainter &painter,
 	                        const QRectF &bbox,
 	                        const std::string &title,
+				QColor clrOperatorBackground,
 	                        const std::vector<std::string> &inputDescriptions,
 	                        const std::string &fusedDescription)
 	{
@@ -152,7 +173,7 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::tupl
 		path.addRoundedRect(bbox, operatorBoxRadius, operatorBoxRadius);
 		QPen pen(clrOperatorBorder, operatorBoxBorderWidth);
 		painter.setPen(pen);
-		painter.fillPath(path, clrOperatorTitleBackground);
+		painter.fillPath(path, clrOperatorBackground);
 		painter.drawPath(path);
 		// texts
 		painter.setPen(clrOperatorTitleText);
@@ -199,6 +220,7 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::tupl
 			drawOperator(painter,
 				std::get<0>(outIndexes)[oid] = boxToQRectF(dotBoxToQtBox(dotBox)),
 				STR(model->getOperatorKind(oid)),
+				clrOperatorTitleBackground(model->getOperatorKind(oid)),
 				{},
 				""
 			);

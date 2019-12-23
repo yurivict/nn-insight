@@ -3,6 +3,7 @@
 #include <QWidget>
 #include <QLabel>
 #include <QTableView>
+#include <QComboBox>
 #include <QAbstractTableModel>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -22,6 +23,8 @@ class DataTable2D : public QWidget {
 	QHBoxLayout                            headerLayout;
 	QLabel                                 shapeLabel;
 	QLabel                                 dataRangeLabel;
+	QLabel                                 colorSchemaLabel;
+	QComboBox                              colorSchemaComboBox;
 	QTableView                           tableView;
 	std::unique_ptr<QAbstractTableModel>   tableModel;
 

@@ -19,6 +19,8 @@
 #include <QDesktopWidget>
 #include <QApplication>
 
+#include <assert.h>
+
 #include <memory>
 
 #if defined(USE_PERFTOOLS)

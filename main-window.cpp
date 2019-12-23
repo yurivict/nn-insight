@@ -16,6 +16,8 @@
 #include <QPushButton>
 #include <QFontMetrics>
 //#include <QMargins>
+#include <QDesktopWidget>
+#include <QApplication>
 
 #include <memory>
 
@@ -38,6 +40,14 @@ MainWindow::MainWindow()
 ,      blankRhsLabel("Select some operator", &rhsWidget)
 , plugin(nullptr)
 {
+	// window size and position
+	if (true) { // set it to center on the screen until we will have persistent app options
+		QDesktopWidget *desktop = QApplication::desktop();
+		resize(desktop->width()*3/4, desktop->height()*3/4); // initialize our window to be 3/4 of the size of the desktop
+		move((desktop->width() - width())/2, (desktop->height() - height())/2);
+	}
+
+	// set up widgets
 	setCentralWidget(&mainSplitter);
 	mainSplitter.addWidget(&svgScrollArea);
 	  svgScrollArea.setWidget(&svgWidget);

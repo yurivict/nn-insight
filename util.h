@@ -2,6 +2,7 @@
 
 #include <string>
 #include <QString>
+#include <QPoint>
 
 #include <string>
 #include <vector>
@@ -16,6 +17,7 @@ namespace Util {
 std::string QStringToStlString(const QString &qs);
 bool warningOk(QWidget *parent, const char *msg);
 int getScreenDPI();
+QPoint getGlobalMousePos();
 std::string formatUIntHumanReadable(size_t u);
 std::tuple<float,float> arrayMinMax(const float *arr, size_t len);
 

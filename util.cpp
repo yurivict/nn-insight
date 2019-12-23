@@ -4,6 +4,7 @@
 
 #include <QApplication>
 #include <QScreen>
+#include <QCursor>
 #include <QString>
 #include <QMessageBox>
 
@@ -22,6 +23,10 @@ bool warningOk(QWidget *parent, const char *msg) {
 
 int getScreenDPI() {
 	return QApplication::screens().at(0)->logicalDotsPerInch();
+}
+
+QPoint getGlobalMousePos() {
+	return QCursor::pos(QApplication::screens().at(0));
 }
 
 std::string formatUIntHumanReadable(size_t u) {

@@ -9,10 +9,12 @@
 #include <QDebug>
 
 #include "misc.h"
+#include "util.h"
 
 ZoomableSvgWidget::ZoomableSvgWidget(QWidget *parent)
 : QSvgWidget(parent)
 , scalingFactor(1.)
+, mousePressed(false)
 { }
 
 /// overridables
@@ -28,8 +30,24 @@ void ZoomableSvgWidget::mousePressEvent(QMouseEvent* event) {
 	// emit the mousePressOccurred signal
 	auto pos = event->pos();
 	emit mousePressOccurred(QPointF(double(pos.x())/scalingFactor, double(pos.y())/scalingFactor));
+	mousePressed = true;
+	lastMousePos = Util::getGlobalMousePos();
 	// pass
 	QSvgWidget::mousePressEvent(event);
+}
+
+void ZoomableSvgWidget::mouseReleaseEvent(QMouseEvent* event) {
+	mousePressed = false;
+	// pass
+	QSvgWidget::mousePressEvent(event);
+}
+
+void ZoomableSvgWidget::mouseMoveEvent(QMouseEvent* event) {
+	if (mousePressed)
+		move(pos() + (Util::getGlobalMousePos()-lastMousePos));
+	lastMousePos = Util::getGlobalMousePos();
+	// pass
+	QSvgWidget::mouseMoveEvent(event);
 }
 
 void ZoomableSvgWidget::wheelEvent(QWheelEvent* event) {

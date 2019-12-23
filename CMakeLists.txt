@@ -56,6 +56,7 @@ add_executable(nn-insight
 target_link_libraries(nn-insight
 	Qt5::Widgets Qt5::Svg
 	nlohmann_json::nlohmann_json
+	${CMAKE_DL_LIBS}
 )
 if (USE_PERFTOOLS)
 target_link_libraries(nn-insight

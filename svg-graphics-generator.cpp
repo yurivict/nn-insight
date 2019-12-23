@@ -162,12 +162,13 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::tupl
 	auto drawTensorSplines = [&](QPainter &painter,
 	                             const std::vector<QPointF> &splines)
 	{
-		assert(splines.size()%3 == 1);
+		assert(splines.size()%3 == 2);
 
 		QPainterPath path;
 		path.moveTo(splines[0]);
-		for (unsigned i = 1; i < splines.size(); i += 3)
+		for (unsigned i = 1; i+2 < splines.size(); i += 3)
 			path.cubicTo(splines[i+0], splines[i+1], splines[i+2]);
+		path.lineTo(splines[splines.size()-1]); // TODO draw the arrow here
 		painter.drawPath(path);
 	};
 	auto drawTensorLabel = [&](QPainter &painter,

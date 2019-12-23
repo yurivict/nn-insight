@@ -137,16 +137,24 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 	auto parseSplines = [](const std::string &splines) {
 		std::vector<std::string> strpts;
 		Util::splitString(splines, strpts, ' ');
-		assert(strpts.size() % 3 == 2); // n = 1 (mod 3) for splines, and the e,Pt endpoint
+		assert(strpts.size()%3 == 2); // n = 1 (mod 3) for splines, and the e,Pt endpoint
 
 		std::vector<QPointF> pts;
+		QPointF endp;
 		for (auto &s : strpts)
 			if (s[0] != 'e') { // ignore it for now
+				assert(s[0] != 's'); // we don't yet support startp (if startp is not given, p1 touches a node)
 				std::vector<float> ptFloats;
 				Util::splitString<std::vector<float>, ConvStrToFloat>(s, ptFloats, ',');
 				assert(ptFloats.size() == 2);
 				pts.push_back(QPointF(ptFloats[0], ptFloats[1]));
+			} else { // endp
+				std::vector<float> ptFloats;
+				Util::splitString<std::vector<float>, ConvStrToFloat>(s.substr(2), ptFloats, ',');
+				assert(ptFloats.size() == 2);
+				endp = QPointF(ptFloats[0], ptFloats[1]);
 			}
+		pts.push_back(endp);
 		return pts;
 	};
 

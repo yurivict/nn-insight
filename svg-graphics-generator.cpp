@@ -90,7 +90,7 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::tupl
 	// render the model to the coordinates
 	ModelFunctions::Box2 bbox;
 	std::vector<ModelFunctions::Box4> operatorBoxes;
-	std::vector<std::vector<QPointF>> tensorLineCubicSplines;
+	std::vector<std::vector<std::vector<QPointF>>> tensorLineCubicSplines;
 	std::vector<QPointF> tensorLabelPositions;
 	{
 		QFontMetrics fm(Fonts::fontOperatorTitle);
@@ -208,8 +208,8 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::tupl
 
 	{ // draw tensor splines
 		painter.setPen(clrTensorLine);
-		for (auto &tensorLineCubicSpline : tensorLineCubicSplines)
-			if (!tensorLineCubicSpline.empty()) // not all tensors are between operators
+		for (auto &tensorLineCubicSplineList : tensorLineCubicSplines)
+			for (auto &tensorLineCubicSpline : tensorLineCubicSplineList) // not all tensors are between operators, so the spline list here can be empty
 				drawTensorSplines(painter, dotVectorQPointToQtVectorQPoint(tensorLineCubicSpline));
 	}
 

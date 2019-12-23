@@ -20,7 +20,7 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 	std::function<QSizeF(PluginInterface::OperatorId)> operatorBoxFn, // operator boxes in inches
 	Box2 &bbox, // return: bounding box in pixels
 	std::vector<Box4> &operatorBoxes, //  return: operator boxes in pixels
-	std::vector<std::vector<QPointF>> &tensorLineCubicSplines, // cubic splines
+	std::vector<std::vector<std::vector<QPointF>>> &tensorLineCubicSplines, // cubic splines
 	std::vector<QPointF> &tensorLabelPositions // return: tensor label positions in pixels
 );
 

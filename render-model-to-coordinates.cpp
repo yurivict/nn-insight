@@ -34,7 +34,7 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 	std::function<QSizeF(PluginInterface::OperatorId)> operatorBoxFn, // operator boxes in inches
 	Box2 &bbox,
 	std::vector<Box4> &operatorBoxes,
-	std::vector<std::vector<QPointF>> &tensorLineCubicSplines,
+	std::vector<std::vector<std::vector<QPointF>>> &tensorLineCubicSplines,
 	std::vector<QPointF> &tensorLabelPositions
 ) {
 
@@ -188,7 +188,7 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 		PluginInterface::TensorId tid = std::stoi(edge["id"].get<std::string>());
 		assert(tid < tensorLabelPositions.size());
 		// splines
-		tensorLineCubicSplines[tid] = parseSplines(edge["pos"].get<std::string>());
+		tensorLineCubicSplines[tid].push_back(parseSplines(edge["pos"].get<std::string>()));
 		// label position
 		std::vector<float> posFloats;
 		Util::splitString<std::vector<float>, ConvStrToFloat>(edge["lp"].get<std::string>(), posFloats, ',');

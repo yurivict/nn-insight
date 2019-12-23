@@ -17,6 +17,11 @@ set(CMAKE_CXX_FLAGS "-std=c++2a -Wall")
 set(CMAKE_BUILD_TYPE Release)
 
 ##
+## Options
+##
+option(USE_PERFTOOLS "Use Google perftools to monitor/improve memory use" ON)
+
+##
 ## Find the required dependencies
 ##
 find_package(Qt5 COMPONENTS Core Gui Widgets Svg REQUIRED)
@@ -26,6 +31,10 @@ if (NOT DOT_PROGRAM)
 	message(FATAL_ERROR "Failed to find dot")
 else()
 	message(STATUS "Found the dot program: ${DOT_PROGRAM}")
+endif()
+if (USE_PERFTOOLS)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(libtcmalloc REQUIRED IMPORTED_TARGET libtcmalloc)
 endif()
 
 ##
@@ -47,6 +56,11 @@ target_link_libraries(nn-insight
 	Qt5::Widgets Qt5::Svg
 	nlohmann_json::nlohmann_json
 )
+if (USE_PERFTOOLS)
+target_link_libraries(nn-insight
+	PkgConfig::libtcmalloc
+)
+endif()
 
 ##
 ## Subdirectories

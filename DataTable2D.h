@@ -10,6 +10,7 @@
 
 #include "nn-types.h"
 
+#include <vector>
 #include <memory>
 
 class DataTable2D : public QWidget {
@@ -17,11 +18,16 @@ class DataTable2D : public QWidget {
 
 	TensorShape      shape;
 	const float*     data;
+	unsigned         dimVertical;
+	unsigned         dimHorizontal;
 
 	QVBoxLayout                          layout;
 	QWidget                              headerWidget;
 	QHBoxLayout                            headerLayout;
 	QLabel                                 shapeLabel;
+	QWidget                                shapeDimensionsWidget;
+	QHBoxLayout                              shapeDimensionsLayout;
+	std::vector<std::unique_ptr<QComboBox>>  shapeDimensionsComboBoxes;
 	QLabel                                 dataRangeLabel;
 	QLabel                                 colorSchemaLabel;
 	QComboBox                              colorSchemaComboBox;
@@ -30,4 +36,7 @@ class DataTable2D : public QWidget {
 
 public:
 	DataTable2D(const TensorShape &shape_, const float *data_, QWidget *parent);
+
+private: // internals
+	std::vector<unsigned> mkIdxs() const;
 };

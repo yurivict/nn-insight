@@ -6,3 +6,12 @@ size_t tensorFlatSize(const TensorShape &shape) {
 		sz *= d;
 	return sz;
 }
+
+unsigned tensorNumMultiDims(const TensorShape &shape) {
+	unsigned numMultiDims = 0;
+	for (auto d : shape)
+		if (d > 1)
+			numMultiDims++;
+	return numMultiDims;
+}
+

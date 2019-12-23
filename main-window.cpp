@@ -251,9 +251,20 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 				connect(button, &QAbstractButton::pressed, [this,t]() {
 					removeTableIfAny();
 					// show table
-					dataTable.reset(new DataTable2D(model->getTensorShape(t), model->getTensorData(t), &rhsWidget));
-					rhsLayout.addWidget(dataTable.get());
-					blankRhsLabel.hide();
+					auto tableShape = model->getTensorShape(t);
+					switch (tensorNumMultiDims(tableShape)) {
+					case 0:
+						PRINT("WARNING tensor with all ones encountered, it is meaningless in NN models context")
+						break;
+					case 1:
+						// TODO DataTable1D
+						break;
+					default:
+						dataTable.reset(new DataTable2D(tableShape, model->getTensorData(t), &rhsWidget));
+						rhsLayout.addWidget(dataTable.get());
+						blankRhsLabel.hide();
+						break;
+					}
 				});
 			}
 		}

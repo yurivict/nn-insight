@@ -198,6 +198,11 @@ public: // QAbstractTableModel interface implementation
 	}
 
 public: // custom interface
+	void setDataSource(const DataSource *dataSource_) {
+		beginResetModel();
+		dataSource.reset(dataSource_);
+		endResetModel();
+	}
 	void setColorSchema(const BaseColorSchema *colorSchema_) {
 		beginResetModel();
 		colorSchema.reset(colorSchema_);
@@ -209,23 +214,136 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 : QWidget(parent)
 , shape(shape_)
 , data(data_)
+, dimVertical(0)
+, dimHorizontal(0)
 , layout(this)
 , headerWidget(this)
 ,   headerLayout(&headerWidget)
 ,   shapeLabel(S2Q(STR("Shape: " << shape)), &headerWidget)
+,   shapeDimensionsWidget(&headerWidget)
+,     shapeDimensionsLayout(&shapeDimensionsWidget)
 ,   dataRangeLabel(&headerWidget)
 ,   colorSchemaLabel("Color scheme:", &headerWidget)
 ,   colorSchemaComboBox(&headerWidget)
 , tableView(this)
 {
-	assert(shape.size() > 1); // otherwise :DataTable1D should be used
+	assert(shape.size() > 1); // otherwise DataTable1D should be used
 
 	layout.addWidget(&headerWidget);
 	  headerLayout.addWidget(&shapeLabel);
+	  headerLayout.addWidget(&shapeDimensionsWidget);
 	  headerLayout.addWidget(&dataRangeLabel);
 	  headerLayout.addWidget(&colorSchemaLabel);
 	  headerLayout.addWidget(&colorSchemaComboBox);
 	layout.addWidget(&tableView);
+
+	{ // create comboboxes for shape dimensions
+		unsigned numMultiDims = tensorNumMultiDims(shape);
+		//std::vector<bool> multiDims = tensorGetMultiDims(shape);
+		unsigned dim = 0;
+		for (auto d : shape) {
+			auto combobox = new QComboBox(&shapeDimensionsWidget);
+			shapeDimensionsLayout.addWidget(combobox);
+			if (d == 1) { // dimensions=1 are excluded from selection
+				combobox->addItem("single 1");
+				combobox->setEnabled(false);
+			} else {
+				combobox->addItem("--X (columns)--");
+				combobox->addItem("--Y (rows)--");
+				if (numMultiDims > 2) {
+					for (unsigned index = 0; index < d; index++)
+						combobox->addItem(QString("index: %1").arg(index+1));
+				}
+			}
+			connect(combobox, QOverload<int>::of(&QComboBox::activated), [this,dim](int index) {
+				auto swapXY = [this,dim](unsigned &dimMy, unsigned &dimOther, bool iAmY) {
+					unsigned otherDim = dimOther;
+					dimMy = dimOther;
+					dimOther = dim;
+					shapeDimensionsComboBoxes[otherDim]->setCurrentIndex(iAmY ? 1/*Y*/ : 0/*X*/);
+					(static_cast<DataModel*>(tableModel.get()))->setDataSource(new TensorSliceDataSource(shape, dimVertical, dimHorizontal, mkIdxs(), data));
+				};
+				auto changeXYtoIndex = [this](unsigned &dimChanged, bool iAmY) {
+					// choose another X/Y
+					for (unsigned dim = 0; dim < shape.size(); dim++)
+						if (shape[dim] > 1 && dim!=dimVertical && dim!=dimHorizontal) {
+							dimChanged = dim;
+							shapeDimensionsComboBoxes[dim]->setCurrentIndex(iAmY ? 1/*Y*/ : 0/*X*/);
+							break;
+						}
+					(static_cast<DataModel*>(tableModel.get()))->setDataSource(new TensorSliceDataSource(shape, dimVertical, dimHorizontal, mkIdxs(), data));
+				};
+				auto changeIndexToXY = [this,dim](unsigned &dimChanged) {
+					shapeDimensionsComboBoxes[dimChanged]->setCurrentIndex(2/*index=1*/);
+					dimChanged = dim;
+					(static_cast<DataModel*>(tableModel.get()))->setDataSource(new TensorSliceDataSource(shape, dimVertical, dimHorizontal, mkIdxs(), data));
+				};
+				auto changeIndexToIndex = [this]() {
+					(static_cast<DataModel*>(tableModel.get()))->setDataSource(new TensorSliceDataSource(shape, dimVertical, dimHorizontal, mkIdxs(), data));
+				};
+				switch (index) {
+				case 0: // change to X
+					if (dim==dimHorizontal)
+						return; // same
+					else if (dim==dimVertical) // Y->X
+						swapXY(dimVertical, dimHorizontal, true/*iAmY*/);
+					else { // other index -> X
+						changeIndexToXY(dimHorizontal);
+					}
+					break;
+				case 1: // change to Y
+					if (dim==dimVertical)
+						return; // same
+					else if (dim==dimHorizontal) // X->Y
+						swapXY(dimHorizontal, dimVertical, false/*iAmY*/);
+					else { // other index -> Y
+						changeIndexToXY(dimVertical);
+					}
+					break;
+				default: // change to index
+					if (dim==dimVertical) // Y->index
+						changeXYtoIndex(dimVertical, true/*iAmY*/);
+					else if (dim==dimHorizontal) // X->index
+						changeXYtoIndex(dimHorizontal, false/*iAmY*/);
+					else // index->index
+						changeIndexToIndex();
+				}
+			});
+			shapeDimensionsComboBoxes.push_back(std::unique_ptr<QComboBox>(combobox));
+			dim++;
+		}
+
+		// choose the initial vertical and horizontal dimensions
+		switch (numMultiDims) {
+		case 0:
+		case 1:
+			assert(false); // 0 is invalid, 1 should be handled by the 1D class
+		default:
+			// in case of 2 - choose the only two that are avalable, in other cases choose two before the very last one, because the last one is usually a channel dimension
+			unsigned num = 0, numMatch = (numMultiDims==2 ? 0 : numMultiDims-3), idx = 0;
+			for (auto d : shape) {
+				if (d > 1) {
+					if (num == numMatch)
+						dimVertical = idx;
+					else if (num == numMatch+1) {
+						dimHorizontal = idx;
+						break;
+					}
+					num++;
+				}
+				idx++;
+			}
+			break;
+		}
+		for (unsigned dim = 0; dim < shapeDimensionsComboBoxes.size(); dim++) {
+			if (dim == dimVertical)
+				shapeDimensionsComboBoxes[dim]->setCurrentIndex(1/*Y*/);
+			else if (dim == dimHorizontal)
+				shapeDimensionsComboBoxes[dim]->setCurrentIndex(0/*X*/);
+			else
+				shapeDimensionsComboBoxes[dim]->setCurrentIndex(2/*index=1*/);
+		}
+	}
 
 	// alignment
 	colorSchemaLabel.setAlignment(Qt::AlignRight|Qt::AlignVCenter);
@@ -239,19 +357,7 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 	dataRangeLabel.setText(QString("Data Range: %1..%2").arg(std::get<0>(dataRange)).arg(std::get<1>(dataRange)));
 
 	// create the model
-	switch (shape.size()) {
-	case 2:
-		tableModel.reset(new DataModel(new TensorSliceDataSource(shape, 0, 1, {0,0}, data), nullptr, &tableView));
-		break;
-	case 3:
-		tableModel.reset(new DataModel(new TensorSliceDataSource(shape, 0, 1, {0,0,1}, data), nullptr, &tableView));
-		break;
-	case 4:
-		tableModel.reset(new DataModel(new TensorSliceDataSource(shape, 1, 2, {1,0,0,1}, data), nullptr, &tableView));
-		break;
-	default:
-		assert(false);
-	}
+	tableModel.reset(new DataModel(new TensorSliceDataSource(shape, dimVertical, dimHorizontal, mkIdxs(), data), nullptr, &tableView));
 	tableView.setModel(tableModel.get());
 
 	// combobox values
@@ -280,4 +386,17 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 	colorSchemaComboBox.setToolTip("Change the color schema of data visualization");
 }
 
+/// internals
 
+std::vector<unsigned> DataTable2D::mkIdxs() const {
+	std::vector<unsigned> idxs;
+	unsigned i = 0;
+	for (auto d : shape) {
+		if (i==dimVertical || i==dimHorizontal || d==1)
+			idxs.push_back(0);
+		else
+			idxs.push_back(shapeDimensionsComboBoxes[i]->currentIndex()-2);
+		i++;
+	}
+	return idxs;
+}

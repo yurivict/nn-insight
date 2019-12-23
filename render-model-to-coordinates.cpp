@@ -171,7 +171,7 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 		auto name = obj["name"].get<std::string>();
 		if (name.size() < 4 || (name[0]!='O' || name[1]!='p' || name[2]!='_'))
 			FAIL("got returned the object name that we don't recognize: " << name)
-		auto opId = std::stoi(name.substr(3));
+		auto opId = (unsigned)std::stoi(name.substr(3));
 		if (opId >= operatorBoxes.size())
 			FAIL("dot returned an invalid name " << name)
 

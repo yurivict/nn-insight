@@ -41,6 +41,7 @@ add_executable(nn-insight
 	render-model-to-coordinates.cpp
 	svg-graphics-generator.cpp
 	ZoomableSvgWidget.cpp
+	DataTable2D.cpp
 )
 target_link_libraries(nn-insight
 	Qt5::Widgets Qt5::Svg

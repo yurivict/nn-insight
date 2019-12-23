@@ -7,6 +7,8 @@
 #include <QString>
 #include <QMessageBox>
 
+#include <limits>
+
 namespace Util {
 
 std::string QStringToStlString(const QString &qs) {
@@ -31,6 +33,18 @@ std::string formatUIntHumanReadable(size_t u) {
 			ddd = std::string("0")+ddd;
 		return STR(formatUIntHumanReadable(u/1000) << "," << ddd);
 	}
+}
+
+std::tuple<float,float> arrayMinMax(const float *arr, size_t len) {
+	float amin = std::numeric_limits<float>::max();
+	float amax = std::numeric_limits<float>::lowest();
+	for (const float *ae = arr + len; arr < ae; arr++) {
+		if (*arr < amin)
+			amin = *arr;
+		if (*arr > amax)
+			amax = *arr;
+	}
+	return std::tuple<float,float>(amin, amax);
 }
 
 }

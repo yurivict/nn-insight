@@ -151,6 +151,7 @@ MainWindow::AnyObject MainWindow::findObjectAtThePoint(const QPointF &pt) {
 }
 
 void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
+	removeTableIfAny();
 	// switch to the details page, set title
 	detailsStack.setCurrentIndex(/*page#1*/1);
 	operatorDetails.setTitle(QString("Operator#%1").arg(operatorId));
@@ -211,6 +212,13 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 				button->setToolTip("Show the tensor data as a table");
 				tempDetailWidgets.push_back(std::unique_ptr<QWidget>(button));
 				operatorDetailsLayout.addWidget(button,         row,   4/*column*/);
+				connect(button, &QAbstractButton::pressed, [this,t]() {
+					removeTableIfAny();
+					// show table
+					dataTable.reset(new DataTable2D(model->getTensorShape(t), model->getTensorData(t), &rhsWidget));
+					rhsLayout.addWidget(dataTable.get());
+					blankRhsLabel.hide();
+				});
 			}
 		}
 	};
@@ -235,6 +243,16 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 }
 
 void MainWindow::showTensorDetails(PluginInterface::TensorId tensorId) {
+	removeTableIfAny();
 	detailsStack.setCurrentIndex(/*page#*/2);
 	tensorDetails.setTitle(QString("Tensor#%1: %2").arg(tensorId).arg(S2Q(model->getTensorName(tensorId))));
 }
+
+void MainWindow::removeTableIfAny() {
+	if (dataTable.get()) {
+		rhsLayout.removeWidget(dataTable.get());
+		dataTable.reset(nullptr);
+		blankRhsLabel.show();
+	}
+}
+

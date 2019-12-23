@@ -7,6 +7,7 @@
 #include <vector>
 #include <ostream>
 #include <sstream>
+#include <tuple>
 
 class QWidget;
 
@@ -15,8 +16,8 @@ namespace Util {
 std::string QStringToStlString(const QString &qs);
 bool warningOk(QWidget *parent, const char *msg);
 int getScreenDPI();
-
 std::string formatUIntHumanReadable(size_t u);
+std::tuple<float,float> arrayMinMax(const float *arr, size_t len);
 
 inline void splitString(const std::string& str, std::vector<std::string> &cont, char delim = ' ') {
 	std::stringstream ss(str);

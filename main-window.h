@@ -6,6 +6,7 @@
 #include <QStackedWidget>
 #include <QGroupBox>
 #include "ZoomableSvgWidget.h"
+#include "DataTable2D.h"
 #include <QLabel>
 #include <QVBoxLayout>
 #include <QGridLayout>
@@ -44,6 +45,7 @@ private: // fields
 	QLabel                                   operatorOutputsLabel;
 	QGroupBox                              tensorDetails;   // page#2
 	QLabel                               blankRhsLabel; // leftover label
+	std::unique_ptr<DataTable2D>         dataTable;
 
 	const PluginManager::Plugin*     plugin;    // plugin in use for the model
 	std::unique_ptr<PluginInterface> pluginInterface; // the file is opened through this handle
@@ -65,5 +67,6 @@ private: // private methods
 	AnyObject findObjectAtThePoint(const QPointF &pt);
 	void showOperatorDetails(PluginInterface::OperatorId operatorId);
 	void showTensorDetails(PluginInterface::TensorId tensorId);
+	void removeTableIfAny();
 };
 

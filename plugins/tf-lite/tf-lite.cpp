@@ -100,13 +100,19 @@ class TfLitePlugin : public PluginInterface {
 			std::string getTensorName(TensorId tensorId) const override {
 				return subgraph->tensors()->Get(tensorId)->name()->c_str();
 			}
-			bool getTensorIsVariableFlag(TensorId tensorId) const override {
-				return subgraph->tensors()->Get(tensorId)->is_variable();
-			}
 			bool getTensorHasData(TensorId tensorId) const override {
 				auto buffer = subgraph->tensors()->Get(tensorId)->buffer();
 				assert(buffer < plugin->model->buffers()->size());
 				return plugin->model->buffers()->Get(buffer)->data() != nullptr;
+			}
+			const float* getTensorData(TensorId tensorId) const override {
+				auto buffer = subgraph->tensors()->Get(tensorId)->buffer();
+				assert(buffer < plugin->model->buffers()->size());
+				assert(plugin->model->buffers()->Get(buffer)->data() != nullptr);
+				return (const float*)plugin->model->buffers()->Get(buffer)->data()->Data();
+			}
+			bool getTensorIsVariableFlag(TensorId tensorId) const override {
+				return subgraph->tensors()->Get(tensorId)->is_variable();
 			}
 	};
 

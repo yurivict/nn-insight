@@ -9,6 +9,7 @@
 #include <nlohmann/json.hpp>
 
 #include <stdio.h>
+#include <errno.h>
 #include <assert.h>
 
 #include "model-functions.h"
@@ -77,10 +78,12 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 		os << "}" << std::endl;
 	};
 	auto renderDotAsJson = [](const std::string &dot) {
+		// XXX research using the C API /usr/local/include/graphviz/gvc.h: gvRenderData (?)
 		// open the pipe
-		FILE *pipe = ::popen("dot -Tjson", "r+");
+		errno = 0; // popen(3) only sets errno optionally, in some cases
+		FILE *pipe = ::popen("dot -Tjson", "r+"); // "r+" only works on FreeBSD, XXX need to solve this on linux
 		if (pipe == nullptr)
-			FAIL("unable to start the 'dot' process to render the model as a graph")
+			FAIL("unable to start the 'dot' process to render the model as a graph: " << (errno ? strerror(errno) : "errno not set by popen"))
 
 		// write into the pipe
 		if (::fwrite(dot.c_str(), 1, dot.size(), pipe) != dot.size())

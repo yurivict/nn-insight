@@ -9,6 +9,7 @@
 #include "util.h"
 #include "misc.h"
 #include "nn-types.h"
+#include "image.h"
 
 #include <QEvent>
 #include <QWheelEvent>
@@ -19,6 +20,8 @@
 //#include <QMargins>
 #include <QDesktopWidget>
 #include <QApplication>
+#include <QFileDialog>
+#include <QPixmap>
 
 #include <assert.h>
 
@@ -35,6 +38,15 @@ MainWindow::MainWindow()
 ,     svgWidget(&mainSplitter)
 ,   rhsWidget(&mainSplitter)
 ,      rhsLayout(&rhsWidget)
+,      sourceWidget("Source Data", &rhsWidget)
+,        sourceLayout(&sourceWidget)
+,        sourceDetails(&sourceWidget)
+,          sourceDetailsLayout(&sourceDetails)
+,          sourceImageFileName(&sourceDetails)
+,          sourceImageSize(&sourceDetails)
+,          sourceFiller(&sourceDetails)
+,          computeButton("Compute", &sourceDetails)
+,        sourceImage(&sourceWidget)
 ,      detailsStack(&rhsWidget)
 ,        noDetails("Details", &detailsStack)
 ,        operatorDetails(&detailsStack)
@@ -47,6 +59,7 @@ MainWindow::MainWindow()
 ,          operatorComplexityValue(&operatorDetails)
 ,        tensorDetails(&detailsStack)
 ,      blankRhsLabel("Select some operator", &rhsWidget)
+, menuBar(this)
 , statusBar(this)
 #if defined(USE_PERFTOOLS)
 ,   memoryUseLabel(&statusBar)
@@ -67,6 +80,13 @@ MainWindow::MainWindow()
 	  svgScrollArea.setWidget(&svgWidget);
 	mainSplitter.addWidget(&rhsWidget);
 
+	rhsLayout.addWidget(&sourceWidget);
+	  sourceLayout.addWidget(&sourceDetails);
+	    sourceDetailsLayout.addWidget(&sourceImageFileName);
+	    sourceDetailsLayout.addWidget(&sourceImageSize);
+	    sourceDetailsLayout.addWidget(&sourceFiller);
+	    sourceDetailsLayout.addWidget(&computeButton);
+	  sourceLayout.addWidget(&sourceImage);
 	rhsLayout.addWidget(&detailsStack);
 	rhsLayout.addWidget(&blankRhsLabel);
 	detailsStack.addWidget(&noDetails);
@@ -78,6 +98,7 @@ MainWindow::MainWindow()
 	svgScrollArea.setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
 	svgScrollArea.setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
 
+	setMenuBar(&menuBar);
 	setStatusBar(&statusBar);
 #if defined(USE_PERFTOOLS)
 	statusBar.addWidget(&memoryUseLabel);
@@ -87,10 +108,15 @@ MainWindow::MainWindow()
 	operatorTypeLabel.setToolTip("Operator type: what kind of operation does it perform");
 
 	// size policies
-	svgScrollArea.setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
-	detailsStack.setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+	svgScrollArea       .setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
+	sourceImageFileName .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+	sourceImageSize     .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+	//sourceFiller .setSizePolicy(QSizePolicy::Fixed, QSizePolicy::MinimumExpanding);
+	sourceImage         .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+	detailsStack        .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
 	// widget options and flags
+	sourceWidget.hide(); // hidden by default
 	noDetails.setEnabled(false); // always grayed out
 
 	// fonts
@@ -110,6 +136,8 @@ MainWindow::MainWindow()
 			}
 		}
 	});
+	connect(&computeButton, &QAbstractButton::pressed, []() {
+	});
 
 	// monitor memory use
 #if defined(USE_PERFTOOLS)
@@ -120,6 +148,23 @@ MainWindow::MainWindow()
 	});
 	memoryUseTimer.start(1000);
 #endif
+
+	// add menus
+	auto fileMenu = menuBar.addMenu(tr("&File"));
+	fileMenu->addAction("Open Image", [this]() {
+		QString fileName = QFileDialog::getOpenFileName(this,
+			"Open image file", "",
+			"Image (*.png);;All Files (*)"
+		);
+		if (fileName != "")
+			openImageFile(fileName);
+	});
+	fileMenu->addAction("Open NN file", []() {
+		PRINT("Open NN")
+	});
+	fileMenu->addAction("Close Image", [this]() {
+		closeImage();
+	});
 }
 
 MainWindow::~MainWindow() {
@@ -257,7 +302,7 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 					auto tableShape = model->getTensorShape(t);
 					switch (tensorNumMultiDims(tableShape)) {
 					case 0:
-						PRINT("WARNING tensor with all ones encountered, it is meaningless in NN models context")
+						PRINT("WARNING tensor with all ones encountered, it is meaningless in the NN models context")
 						break;
 					case 1:
 						// TODO DataTable1D
@@ -308,5 +353,22 @@ void MainWindow::removeTableIfAny() {
 		dataTable.reset(nullptr);
 		blankRhsLabel.show();
 	}
+}
+
+void MainWindow::openImageFile(const QString &imageFileName) {
+	// enable widgets, show image
+	sourceWidget.show();
+	sourceImage.setPixmap(QPixmap(imageFileName));
+	// read the image as tensor
+	sourceTensorData.reset(Image::readPngImageFile(Q2S(imageFileName), sourceTensorShape));
+	// set info on the screen
+	sourceImageFileName.setText(QString("File name: %1").arg(imageFileName));
+	sourceImageSize.setText(QString("Image size: %1").arg(S2Q(STR(sourceTensorShape))));
+}
+
+void MainWindow::closeImage() {
+	sourceWidget.hide();
+	sourceImage.setPixmap(QPixmap());
+	sourceTensorData.reset(nullptr);
 }
 

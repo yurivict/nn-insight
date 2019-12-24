@@ -8,8 +8,10 @@
 #include "ZoomableSvgWidget.h"
 #include "DataTable2D.h"
 #include <QLabel>
+#include <QPushButton>
 #include <QVBoxLayout>
 #include <QGridLayout>
+#include <QMenuBar>
 #include <QStatusBar>
 #include <QRectF>
 class QEvent;
@@ -19,6 +21,7 @@ class QEvent;
 
 #include "plugin-manager.h"
 #include "plugin-interface.h"
+#include "nn-types.h"
 
 #include <vector>
 #include <memory>
@@ -39,6 +42,15 @@ private: // fields
 	ZoomableSvgWidget                  svgWidget;
 	QWidget                            rhsWidget;
 	QVBoxLayout                          rhsLayout;
+	QGroupBox                            sourceWidget; // optionally visible
+	QHBoxLayout                            sourceLayout;
+	QWidget                                sourceDetails;
+	QVBoxLayout                              sourceDetailsLayout;
+	QLabel                                   sourceImageFileName;
+	QLabel                                   sourceImageSize;
+	QWidget                                  sourceFiller;
+	QPushButton                              computeButton;
+	QLabel                                 sourceImage;
 	QStackedWidget                       detailsStack;
 	QGroupBox                              noDetails;       // page#0
 	QGroupBox                              operatorDetails; // page#1
@@ -53,6 +65,7 @@ private: // fields
 	QLabel                               blankRhsLabel; // leftover label
 	std::unique_ptr<DataTable2D>         dataTable;
 
+	QMenuBar                       menuBar;
 	QStatusBar                     statusBar;
 #if defined(USE_PERFTOOLS)
 	QLabel                         memoryUseLabel;
@@ -62,6 +75,9 @@ private: // fields
 	const PluginManager::Plugin*     plugin;    // plugin in use for the model
 	std::unique_ptr<PluginInterface> pluginInterface; // the file is opened through this handle
 	const PluginInterface::Model*    model;     // the model from the file that is currently open
+
+	std::unique_ptr<float>           sourceTensorData; // currently used data source
+	TensorShape                      sourceTensorShape;
 
 	struct {
 		std::vector<QRectF> allOperatorBoxes; // indexed based on OperatorId
@@ -80,5 +96,7 @@ private: // private methods
 	void showOperatorDetails(PluginInterface::OperatorId operatorId);
 	void showTensorDetails(PluginInterface::TensorId tensorId);
 	void removeTableIfAny();
+	void openImageFile(const QString &imageFileName);
+	void closeImage();
 };
 

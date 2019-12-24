@@ -17,6 +17,11 @@ set(CMAKE_CXX_FLAGS "-std=c++2a -Wall")
 set(CMAKE_BUILD_TYPE Release)
 
 ##
+## Some required locations
+##
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+
+##
 ## Options
 ##
 option(USE_PERFTOOLS "Use Google perftools to monitor/improve memory use" ON)
@@ -26,6 +31,8 @@ option(USE_PERFTOOLS "Use Google perftools to monitor/improve memory use" ON)
 ##
 find_package(Qt5 COMPONENTS Core Gui Widgets Svg REQUIRED)
 find_package(nlohmann_json 3.2.0 REQUIRED)
+find_package(png++ REQUIRED)
+find_package(PNG REQUIRED)
 find_program(DOT_PROGRAM NAMES dot)
 if (NOT DOT_PROGRAM)
 	message(FATAL_ERROR "Failed to find dot")
@@ -37,6 +44,10 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(libtcmalloc REQUIRED IMPORTED_TARGET libtcmalloc)
 add_definitions(-DUSE_PERFTOOLS)
 endif()
+
+message(STATUS "PNG++ found: includes ${png++_INCLUDE_DIRS}, libs ${png++_LIBRARIES}")
+
+include_directories(${png++_INCLUDE_DIRS})
 
 ##
 ## Targets
@@ -53,10 +64,12 @@ add_executable(nn-insight
 	svg-graphics-generator.cpp
 	ZoomableSvgWidget.cpp
 	DataTable2D.cpp
+	image.cpp
 )
 target_link_libraries(nn-insight
 	Qt5::Widgets Qt5::Svg
 	nlohmann_json::nlohmann_json
+	${png++_LIBRARIES}
 	${CMAKE_DL_LIBS}
 )
 if (USE_PERFTOOLS)

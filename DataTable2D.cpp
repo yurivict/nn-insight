@@ -310,6 +310,7 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 				}
 			});
 			shapeDimensionsComboBoxes.push_back(std::unique_ptr<QComboBox>(combobox));
+			combobox->setToolTip(S2Q(STR("Directions and indexes to choose for dimension number " << (dim+1) << " of the shape " << shape)));
 			dim++;
 		}
 
@@ -384,6 +385,7 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 	shapeLabel         .setToolTip("Shape of tensor data that this table represents");
 	dataRangeLabel     .setToolTip("Range of numeric values present in the table");
 	colorSchemaComboBox.setToolTip("Change the color schema of data visualization");
+	tableView          .setToolTip("Tensor data values");
 }
 
 /// internals

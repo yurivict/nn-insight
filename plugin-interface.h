@@ -50,6 +50,15 @@ public:
 	KindUnknown
   };
 
+	enum ActivationFunction {
+		ActivationFunction_NONE,
+		ActivationFunction_RELU,
+		ActivationFunction_RELU_N1_TO_1,
+		ActivationFunction_RELU6,
+		ActivationFunction_TANH,
+		ActivationFunction_SIGN_BIT
+	};
+
 	// OperatorOptionName represents a unique option value with a specific meaning each available only for some operators
 	enum OperatorOptionName {
 		OperatorOption_UNKNOWN,
@@ -138,7 +147,8 @@ if (false) {
 		OperatorOption_TypeFloat,
 		OperatorOption_TypeInt,
 		OperatorOption_TypeUInt,
-		OperatorOption_TypeIntArray
+		OperatorOption_TypeIntArray,
+		OperatorOption_TypeActivationFunction
 	};
 	struct OperatorOptionValue {
 		OperatorOptionType type;
@@ -146,12 +156,14 @@ if (false) {
 		float    f;
 		int32_t  i;
 		uint32_t u;
+		ActivationFunction activationFunction;
 		std::vector<int32_t>  ii;
-		OperatorOptionValue(bool b_) : type(OperatorOption_TypeBool), b(b_) { }
-		OperatorOptionValue(float f_) : type(OperatorOption_TypeFloat), f(f_) { }
-		OperatorOptionValue(int32_t i_) : type(OperatorOption_TypeInt), i(i_) { }
-		OperatorOptionValue(uint32_t u_) : type(OperatorOption_TypeUInt), u(u_) { }
-		OperatorOptionValue(const std::vector<int32_t> &ii_) : type(OperatorOption_TypeIntArray), ii(ii_) { }
+		OperatorOptionValue(bool b_)                                : type(OperatorOption_TypeBool), b(b_) { }
+		OperatorOptionValue(float f_)                               : type(OperatorOption_TypeFloat), f(f_) { }
+		OperatorOptionValue(int32_t i_)                             : type(OperatorOption_TypeInt), i(i_) { }
+		OperatorOptionValue(uint32_t u_)                            : type(OperatorOption_TypeUInt), u(u_) { }
+		OperatorOptionValue(const std::vector<int32_t> &ii_)        : type(OperatorOption_TypeIntArray), ii(ii_) { }
+		OperatorOptionValue(ActivationFunction activationFunction_) : type(OperatorOption_TypeActivationFunction), activationFunction(activationFunction_) { }
 	};
 
 	// OperatorOption is what is returned by the plugin for individual operators
@@ -163,6 +175,7 @@ if (false) {
 	typedef std::vector<OperatorOption> OperatorOptionsList;
 
 	friend std::ostream& operator<<(std::ostream &os, OperatorKind okind);
+	friend std::ostream& operator<<(std::ostream &os, ActivationFunction afunc);
 	friend std::ostream& operator<<(std::ostream &os, OperatorOptionName optName);
 	friend std::ostream& operator<<(std::ostream &os, OperatorOptionType optType);
 	friend std::ostream& operator<<(std::ostream &os, const OperatorOptionValue &optValue);

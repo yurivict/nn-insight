@@ -59,6 +59,9 @@ if (true) {
 					case "squeeze_dims":
 						valueAdjustFn = "Helpers::convertFlatbuffersIntListToStl";
 						break;
+					case "fused_activation_function":
+						valueAdjustFn = "Helpers::convertActivationFunction";
+						break;
 					}
 					print("	ourOpts->push_back({"
 						+"PluginInterface::OperatorOption_"+opt.toUpperCase()
@@ -86,7 +89,7 @@ case tflite::BuiltinOperator_ADD_N: {
 }
 case tflite::BuiltinOperator_ADD: {
 	auto oo = o->builtin_options_as_AddOptions();
-	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue((oo->fused_activation_function()))});
+	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue(Helpers::convertActivationFunction(oo->fused_activation_function()))});
 	break;
 }
 case tflite::BuiltinOperator_ARG_MAX: {
@@ -105,7 +108,7 @@ case tflite::BuiltinOperator_BATCH_TO_SPACE_ND: {
 case tflite::BuiltinOperator_BIDIRECTIONAL_SEQUENCE_LSTM: {
 	auto oo = o->builtin_options_as_BidirectionalSequenceLSTMOptions();
 	ourOpts->push_back({PluginInterface::OperatorOption_CELL_CLIP, PluginInterface::OperatorOptionValue((oo->cell_clip()))});
-	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue((oo->fused_activation_function()))});
+	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue(Helpers::convertActivationFunction(oo->fused_activation_function()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_MERGE_OUTPUTS, PluginInterface::OperatorOptionValue((oo->merge_outputs()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_PROJ_CLIP, PluginInterface::OperatorOptionValue((oo->proj_clip()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_TIME_MAJOR, PluginInterface::OperatorOptionValue((oo->time_major()))});
@@ -113,7 +116,7 @@ case tflite::BuiltinOperator_BIDIRECTIONAL_SEQUENCE_LSTM: {
 }
 case tflite::BuiltinOperator_BIDIRECTIONAL_SEQUENCE_RNN: {
 	auto oo = o->builtin_options_as_BidirectionalSequenceRNNOptions();
-	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue((oo->fused_activation_function()))});
+	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue(Helpers::convertActivationFunction(oo->fused_activation_function()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_MERGE_OUTPUTS, PluginInterface::OperatorOptionValue((oo->merge_outputs()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_TIME_MAJOR, PluginInterface::OperatorOptionValue((oo->time_major()))});
 	break;
@@ -139,14 +142,14 @@ case tflite::BuiltinOperator_CONCAT_EMBEDDINGS: {
 case tflite::BuiltinOperator_CONCATENATION: {
 	auto oo = o->builtin_options_as_ConcatenationOptions();
 	ourOpts->push_back({PluginInterface::OperatorOption_AXIS, PluginInterface::OperatorOptionValue((oo->axis()))});
-	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue((oo->fused_activation_function()))});
+	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue(Helpers::convertActivationFunction(oo->fused_activation_function()))});
 	break;
 }
 case tflite::BuiltinOperator_CONV_2D: {
 	auto oo = o->builtin_options_as_Conv2DOptions();
 	ourOpts->push_back({PluginInterface::OperatorOption_DILATION_H_FACTOR, PluginInterface::OperatorOptionValue((oo->dilation_h_factor()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_DILATION_W_FACTOR, PluginInterface::OperatorOptionValue((oo->dilation_w_factor()))});
-	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue((oo->fused_activation_function()))});
+	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue(Helpers::convertActivationFunction(oo->fused_activation_function()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_PADDING, PluginInterface::OperatorOptionValue((oo->padding()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_STRIDE_H, PluginInterface::OperatorOptionValue((oo->stride_h()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_STRIDE_W, PluginInterface::OperatorOptionValue((oo->stride_w()))});
@@ -168,7 +171,7 @@ case tflite::BuiltinOperator_DEPTHWISE_CONV_2D: {
 	ourOpts->push_back({PluginInterface::OperatorOption_DEPTH_MULTIPLIER, PluginInterface::OperatorOptionValue((oo->depth_multiplier()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_DILATION_H_FACTOR, PluginInterface::OperatorOptionValue((oo->dilation_h_factor()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_DILATION_W_FACTOR, PluginInterface::OperatorOptionValue((oo->dilation_w_factor()))});
-	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue((oo->fused_activation_function()))});
+	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue(Helpers::convertActivationFunction(oo->fused_activation_function()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_PADDING, PluginInterface::OperatorOptionValue((oo->padding()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_STRIDE_H, PluginInterface::OperatorOptionValue((oo->stride_h()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_STRIDE_W, PluginInterface::OperatorOptionValue((oo->stride_w()))});
@@ -179,7 +182,7 @@ case tflite::BuiltinOperator_DEQUANTIZE: {
 }
 case tflite::BuiltinOperator_DIV: {
 	auto oo = o->builtin_options_as_DivOptions();
-	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue((oo->fused_activation_function()))});
+	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue(Helpers::convertActivationFunction(oo->fused_activation_function()))});
 	break;
 }
 case tflite::BuiltinOperator_EMBEDDING_LOOKUP_SPARSE: {
@@ -215,7 +218,7 @@ case tflite::BuiltinOperator_FLOOR_MOD: {
 }
 case tflite::BuiltinOperator_FULLY_CONNECTED: {
 	auto oo = o->builtin_options_as_FullyConnectedOptions();
-	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue((oo->fused_activation_function()))});
+	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue(Helpers::convertActivationFunction(oo->fused_activation_function()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_KEEP_NUM_DIMS, PluginInterface::OperatorOptionValue((oo->keep_num_dims()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_WEIGHTS_FORMAT, PluginInterface::OperatorOptionValue((oo->weights_format()))});
 	break;
@@ -245,7 +248,7 @@ case tflite::BuiltinOperator_IF: {
 }
 case tflite::BuiltinOperator_L2_NORMALIZATION: {
 	auto oo = o->builtin_options_as_L2NormOptions();
-	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue((oo->fused_activation_function()))});
+	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue(Helpers::convertActivationFunction(oo->fused_activation_function()))});
 	break;
 }
 case tflite::BuiltinOperator_LSH_PROJECTION: {
@@ -256,7 +259,7 @@ case tflite::BuiltinOperator_LSH_PROJECTION: {
 case tflite::BuiltinOperator_LSTM: {
 	auto oo = o->builtin_options_as_LSTMOptions();
 	ourOpts->push_back({PluginInterface::OperatorOption_CELL_CLIP, PluginInterface::OperatorOptionValue((oo->cell_clip()))});
-	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue((oo->fused_activation_function()))});
+	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue(Helpers::convertActivationFunction(oo->fused_activation_function()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_KERNEL_TYPE, PluginInterface::OperatorOptionValue((oo->kernel_type()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_PROJ_CLIP, PluginInterface::OperatorOptionValue((oo->proj_clip()))});
 	break;
@@ -309,7 +312,7 @@ case tflite::BuiltinOperator_MIRROR_PAD: {
 }
 case tflite::BuiltinOperator_MUL: {
 	auto oo = o->builtin_options_as_MulOptions();
-	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue((oo->fused_activation_function()))});
+	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue(Helpers::convertActivationFunction(oo->fused_activation_function()))});
 	break;
 }
 case tflite::BuiltinOperator_NEG: {
@@ -347,7 +350,7 @@ case tflite::BuiltinOperator_L2_POOL_2D: {
 	auto oo = o->builtin_options_as_Pool2DOptions();
 	ourOpts->push_back({PluginInterface::OperatorOption_FILTER_HEIGHT, PluginInterface::OperatorOptionValue((oo->filter_height()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_FILTER_WIDTH, PluginInterface::OperatorOptionValue((oo->filter_width()))});
-	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue((oo->fused_activation_function()))});
+	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue(Helpers::convertActivationFunction(oo->fused_activation_function()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_PADDING, PluginInterface::OperatorOptionValue((oo->padding()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_STRIDE_H, PluginInterface::OperatorOptionValue((oo->stride_h()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_STRIDE_W, PluginInterface::OperatorOptionValue((oo->stride_w()))});
@@ -361,7 +364,7 @@ case tflite::BuiltinOperator_QUANTIZE: {
 }
 case tflite::BuiltinOperator_RNN: {
 	auto oo = o->builtin_options_as_RNNOptions();
-	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue((oo->fused_activation_function()))});
+	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue(Helpers::convertActivationFunction(oo->fused_activation_function()))});
 	break;
 }
 case tflite::BuiltinOperator_RANGE: {
@@ -404,7 +407,7 @@ case tflite::BuiltinOperator_REVERSE_V2: {
 }
 case tflite::BuiltinOperator_SVDF: {
 	auto oo = o->builtin_options_as_SVDFOptions();
-	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue((oo->fused_activation_function()))});
+	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue(Helpers::convertActivationFunction(oo->fused_activation_function()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_RANK, PluginInterface::OperatorOptionValue((oo->rank()))});
 	break;
 }
@@ -419,7 +422,7 @@ case tflite::BuiltinOperator_SELECT_V2: {
 }
 case tflite::BuiltinOperator_UNIDIRECTIONAL_SEQUENCE_RNN: {
 	auto oo = o->builtin_options_as_SequenceRNNOptions();
-	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue((oo->fused_activation_function()))});
+	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue(Helpers::convertActivationFunction(oo->fused_activation_function()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_TIME_MAJOR, PluginInterface::OperatorOptionValue((oo->time_major()))});
 	break;
 }
@@ -488,7 +491,7 @@ case tflite::BuiltinOperator_STRIDED_SLICE: {
 }
 case tflite::BuiltinOperator_SUB: {
 	auto oo = o->builtin_options_as_SubOptions();
-	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue((oo->fused_activation_function()))});
+	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue(Helpers::convertActivationFunction(oo->fused_activation_function()))});
 	break;
 }
 case tflite::BuiltinOperator_TILE: {
@@ -510,7 +513,7 @@ case tflite::BuiltinOperator_TRANSPOSE: {
 case tflite::BuiltinOperator_UNIDIRECTIONAL_SEQUENCE_LSTM: {
 	auto oo = o->builtin_options_as_UnidirectionalSequenceLSTMOptions();
 	ourOpts->push_back({PluginInterface::OperatorOption_CELL_CLIP, PluginInterface::OperatorOptionValue((oo->cell_clip()))});
-	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue((oo->fused_activation_function()))});
+	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue(Helpers::convertActivationFunction(oo->fused_activation_function()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_PROJ_CLIP, PluginInterface::OperatorOptionValue((oo->proj_clip()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_TIME_MAJOR, PluginInterface::OperatorOptionValue((oo->time_major()))});
 	break;

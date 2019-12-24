@@ -16,6 +16,30 @@ std::ostream& operator<<(std::ostream &os, PluginInterface::OperatorKind okind) 
 	return os;
 }
 
+std::ostream& operator<<(std::ostream &os, PluginInterface::ActivationFunction afunc) {
+	switch (afunc) {
+	case PluginInterface::ActivationFunction_NONE:
+		os << "NONE";
+		break;
+	case PluginInterface::ActivationFunction_RELU:
+		os << "RELU";
+		break;
+	case PluginInterface::ActivationFunction_RELU_N1_TO_1:
+		os << "RELU_N1_TO_1";
+		break;
+	case PluginInterface::ActivationFunction_RELU6:
+		os << "RELU6";
+		break;
+	case PluginInterface::ActivationFunction_TANH:
+		os << "TANH";
+		break;
+	case PluginInterface::ActivationFunction_SIGN_BIT:
+		os << "SIGN_BIT";
+		break;
+	}
+	return os;
+}
+
 std::ostream& operator<<(std::ostream &os, PluginInterface::OperatorOptionName optName) {
 	std::string s;
 #define CASE(name) case PluginInterface::OperatorOption_##name: s = #name; break;
@@ -108,6 +132,9 @@ std::ostream& operator<<(std::ostream &os, PluginInterface::OperatorOptionType o
 	case PluginInterface::OperatorOption_TypeIntArray:
 		os << "array of int";
 		break;
+	case PluginInterface::OperatorOption_TypeActivationFunction:
+		os << "activation function";
+		break;
 	}
 	return os;
 }
@@ -133,6 +160,10 @@ std::ostream& operator<<(std::ostream &os, const PluginInterface::OperatorOption
 			os << (n++ > 0 ? ", " : "") << i;
 		os << "}";
 		break;
-	}}
+	} case PluginInterface::OperatorOption_TypeActivationFunction:
+		os << optValue.activationFunction;
+		break;
+	}
+
 	return os;
 }

@@ -29,6 +29,17 @@ namespace Helpers {
 		return v;
 	}
 
+	PluginInterface::ActivationFunction convertActivationFunction(tflite::ActivationFunctionType atype) {
+		switch (atype) {
+		case tflite::ActivationFunctionType_NONE:            return PluginInterface::ActivationFunction_NONE;
+		case tflite::ActivationFunctionType_RELU:            return PluginInterface::ActivationFunction_RELU;
+		case tflite::ActivationFunctionType_RELU_N1_TO_1:    return PluginInterface::ActivationFunction_RELU_N1_TO_1;
+		case tflite::ActivationFunctionType_RELU6:           return PluginInterface::ActivationFunction_RELU6;
+		case tflite::ActivationFunctionType_TANH:            return PluginInterface::ActivationFunction_TANH;
+		case tflite::ActivationFunctionType_SIGN_BIT:        return PluginInterface::ActivationFunction_SIGN_BIT;
+		}
+	}
+
 	static PluginInterface::OperatorKind opcodeToOperatorKind(tflite::BuiltinOperator opcode) {
 		switch (opcode) {
 #define CASE(hisName,myName) case tflite::BuiltinOperator_##hisName: return PluginInterface::Kind##myName;

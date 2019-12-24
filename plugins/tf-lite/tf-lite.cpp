@@ -27,19 +27,7 @@ namespace Helpers {
 	static PluginInterface::OperatorKind opcodeToOperatorKind(tflite::BuiltinOperator opcode) {
 		switch (opcode) {
 #define CASE(hisName,myName) case tflite::BuiltinOperator_##hisName: return PluginInterface::Kind##myName;
-		CASE(ADD, Add) CASE(AVERAGE_POOL_2D, AveragePool) CASE(CONCATENATION, Concatenation) CASE(CONV_2D, Conv2D) CASE(DEPTHWISE_CONV_2D, DepthwiseConv2D) CASE(DEPTH_TO_SPACE, Unknown) CASE(DEQUANTIZE, Unknown) CASE(EMBEDDING_LOOKUP, Unknown) CASE(FLOOR, Unknown) CASE(FULLY_CONNECTED, FullyConnected)
-		CASE(HASHTABLE_LOOKUP, Unknown) CASE(L2_NORMALIZATION, Unknown) CASE(L2_POOL_2D, Unknown) CASE(LOCAL_RESPONSE_NORMALIZATION, Unknown) CASE(LOGISTIC, Unknown) CASE(LSH_PROJECTION, Unknown) CASE(LSTM, Unknown) CASE(MAX_POOL_2D, MaxPool) CASE(MUL, Mul) CASE(RELU, Relu)
-		CASE(RELU_N1_TO_1, Unknown) CASE(RELU6, Relu6) CASE(RESHAPE, Reshape) CASE(RESIZE_BILINEAR, Unknown) CASE(RNN, Unknown) CASE(SOFTMAX, Softmax) CASE(SPACE_TO_DEPTH, Unknown) CASE(SVDF, Unknown) CASE(TANH, Tanh) CASE(CONCAT_EMBEDDINGS, Unknown)
-		CASE(SKIP_GRAM, Unknown) CASE(CALL, Unknown) CASE(CUSTOM, Unknown) CASE(EMBEDDING_LOOKUP_SPARSE, Unknown) CASE(PAD, Pad) CASE(UNIDIRECTIONAL_SEQUENCE_RNN, Unknown) CASE(GATHER, Unknown) CASE(BATCH_TO_SPACE_ND, Unknown) CASE(SPACE_TO_BATCH_ND, Unknown) CASE(TRANSPOSE, Transpose)
-		CASE(MEAN, Mean) CASE(SUB, Sub) CASE(DIV, Div) CASE(SQUEEZE, Unknown) CASE(UNIDIRECTIONAL_SEQUENCE_LSTM, Unknown) CASE(STRIDED_SLICE, StridedSlice) CASE(BIDIRECTIONAL_SEQUENCE_RNN, Unknown) CASE(EXP, Unknown) CASE(TOPK_V2, Unknown) CASE(SPLIT, Unknown)
-		CASE(LOG_SOFTMAX, Unknown) CASE(DELEGATE, Unknown) CASE(BIDIRECTIONAL_SEQUENCE_LSTM, Unknown) CASE(CAST, Unknown) CASE(PRELU, Unknown) CASE(MAXIMUM, Maximum) CASE(ARG_MAX, Unknown) CASE(MINIMUM, Minimum) CASE(LESS, Unknown) CASE(NEG, Unknown)
-		CASE(PADV2, Unknown) CASE(GREATER, Unknown) CASE(GREATER_EQUAL, Unknown) CASE(LESS_EQUAL, Unknown) CASE(SELECT, Unknown) CASE(SLICE, Unknown) CASE(SIN, Unknown) CASE(TRANSPOSE_CONV, Unknown) CASE(SPARSE_TO_DENSE, Unknown) CASE(TILE, Unknown)
-		CASE(EXPAND_DIMS, Unknown) CASE(EQUAL, Unknown) CASE(NOT_EQUAL, Unknown) CASE(LOG, Unknown) CASE(SUM, Unknown) CASE(SQRT, Unknown) CASE(RSQRT, Unknown) CASE(SHAPE, Unknown) CASE(POW, Unknown) CASE(ARG_MIN, Unknown)
-		CASE(FAKE_QUANT, Unknown) CASE(REDUCE_PROD, Unknown) CASE(REDUCE_MAX, Unknown) CASE(PACK, Unknown) CASE(LOGICAL_OR, Unknown) CASE(ONE_HOT, Unknown) CASE(LOGICAL_AND, Unknown) CASE(LOGICAL_NOT, Unknown) CASE(UNPACK, Unknown) CASE(REDUCE_MIN, Unknown)
-		CASE(FLOOR_DIV, Unknown) CASE(REDUCE_ANY, Unknown) CASE(SQUARE, Unknown) CASE(ZEROS_LIKE, Unknown) CASE(FILL, Unknown) CASE(FLOOR_MOD, Unknown) CASE(RANGE, Unknown) CASE(RESIZE_NEAREST_NEIGHBOR, Unknown) CASE(LEAKY_RELU, LeakyRelu) CASE(SQUARED_DIFFERENCE, Unknown)
-		CASE(MIRROR_PAD, Unknown) CASE(ABS, Unknown) CASE(SPLIT_V, Unknown) CASE(UNIQUE, Unknown) CASE(CEIL, Unknown) CASE(REVERSE_V2, Unknown) CASE(ADD_N, Unknown) CASE(GATHER_ND, Unknown) CASE(COS, Unknown) CASE(WHERE, Unknown)
-		CASE(RANK, Unknown) CASE(ELU, Unknown) CASE(REVERSE_SEQUENCE, Unknown) CASE(MATRIX_DIAG, Unknown) CASE(QUANTIZE, Unknown) CASE(MATRIX_SET_DIAG, Unknown) CASE(ROUND, Unknown) CASE(HARD_SWISH, Unknown) CASE(IF, Unknown) CASE(WHILE, Unknown)
-		CASE(NON_MAX_SUPPRESSION_V4, Unknown) CASE(NON_MAX_SUPPRESSION_V5, Unknown)
+#include "operator-list.cpp"
 		default:
 			FAIL("unknown opcode=" << opcode)
 #undef CASE

@@ -48,6 +48,7 @@ add_executable(nn-insight
 	util.cpp
 	fonts.cpp
 	nn-types.cpp
+	model-functions.cpp
 	render-model-to-coordinates.cpp
 	svg-graphics-generator.cpp
 	ZoomableSvgWidget.cpp

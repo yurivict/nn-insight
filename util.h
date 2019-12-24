@@ -19,6 +19,8 @@ bool warningOk(QWidget *parent, const char *msg);
 int getScreenDPI();
 QPoint getGlobalMousePos();
 std::string formatUIntHumanReadable(size_t u);
+std::string formatUIntHumanReadableSuffixed(size_t u);
+std::string formatFlops(size_t flops);
 std::tuple<float,float> arrayMinMax(const float *arr, size_t len);
 
 inline void splitString(const std::string& str, std::vector<std::string> &cont, char delim = ' ') {

@@ -40,6 +40,30 @@ std::string formatUIntHumanReadable(size_t u) {
 	}
 }
 
+std::string formatUIntHumanReadableSuffixed(size_t u) {
+	auto one = [](size_t u, size_t degree, char chr) {
+		auto du = u/degree;
+		if (du >= 10)
+			return STR(formatUIntHumanReadable(du) << ' ' << chr);
+		else
+			return STR(formatUIntHumanReadable(du) << '.' << (u%degree)/(degree/10) << ' ' << chr);
+	};
+	if (u >= 1000000000000) // in Tera-range
+		return one(u, 1000000000000, 'T');
+	if (u >= 1000000000) // in Giga-range
+		return one(u, 1000000000, 'G');
+	else if (u >= 1000000) // in Mega-range
+		return one(u, 1000000, 'M');
+	else if (u >= 1000) // in kilo-range
+		return one(u, 1000, 'k');
+	return STR(u << ' '); // because it is followed by the unit name
+
+}
+
+std::string formatFlops(size_t flops) {
+	return STR(formatUIntHumanReadableSuffixed(flops) << "flops");
+}
+
 std::tuple<float,float> arrayMinMax(const float *arr, size_t len) {
 	float amin = std::numeric_limits<float>::max();
 	float amax = std::numeric_limits<float>::lowest();

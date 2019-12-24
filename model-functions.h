@@ -24,4 +24,7 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 	std::vector<std::vector<QPointF>> &tensorLabelPositions // return: tensor label positions in pixels
 );
 
+size_t computeModelFlops(const PluginInterface::Model *model);
+size_t computeOperatorFlops(const PluginInterface::Model *model, PluginInterface::OperatorId operatorId);
+
 }

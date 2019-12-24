@@ -47,6 +47,8 @@ private: // fields
 	QLabel                                   operatorTypeValue;
 	QLabel                                   operatorInputsLabel;
 	QLabel                                   operatorOutputsLabel;
+	QLabel                                   operatorComplexityLabel;
+	QLabel                                   operatorComplexityValue;
 	QGroupBox                              tensorDetails;   // page#2
 	QLabel                               blankRhsLabel; // leftover label
 	std::unique_ptr<DataTable2D>         dataTable;

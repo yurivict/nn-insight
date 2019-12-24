@@ -3,6 +3,7 @@
 #include "nn-model-viewer.h"
 #include "plugin-interface.h"
 #include "plugin-manager.h"
+#include "model-functions.h"
 
 #include "svg-graphics-generator.h"
 #include "util.h"
@@ -42,6 +43,8 @@ MainWindow::MainWindow()
 ,          operatorTypeValue(&operatorDetails)
 ,          operatorInputsLabel("Inputs", &operatorDetails)
 ,          operatorOutputsLabel("Outputs", &operatorDetails)
+,          operatorComplexityLabel("Complexity", &operatorDetails)
+,          operatorComplexityValue(&operatorDetails)
 ,        tensorDetails(&detailsStack)
 ,      blankRhsLabel("Select some operator", &rhsWidget)
 , statusBar(this)
@@ -91,7 +94,7 @@ MainWindow::MainWindow()
 	noDetails.setEnabled(false); // always grayed out
 
 	// fonts
-	for (auto widget : {&operatorTypeLabel, &operatorInputsLabel, &operatorOutputsLabel})
+	for (auto widget : {&operatorTypeLabel, &operatorInputsLabel, &operatorOutputsLabel, &operatorComplexityLabel})
 		widget->setStyleSheet("font-weight: bold;");
 
 	// connect signals
@@ -163,7 +166,7 @@ bool MainWindow::loadModelFile(const QString &filePath) {
 	svgWidget.load(SvgGraphics::generateModelSvg(model, {modelIndexes.allOperatorBoxes, modelIndexes.allTensorLabelBoxes}));
 
 	// set window title
-	setWindowTitle(QString("NN Insight: %1").arg(filePath));
+	setWindowTitle(QString("NN Insight: %1 (%2)").arg(filePath).arg(S2Q(Util::formatFlops(ModelFunctions::computeModelFlops(model)))));
 
 	return true; // success
 }
@@ -276,17 +279,21 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 
 	// add items
 	unsigned row = 0;
-	operatorDetailsLayout.addWidget(&operatorTypeLabel,    row,   0/*column*/);
-	operatorDetailsLayout.addWidget(&operatorTypeValue,    row,   1/*column*/);
+	operatorDetailsLayout.addWidget(&operatorTypeLabel,          row,   0/*column*/);
+	operatorDetailsLayout.addWidget(&operatorTypeValue,          row,   1/*column*/);
 	row++;
-	operatorDetailsLayout.addWidget(&operatorInputsLabel,  row,   0/*column*/);
+	operatorDetailsLayout.addWidget(&operatorInputsLabel,        row,   0/*column*/);
 	addTensorLines(inputs, row);
 	row++;
-	operatorDetailsLayout.addWidget(&operatorOutputsLabel, row,   0/*column*/);
+	operatorDetailsLayout.addWidget(&operatorOutputsLabel,       row,   0/*column*/);
 	addTensorLines(outputs, row);
+	row++;
+	operatorDetailsLayout.addWidget(&operatorComplexityLabel,    row,   0/*column*/);
+	operatorDetailsLayout.addWidget(&operatorComplexityValue,    row,   1/*column*/);
 
 	// set texts
 	operatorTypeValue.setText(S2Q(STR(model->getOperatorKind(operatorId))));
+	operatorComplexityValue.setText(S2Q(Util::formatFlops(ModelFunctions::computeOperatorFlops(model, operatorId))));
 }
 
 void MainWindow::showTensorDetails(PluginInterface::TensorId tensorId) {

@@ -57,6 +57,7 @@ private: // fields
 	QGridLayout                              operatorDetailsLayout;
 	QLabel                                   operatorTypeLabel;
 	QLabel                                   operatorTypeValue;
+	QLabel                                   operatorOptionsLabel;
 	QLabel                                   operatorInputsLabel;
 	QLabel                                   operatorOutputsLabel;
 	QLabel                                   operatorComplexityLabel;

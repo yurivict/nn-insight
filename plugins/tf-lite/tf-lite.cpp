@@ -23,15 +23,33 @@ namespace Helpers {
 		for (auto c : src)
 			dst.push_back(c);
 	}
+	const std::vector<int32_t> convertFlatbuffersIntListToStl(const flatbuffers::Vector<int> *lst) {
+		std::vector<int32_t> v;
+		convertContainers(*lst, v);
+		return v;
+	}
 
 	static PluginInterface::OperatorKind opcodeToOperatorKind(tflite::BuiltinOperator opcode) {
 		switch (opcode) {
 #define CASE(hisName,myName) case tflite::BuiltinOperator_##hisName: return PluginInterface::Kind##myName;
-#include "operator-list.cpp"
+#include "operator-list.cpp" // generated from schema.fbs
 		default:
 			FAIL("unknown opcode=" << opcode)
 #undef CASE
 		}
+	}
+	static PluginInterface::OperatorOptionsList* convertOperatorOptions(const tflite::Operator *o, tflite::BuiltinOperator opcode) {
+
+		std::unique_ptr<PluginInterface::OperatorOptionsList> ourOpts(new PluginInterface::OperatorOptionsList);
+
+		switch (opcode) {
+#include "operator-options.cpp" // generated from schema.fbs
+		default:
+			// no nothing: no options for this operator
+			;
+		}
+
+		return ourOpts.release();
 	}
 }
 
@@ -76,6 +94,10 @@ class TfLitePlugin : public PluginInterface {
 				auto opcode_index = subgraph->operators()->Get(operatorId)->opcode_index();
 				assert(opcode_index < plugin->model->operator_codes()->size());
 				return Helpers::opcodeToOperatorKind(plugin->model->operator_codes()->Get(opcode_index)->builtin_code());
+			}
+			PluginInterface::OperatorOptionsList* getOperatorOptions(OperatorId operatorId) const override {
+				auto o = subgraph->operators()->Get(operatorId);
+				return Helpers::convertOperatorOptions(o, plugin->model->operator_codes()->Get(o->opcode_index())->builtin_code());
 			}
 			unsigned numTensors() const override {
 				return subgraph->tensors()->size();

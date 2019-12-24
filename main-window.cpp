@@ -53,6 +53,7 @@ MainWindow::MainWindow()
 ,          operatorDetailsLayout(&operatorDetails)
 ,          operatorTypeLabel("Operator Type", &operatorDetails)
 ,          operatorTypeValue(&operatorDetails)
+,          operatorOptionsLabel("Options", &operatorDetails)
 ,          operatorInputsLabel("Inputs", &operatorDetails)
 ,          operatorOutputsLabel("Outputs", &operatorDetails)
 ,          operatorComplexityLabel("Complexity", &operatorDetails)
@@ -120,7 +121,7 @@ MainWindow::MainWindow()
 	noDetails.setEnabled(false); // always grayed out
 
 	// fonts
-	for (auto widget : {&operatorTypeLabel, &operatorInputsLabel, &operatorOutputsLabel, &operatorComplexityLabel})
+	for (auto widget : {&operatorTypeLabel, &operatorOptionsLabel, &operatorInputsLabel, &operatorOutputsLabel, &operatorComplexityLabel})
 		widget->setStyleSheet("font-weight: bold;");
 
 	// connect signals
@@ -326,6 +327,40 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 	unsigned row = 0;
 	operatorDetailsLayout.addWidget(&operatorTypeLabel,          row,   0/*column*/);
 	operatorDetailsLayout.addWidget(&operatorTypeValue,          row,   1/*column*/);
+	row++;
+	operatorDetailsLayout.addWidget(&operatorOptionsLabel,       row,   0/*column*/);
+	{
+		std::unique_ptr<PluginInterface::OperatorOptionsList> opts(model->getOperatorOptions(operatorId));
+		for (auto &opt : *opts) {
+			row++;
+			// option name
+			auto label = new QLabel(S2Q(STR(opt.name)), &operatorDetails);
+			label->setToolTip("Option name");
+			label->setAlignment(Qt::AlignRight);
+			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
+			operatorDetailsLayout.addWidget(label,               row,   0/*column*/);
+			// option type
+			label = new QLabel(S2Q(STR("<" << opt.value.type << ">")), &operatorDetails);
+			label->setToolTip("Option type");
+			label->setAlignment(Qt::AlignLeft);
+			label->setStyleSheet("font: italic");
+			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
+			operatorDetailsLayout.addWidget(label,               row,   1/*column*/);
+			// option value
+			label = new QLabel(S2Q(STR(opt.value)), &operatorDetails);
+			label->setToolTip("Option value");
+			label->setAlignment(Qt::AlignLeft);
+			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
+			operatorDetailsLayout.addWidget(label,               row,   2/*column*/);
+		}
+		if (opts->empty()) {
+			row++;
+			auto label = new QLabel("-none-", &operatorDetails);
+			label->setAlignment(Qt::AlignRight);
+			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
+			operatorDetailsLayout.addWidget(label,               row,   0/*column*/);
+		}
+	}
 	row++;
 	operatorDetailsLayout.addWidget(&operatorInputsLabel,        row,   0/*column*/);
 	addTensorLines(inputs, row);

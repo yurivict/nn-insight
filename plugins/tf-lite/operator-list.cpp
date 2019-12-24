@@ -1,8 +1,18 @@
 // corresponds to https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/schema/schema.fbs 58719c1 Dec 17, 2019
-// Regenerate from json:
-//all.definitions.tflite_BuiltinOperator.enum.forEach(function(name) {
-//	print("CASE("+name+","+name+")");
-//});
+
+// Regenerate from schema.fb 'flatc --jsonschema schema.fb', then prepend with 'var fbsSchema = ' and append the following:
+#if 0
+if (true) {
+        var sorted = {};
+        fbsSchema.definitions.tflite_BuiltinOperator.enum.forEach(function(operator) {
+                sorted[operator] = true;
+        });
+        Object.keys(sorted).forEach(function(operator) {
+                print("CASE("+operator+",Unknown)");
+        });
+}
+#endif
+
 
 CASE(ABS, Unknown)
 CASE(ADD, Add)

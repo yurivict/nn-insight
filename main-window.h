@@ -47,6 +47,7 @@ private: // fields
 	QWidget                                sourceDetails;
 	QVBoxLayout                              sourceDetailsLayout;
 	QLabel                                   sourceImageFileName;
+	QLabel                                   sourceImageFileSize;
 	QLabel                                   sourceImageSize;
 	QWidget                                  sourceFiller;
 	QPushButton                              computeButton;

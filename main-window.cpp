@@ -43,6 +43,7 @@ MainWindow::MainWindow()
 ,        sourceDetails(&sourceWidget)
 ,          sourceDetailsLayout(&sourceDetails)
 ,          sourceImageFileName(&sourceDetails)
+,          sourceImageFileSize(&sourceDetails)
 ,          sourceImageSize(&sourceDetails)
 ,          sourceFiller(&sourceDetails)
 ,          computeButton("Compute", &sourceDetails)
@@ -84,6 +85,7 @@ MainWindow::MainWindow()
 	rhsLayout.addWidget(&sourceWidget);
 	  sourceLayout.addWidget(&sourceDetails);
 	    sourceDetailsLayout.addWidget(&sourceImageFileName);
+	    sourceDetailsLayout.addWidget(&sourceImageFileSize);
 	    sourceDetailsLayout.addWidget(&sourceImageSize);
 	    sourceDetailsLayout.addWidget(&sourceFiller);
 	    sourceDetailsLayout.addWidget(&computeButton);
@@ -106,8 +108,9 @@ MainWindow::MainWindow()
 #endif
 
 	// tooltips
-	sourceImageFileName    .setToolTip("Source file name of the image");
-	sourceImageSize        .setToolTip("Source image size");
+	sourceImageFileName    .setToolTip("File name of the input image");
+	sourceImageFileSize    .setToolTip("File size of the input image");
+	sourceImageSize        .setToolTip("Input image size");
 	computeButton          .setToolTip("Perform neural network computation for the currently selected image as input");
 	sourceImage            .setToolTip("Image currently used as a NN input");
 	operatorTypeLabel      .setToolTip("Operator type: what kind of operation does it perform");
@@ -116,6 +119,7 @@ MainWindow::MainWindow()
 	// size policies
 	svgScrollArea       .setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
 	sourceImageFileName .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+	sourceImageFileSize .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
 	sourceImageSize     .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
 	//sourceFiller .setSizePolicy(QSizePolicy::Fixed, QSizePolicy::MinimumExpanding);
 	sourceImage         .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
@@ -455,6 +459,7 @@ void MainWindow::openImageFile(const QString &imageFileName) {
 	sourceTensorData.reset(Image::readPngImageFile(Q2S(imageFileName), sourceTensorShape));
 	// set info on the screen
 	sourceImageFileName.setText(QString("File name: %1").arg(imageFileName));
+	sourceImageFileSize.setText(QString("File size: %1 bytes").arg(S2Q(Util::formatUIntHumanReadable(Util::getFileSize(imageFileName)))));
 	sourceImageSize.setText(QString("Image size: %1").arg(S2Q(STR(sourceTensorShape))));
 }
 

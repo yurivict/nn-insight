@@ -24,6 +24,7 @@ std::string formatUIntHumanReadableSuffixed(size_t u);
 std::string formatFlops(size_t flops);
 std::tuple<float,float> arrayMinMax(const float *arr, size_t len);
 float* copyFpArray(const float *a, size_t sz);
+size_t getFileSize(const QString &fileName);
 template<typename T>
 bool isValueIn(const std::vector<T> &v, T val) {
 	return std::find(v.begin(), v.end(), val) != v.end();

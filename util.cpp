@@ -7,6 +7,7 @@
 #include <QCursor>
 #include <QString>
 #include <QMessageBox>
+#include <QFile>
 
 #include <limits>
 #include <cstring>
@@ -81,6 +82,16 @@ float* copyFpArray(const float *a, size_t sz) {
 	auto n = new float[sz];
 	std::memcpy(n, a, sz*sizeof(float));
 	return n;
+}
+
+size_t getFileSize(const QString &fileName) {
+	size_t size = 0;
+	QFile file(fileName);
+	if (file.open(QIODevice::ReadOnly)) {
+		size = file.size();
+		file.close();
+	} 
+	return size;
 }
 
 }

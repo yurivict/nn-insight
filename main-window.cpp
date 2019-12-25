@@ -106,7 +106,12 @@ MainWindow::MainWindow()
 #endif
 
 	// tooltips
-	operatorTypeLabel.setToolTip("Operator type: what kind of operation does it perform");
+	sourceImageFileName    .setToolTip("Source file name of the image");
+	sourceImageSize        .setToolTip("Source image size");
+	computeButton          .setToolTip("Perform neural network computation for the currently selected image as input");
+	sourceImage            .setToolTip("Image currently used as a NN input");
+	operatorTypeLabel      .setToolTip("Operator type: what kind of operation does it perform");
+	operatorComplexityValue.setToolTip("Complexity of the currntly selected NN in FLOPS");
 
 	// size policies
 	svgScrollArea       .setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);

@@ -13,6 +13,7 @@
 #include <QGridLayout>
 #include <QMenuBar>
 #include <QStatusBar>
+#include <QPixmap>
 #include <QRectF>
 class QEvent;
 #if defined(USE_PERFTOOLS)
@@ -101,6 +102,7 @@ private: // private methods
 	void showTensorDetails(PluginInterface::TensorId tensorId);
 	void removeTableIfAny();
 	void openImageFile(const QString &imageFileName);
+	void openImagePixmap(const QPixmap &imagePixmap, const char *sourceName);
 	void clearImageData();
 };
 

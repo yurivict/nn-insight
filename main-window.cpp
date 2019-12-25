@@ -213,6 +213,9 @@ MainWindow::MainWindow()
 	fileMenu->addAction("Open NN file", []() {
 		PRINT("Open NN")
 	});
+	fileMenu->addAction("Take screenshot as input", [this]() {
+		openImagePixmap(Util::getScreenshot(true/*hideOurWindows*/), "screenshot");
+	});
 	fileMenu->addAction("Close Image", [this]() {
 		clearImageData();
 	});
@@ -460,6 +463,34 @@ void MainWindow::openImageFile(const QString &imageFileName) {
 	// set info on the screen
 	sourceImageFileName.setText(QString("File name: %1").arg(imageFileName));
 	sourceImageFileSize.setText(QString("File size: %1 bytes").arg(S2Q(Util::formatUIntHumanReadable(Util::getFileSize(imageFileName)))));
+	sourceImageSize.setText(QString("Image size: %1").arg(S2Q(STR(sourceTensorShape))));
+}
+
+void MainWindow::openImagePixmap(const QPixmap &imagePixmap, const char *sourceName) {
+	// clear the previous image data if any
+	clearImageData();
+	// read the image as tensor
+	sourceTensorData.reset(Image::readPixmap(imagePixmap, sourceTensorShape));
+	{ // TMP: scale down a huge screenshot 1/6
+		TensorShape sourceTensorShapeNew = {sourceTensorShape[0]/6, sourceTensorShape[1]/6, sourceTensorShape[2]};
+		sourceTensorData.reset(Image::resizeImage(sourceTensorData.get(), sourceTensorShape, sourceTensorShapeNew));
+		sourceTensorShape = sourceTensorShapeNew;
+	}
+	if (!sourceTensorData) {
+		Util::warningOk(this, CSTR("Unable to take a screenshot"));
+		return;
+	}
+	// enable widgets, show image
+	sourceWidget.show();
+	sourceImage.setPixmap(QPixmap::fromImage(QImage(
+		std::unique_ptr<const uchar>(Util::convertArrayFloatToUInt8(sourceTensorData.get(), tensorFlatSize(sourceTensorShape))).get(),
+		sourceTensorShape[1],
+		sourceTensorShape[0],
+		QImage::Format_RGB888
+	)));
+	// set info on the screen
+	sourceImageFileName.setText(QString("File name: n/a: %1").arg(sourceName));
+	sourceImageFileSize.setText(QString("File size: n/a: %1").arg(sourceName));
 	sourceImageSize.setText(QString("Image size: %1").arg(S2Q(STR(sourceTensorShape))));
 }
 

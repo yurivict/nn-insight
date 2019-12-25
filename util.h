@@ -3,6 +3,7 @@
 #include <string>
 #include <QString>
 #include <QPoint>
+#include <QPixmap>
 
 #include <string>
 #include <vector>
@@ -25,6 +26,9 @@ std::string formatFlops(size_t flops);
 std::tuple<float,float> arrayMinMax(const float *arr, size_t len);
 float* copyFpArray(const float *a, size_t sz);
 size_t getFileSize(const QString &fileName);
+QPixmap getScreenshot(bool hideOurWindows);
+unsigned char* convertArrayFloatToUInt8(const float *a, size_t size);
+
 template<typename T>
 bool isValueIn(const std::vector<T> &v, T val) {
 	return std::find(v.begin(), v.end(), val) != v.end();

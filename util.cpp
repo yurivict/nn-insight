@@ -8,9 +8,15 @@
 #include <QString>
 #include <QMessageBox>
 #include <QFile>
+#include <QPixmap>
+#include <QGuiApplication>
+#include <QWindow>
 
 #include <limits>
 #include <cstring>
+#include <memory>
+
+#include <unistd.h> // sleep
 
 namespace Util {
 
@@ -92,6 +98,38 @@ size_t getFileSize(const QString &fileName) {
 		file.close();
 	} 
 	return size;
+}
+
+QPixmap getScreenshot(bool hideOurWindows) {
+	QScreen *screen = QGuiApplication::primaryScreen();
+
+	std::vector<QWidget*> windowsToHide = hideOurWindows ? std::vector<QWidget*>{QApplication::activeWindow()} : std::vector<QWidget*>{};
+	for (auto w : windowsToHide)
+		w->hide();
+
+	QApplication::beep(); // ha ha
+
+	if (!windowsToHide.empty()) {
+		QCoreApplication::processEvents();
+		::sleep(1); // without this sleep screen doesn't have enough time to hide our window when complex windows are behind (like a browser)
+	}
+
+	auto pixmap = screen->grabWindow(0);
+
+	for (auto w : windowsToHide)
+		w->show();
+
+	return pixmap;
+}
+
+unsigned char* convertArrayFloatToUInt8(const float *a, size_t size) { // ASSUME that a is normalized to 0..255
+	std::unique_ptr<unsigned char> cc(new unsigned char[size]);
+
+	auto c = cc.get();
+	for (const float *ae = a+size; a < ae; )
+		*c++ = *a++;
+
+	return cc.release();
 }
 
 }

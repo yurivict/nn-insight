@@ -1,9 +1,13 @@
 
 #include "image.h"
 #include "nn-types.h"
+#include "misc.h"
 
 #include <png++/png.hpp>
 #include <avir.h>
+
+#include <QPixmap>
+#include <QImage>
 
 #include <memory>
 
@@ -25,6 +29,36 @@ float* readPngImageFile(const std::string &fileName, TensorShape &outShape) {
 		}
 
 	outShape = {height,width,3};
+	return data.release();
+}
+
+float* readPixmap(const QPixmap &pixmap, TensorShape &outShape) {
+	const QImage image = pixmap.toImage();
+
+	std::unique_ptr<float> data(new float[image.width()*image.height()*3]);
+	auto pi = image.bits();
+	auto pf = data.get();
+	switch (image.format()) {
+	case QImage::Format_RGB32: // 0xffRRGGBB
+	case QImage::Format_ARGB32: { // 0xAARRGGBB
+		for (float *pfe = pf+image.width()*image.height()*3; pf < pfe; pi+=4, pf+=3) {
+			pf[0] = pi[2];
+			pf[1] = pi[1];
+			pf[2] = pi[0];
+		}
+		break;
+	} case QImage::Format_RGB888: { // 24-bit RGB format (8-8-8)
+		for (float *pfe = pf+image.width()*image.height()*3; pf < pfe; )
+			*pf++ = *pi++;
+		break;
+	} default: {
+		// we could also easily handle QImage::Format_RGB666, QImage::Format_RGB555
+		WARNING("unable to handle the pixmap format=" << image.format() <<
+		        ": width=" << image.width() << " height=" << image.height() << " bpl=" << image.bytesPerLine())
+		return nullptr;
+	}}
+
+	outShape = {(unsigned)image.height(), (unsigned)image.width(), 3};
 	return data.release();
 }
 

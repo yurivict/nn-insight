@@ -77,10 +77,10 @@ private: // fields
 	std::unique_ptr<PluginInterface> pluginInterface; // the file is opened through this handle
 	const PluginInterface::Model*    model;     // the model from the file that is currently open
 
-	std::unique_ptr<float>           sourceTensorData; // currently used data source
+	std::shared_ptr<float>           sourceTensorData; // currently used data source, can be shapred with tensorData
 	TensorShape                      sourceTensorShape;
 
-	std::unique_ptr<std::vector<std::unique_ptr<const float>>>   tensorData; // tensors corresponding to the currently used image
+	std::unique_ptr<std::vector<std::shared_ptr<const float>>>   tensorData; // tensors corresponding to the currently used image, shared because reshape/input often shared
 
 	struct {
 		std::vector<QRectF> allOperatorBoxes; // indexed based on OperatorId

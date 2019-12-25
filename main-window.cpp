@@ -140,7 +140,7 @@ MainWindow::MainWindow()
 	connect(&computeButton, &QAbstractButton::pressed, [this]() {
 		// allocate tensors array
 		if (!tensorData) {
-			tensorData.reset(new std::vector<std::unique_ptr<const float>>);
+			tensorData.reset(new std::vector<std::shared_ptr<const float>>);
 			tensorData->resize(model->numTensors());
 		}
 		// find the model input
@@ -152,12 +152,11 @@ MainWindow::MainWindow()
 		// resize the source image
 		if (!(*tensorData.get())[modelInputs[0]]) {
 			TensorShape requiredShape = tensorGetLastDims(model->getTensorShape(modelInputs[0]), 3);
-			(*tensorData.get())[modelInputs[0]].reset(
-				sourceTensorShape != requiredShape ?
-					Image::resizeImage(sourceTensorData.get(), sourceTensorShape, requiredShape)
-					:
-					Util::copyFpArray(sourceTensorData.get(), tensorFlatSize(requiredShape))
-			);
+			auto &sharedPtrInput = (*tensorData.get())[modelInputs[0]];
+			if (sourceTensorShape != requiredShape)
+				sharedPtrInput.reset(Image::resizeImage(sourceTensorData.get(), sourceTensorShape, requiredShape));
+			else
+				sharedPtrInput = sourceTensorData;
 		}
 	});
 
@@ -434,7 +433,7 @@ void MainWindow::openImageFile(const QString &imageFileName) {
 void MainWindow::closeImage() {
 	sourceWidget.hide();
 	sourceImage.setPixmap(QPixmap());
-	sourceTensorData.reset(nullptr);
+	sourceTensorData = nullptr;
 	tensorData.reset(nullptr);
 }
 

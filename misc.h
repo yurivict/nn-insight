@@ -18,6 +18,10 @@
 	{ \
 		std::cout << STR(msg << std::endl); \
 	}
+#define WARNING(msg...) \
+	{ \
+		std::cerr << STR("WARNING: " << msg << std::endl); \
+	}
 #define PRINT_ERR(msg...) \
 	{ \
 		std::cerr << STR(msg << std::endl); \

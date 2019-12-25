@@ -4,6 +4,9 @@
 #include "misc.h"
 #include "util.h"
 
+#include <QPixmap>
+#include <QImage>
+
 #include <cmath>
 
 #include <assert.h>
@@ -19,7 +22,7 @@ public:
 	}
 	virtual ~DataSource() { }
 
-public: // iface
+public: // iface: data access
 	unsigned nrows() const {
 		return numRows;
 	}
@@ -27,6 +30,21 @@ public: // iface
 		return numColumns;
 	}
 	virtual float value(unsigned r, unsigned c) const = 0;
+
+public: // iface: data computations
+	std::tuple<float,float> computeMinMax() const {
+		float dmin = std::numeric_limits<float>::max();
+		float dmax = std::numeric_limits<float>::lowest();
+		for (unsigned r = 0, re = nrows(); r < re; r++)
+			for (unsigned c = 0, ce = ncols(); c < ce; c++) {
+				auto d = value(r,c);
+				if (d < dmin)
+					dmin = d;
+				if (d > dmax)
+					dmax = d;
+			}
+		return std::tuple<float,float>(dmin, dmax);
+	}
 };
 
 class TensorSliceDataSource : public DataSource {
@@ -208,6 +226,9 @@ public: // custom interface
 		colorSchema.reset(colorSchema_);
 		endResetModel();
 	}
+	const DataSource* getDataSource() const {
+		return dataSource.get();
+	}
 };
 
 DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget *parent)
@@ -225,7 +246,14 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 ,   dataRangeLabel(&headerWidget)
 ,   colorSchemaLabel("Color scheme:", &headerWidget)
 ,   colorSchemaComboBox(&headerWidget)
-, tableView(this)
+, header1Widget(this)
+,   header1Layout(&header1Widget)
+,   filler1Widget(&header1Widget)
+,   viewDataAsBwImageCheckBox("View Data as B/W Image", &header1Widget)
+, dataViewStackWidget(this)
+,   tableView(&dataViewStackWidget)
+,   imageViewScrollArea(&dataViewStackWidget)
+,     imageView(&imageViewScrollArea)
 {
 	assert(shape.size() > 1); // otherwise DataTable1D should be used
 
@@ -235,7 +263,13 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 	  headerLayout.addWidget(&dataRangeLabel);
 	  headerLayout.addWidget(&colorSchemaLabel);
 	  headerLayout.addWidget(&colorSchemaComboBox);
-	layout.addWidget(&tableView);
+	layout.addWidget(&header1Widget);
+	  header1Layout.addWidget(&filler1Widget);
+	  header1Layout.addWidget(&viewDataAsBwImageCheckBox);
+	layout.addWidget(&dataViewStackWidget);
+	dataViewStackWidget.insertWidget(0, &tableView);
+	dataViewStackWidget.insertWidget(1, &imageViewScrollArea);
+	imageViewScrollArea.setWidget(&imageView);
 
 	{ // create comboboxes for shape dimensions
 		unsigned numMultiDims = tensorNumMultiDims(shape);
@@ -243,6 +277,7 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 		unsigned dim = 0;
 		for (auto d : shape) {
 			auto combobox = new QComboBox(&shapeDimensionsWidget);
+			combobox->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum); // (H) The sizeHint() is a maximum (V) The sizeHint() is a maximum
 			shapeDimensionsLayout.addWidget(combobox);
 			if (d == 1) { // dimensions=1 are excluded from selection
 				combobox->addItem("single 1");
@@ -350,8 +385,20 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 	colorSchemaLabel.setAlignment(Qt::AlignRight|Qt::AlignVCenter);
 
 	// size policies
-	headerWidget.setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Fixed);
-	tableView   .setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
+	headerWidget             .setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Fixed);
+	colorSchemaComboBox      .setSizePolicy(QSizePolicy::Maximum,          QSizePolicy::Fixed); // (H) The sizeHint() is a maximum
+	header1Widget            .setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Fixed);
+	filler1Widget            .setSizePolicy(QSizePolicy::Minimum,          QSizePolicy::Maximum); // (H) The widget can be expanded (V) The sizeHint() is a maximum
+	viewDataAsBwImageCheckBox.setSizePolicy(QSizePolicy::Maximum,          QSizePolicy::Fixed); // (H) The sizeHint() is a maximum
+	tableView    .setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
+	//imageView    .setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
+	for (auto widget : {&shapeLabel, &dataRangeLabel, &colorSchemaLabel}) // make labels minimal
+		widget->setSizePolicy(QSizePolicy::Maximum,          QSizePolicy::Maximum);
+	layout.setSpacing(0);
+	layout.setContentsMargins(0,0,0,0);
+	headerWidget.setContentsMargins(0,0,0,0);
+	headerLayout.setContentsMargins(0,0,0,0); // XXX this doesn't work for some reason: widget still has vertical margins
+	header1Layout.setContentsMargins(0,0,0,0);
 
 	// data range
 	auto dataRange = Util::arrayMinMax(data, tensorFlatSize(shape));
@@ -380,12 +427,44 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 			std::get<1>(dataRange)
 		));
 	});
+	connect(&viewDataAsBwImageCheckBox, &QCheckBox::stateChanged, [this](int state) {
+		dataViewStackWidget.setCurrentIndex(state!=0 ? 1/*imageView*/ : 0/*tableView*/);
+		if (state!=0) { // => imageView
+			// create the image from the datasource that the table sees
+			auto dataSource = (static_cast<DataModel*>(tableModel.get()))->getDataSource();
+			std::unique_ptr<uchar> data(new uchar[dataSource->ncols()*dataSource->nrows()]);
+			auto minMax = dataSource->computeMinMax();
+			auto minMaxRange = std::get<1>(minMax)-std::get<0>(minMax);
+			auto normalize = [minMax,minMaxRange](float d) {
+				return 255.*(d-std::get<0>(minMax))/minMaxRange;
+			};
+			uchar *p = data.get();
+			for (unsigned r = 0, re = dataSource->nrows(); r < re; r++)
+				for (unsigned c = 0, ce = dataSource->ncols(); c < ce; c++)
+					*p++ = normalize(dataSource->value(r,c));
+			QImage img(data.get(), dataSource->ncols(), dataSource->nrows(), dataSource->ncols(), QImage::Format_Grayscale8);
+			imageView.setPixmap(QPixmap::fromImage(img));
+			imageView.resize(dataSource->ncols(), dataSource->nrows());
+			// disable all other widgets so that the data view can't be changed
+			headerWidget.setEnabled(false);
+			// set tooltip with explanation custom to the data
+			imageView.setToolTip(QString("Tensor data as a B/W image normalized to the range of data in the currently viewed tensor slice: %1..%2")
+				.arg(std::get<0>(minMax))
+				.arg(std::get<1>(minMax)));
+		} else {
+			// clear the image, reenable the widgets
+			imageView.setPixmap(QPixmap());
+			imageView.resize(0,0);
+			headerWidget.setEnabled(true);
+		}
+	});
 
 	// tooltips
-	shapeLabel         .setToolTip("Shape of tensor data that this table represents");
-	dataRangeLabel     .setToolTip("Range of numeric values present in the table");
-	colorSchemaComboBox.setToolTip("Change the color schema of data visualization");
-	tableView          .setToolTip("Tensor data values");
+	shapeLabel               .setToolTip("Shape of tensor data that this table represents");
+	dataRangeLabel           .setToolTip("Range of numeric values present in the table");
+	colorSchemaComboBox      .setToolTip("Change the color schema of data visualization");
+	viewDataAsBwImageCheckBox.setToolTip("View data as image");
+	tableView                .setToolTip("Tensor data values");
 }
 
 /// internals

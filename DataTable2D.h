@@ -4,6 +4,9 @@
 #include <QLabel>
 #include <QTableView>
 #include <QComboBox>
+#include <QCheckBox>
+#include <QStackedWidget>
+#include <QScrollArea>
 #include <QAbstractTableModel>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -31,8 +34,15 @@ class DataTable2D : public QWidget {
 	QLabel                                 dataRangeLabel;
 	QLabel                                 colorSchemaLabel;
 	QComboBox                              colorSchemaComboBox;
-	QTableView                           tableView;
-	std::unique_ptr<QAbstractTableModel>   tableModel;
+	QWidget                              header1Widget; // second line
+	QHBoxLayout                            header1Layout;
+	QWidget                                filler1Widget;
+	QCheckBox                              viewDataAsBwImageCheckBox;
+	QStackedWidget                       dataViewStackWidget; // to be able to stack various views of the same data
+	QTableView                             tableView;
+	std::unique_ptr<QAbstractTableModel>     tableModel;
+	QScrollArea                            imageViewScrollArea;
+	QLabel                                   imageView;
 
 public:
 	DataTable2D(const TensorShape &shape_, const float *data_, QWidget *parent);

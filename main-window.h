@@ -77,9 +77,9 @@ private: // fields
 	std::unique_ptr<PluginInterface> pluginInterface; // the file is opened through this handle
 	const PluginInterface::Model*    model;     // the model from the file that is currently open
 
+	// data associated with a specific input data (image) currently loaded by the user
 	std::shared_ptr<float>           sourceTensorData; // currently used data source, can be shapred with tensorData
 	TensorShape                      sourceTensorShape;
-
 	std::unique_ptr<std::vector<std::shared_ptr<const float>>>   tensorData; // tensors corresponding to the currently used image, shared because reshape/input often shared
 
 	struct {
@@ -100,6 +100,6 @@ private: // private methods
 	void showTensorDetails(PluginInterface::TensorId tensorId);
 	void removeTableIfAny();
 	void openImageFile(const QString &imageFileName);
-	void closeImage();
+	void clearImageData();
 };
 

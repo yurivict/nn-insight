@@ -151,7 +151,28 @@ MainWindow::MainWindow()
 		}
 		// resize the source image
 		if (!(*tensorData.get())[modelInputs[0]]) {
-			TensorShape requiredShape = tensorGetLastDims(model->getTensorShape(modelInputs[0]), 3);
+			TensorShape requiredShape = model->getTensorShape(modelInputs[0]);
+			if (requiredShape.size() == 4) {
+				if (requiredShape[0] != 1) {
+					Util::warningOk(this, CSTR("Model's required shape " << requiredShape << " has 4 elements but doesn't begin with B=1,"
+					                           " don't know how to adjust the image for it"));
+					return;
+				}
+				requiredShape = tensorGetLastDims(requiredShape, 3);
+			} else if (requiredShape.size() == 3) {
+				if (requiredShape[0] == 1) { // assume [B=1,H,W], remove B and add C=1 for monochrome image
+					requiredShape = tensorGetLastDims(requiredShape, 2);
+					requiredShape.push_back(1);
+				} else { // see if the shape is image-like
+					if (requiredShape[2]!=1 && requiredShape[2]!=3) {
+						Util::warningOk(this, CSTR("Model's required shape " << requiredShape << " has 3 elements but have C=1 or C=3,"
+						                           " it doesn't look limke it describes an image,"
+					                                   " don't know how to adjust the image for it"));
+						return;
+					}
+				}
+			}
+
 			auto &sharedPtrInput = (*tensorData.get())[modelInputs[0]];
 			if (sourceTensorShape != requiredShape)
 				sharedPtrInput.reset(Image::resizeImage(sourceTensorData.get(), sourceTensorShape, requiredShape));
@@ -184,7 +205,7 @@ MainWindow::MainWindow()
 		PRINT("Open NN")
 	});
 	fileMenu->addAction("Close Image", [this]() {
-		closeImage();
+		clearImageData();
 	});
 }
 
@@ -420,6 +441,8 @@ void MainWindow::removeTableIfAny() {
 }
 
 void MainWindow::openImageFile(const QString &imageFileName) {
+	// clear the previous image data if any
+	clearImageData();
 	// enable widgets, show image
 	sourceWidget.show();
 	sourceImage.setPixmap(QPixmap(imageFileName));
@@ -430,10 +453,11 @@ void MainWindow::openImageFile(const QString &imageFileName) {
 	sourceImageSize.setText(QString("Image size: %1").arg(S2Q(STR(sourceTensorShape))));
 }
 
-void MainWindow::closeImage() {
+void MainWindow::clearImageData() {
 	sourceWidget.hide();
 	sourceImage.setPixmap(QPixmap());
 	sourceTensorData = nullptr;
+	sourceTensorShape = TensorShape();
 	tensorData.reset(nullptr);
 }
 

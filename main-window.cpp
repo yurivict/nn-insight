@@ -299,16 +299,23 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
 			operatorDetailsLayout.addWidget(label,         row,   2/*column*/);
 			// has buffer? is variable?
-			auto hasData    = model->getTensorHasData(t);
+			bool isInput = Util::isValueIn(model->getInputs(), t);
+			bool isOutput = Util::isValueIn(model->getOutputs(), t);
+			auto hasStaticData = model->getTensorHasData(t);
 			auto isVariable = model->getTensorIsVariableFlag(t);
-			assert(!(hasData && isVariable)); // can't both have data and be a variable
-			label = new QLabel(hasData ? "has data" : (!isVariable ? "is input" : "is variable") , &operatorDetails);
+			label = new QLabel(QString("<%1>").arg(
+				isInput ? "input"
+				: isOutput ? "output"
+				: hasStaticData ? "static tensor"
+				: isVariable ? "variable" : "computed"),
+				&operatorDetails);
 			label->setToolTip("Tensor type");
 			label->setAlignment(Qt::AlignCenter);
+			label->setStyleSheet("font: italic");
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
 			operatorDetailsLayout.addWidget(label,         row,   3/*column*/);
 			// button
-			if (hasData) {
+			if (hasStaticData) {
 				auto button = new QPushButton("➞", &operatorDetails);
 				button->setContentsMargins(0,0,0,0);
 				button->setStyleSheet("color: blue;");

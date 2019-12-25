@@ -9,6 +9,7 @@
 #include <ostream>
 #include <sstream>
 #include <tuple>
+#include <algorithm>
 
 class QWidget;
 
@@ -23,6 +24,10 @@ std::string formatUIntHumanReadableSuffixed(size_t u);
 std::string formatFlops(size_t flops);
 std::tuple<float,float> arrayMinMax(const float *arr, size_t len);
 float* copyFpArray(const float *a, size_t sz);
+template<typename T>
+bool isValueIn(const std::vector<T> &v, T val) {
+	return std::find(v.begin(), v.end(), val) != v.end();
+}
 
 inline void splitString(const std::string& str, std::vector<std::string> &cont, char delim = ' ') {
 	std::stringstream ss(str);

@@ -14,7 +14,9 @@ set(CMAKE_CXX_FLAGS "-std=c++2a -Wall")
 ##
 ## Build type
 ##
-set(CMAKE_BUILD_TYPE Release)
+if (NOT CMAKE_BUILD_TYPE)
+	set(CMAKE_BUILD_TYPE Release)
+endif()
 
 ##
 ## Some required locations

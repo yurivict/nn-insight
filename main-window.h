@@ -80,7 +80,7 @@ private: // fields
 	std::unique_ptr<float>           sourceTensorData; // currently used data source
 	TensorShape                      sourceTensorShape;
 
-	std::unique_ptr<std::vector<std::unique_ptr<float>>>   tensorData; // tensors corresponding to the currently used image
+	std::unique_ptr<std::vector<std::unique_ptr<const float>>>   tensorData; // tensors corresponding to the currently used image
 
 	struct {
 		std::vector<QRectF> allOperatorBoxes; // indexed based on OperatorId

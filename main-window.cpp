@@ -140,7 +140,7 @@ MainWindow::MainWindow()
 	connect(&computeButton, &QAbstractButton::pressed, [this]() {
 		// allocate tensors array
 		if (!tensorData) {
-			tensorData.reset(new std::vector<std::unique_ptr<float>>);
+			tensorData.reset(new std::vector<std::unique_ptr<const float>>);
 			tensorData->resize(model->numTensors());
 		}
 		// find the model input
@@ -315,7 +315,7 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
 			operatorDetailsLayout.addWidget(label,         row,   3/*column*/);
 			// button
-			if (hasStaticData) {
+			if (hasStaticData || (tensorData && (*tensorData.get())[t])) {
 				auto button = new QPushButton("➞", &operatorDetails);
 				button->setContentsMargins(0,0,0,0);
 				button->setStyleSheet("color: blue;");
@@ -325,7 +325,7 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 				button->setToolTip("Show the tensor data as a table");
 				tempDetailWidgets.push_back(std::unique_ptr<QWidget>(button));
 				operatorDetailsLayout.addWidget(button,         row,   4/*column*/);
-				connect(button, &QAbstractButton::pressed, [this,t]() {
+				connect(button, &QAbstractButton::pressed, [this,t,hasStaticData]() {
 					removeTableIfAny();
 					// show table
 					auto tableShape = model->getTensorShape(t);
@@ -336,12 +336,14 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 					case 1:
 						// TODO DataTable1D
 						break;
-					default:
-						dataTable.reset(new DataTable2D(tableShape, model->getTensorData(t), &rhsWidget));
+					default: {
+						dataTable.reset(new DataTable2D(tableShape,
+							hasStaticData ? model->getTensorData(t) : (*tensorData.get())[t].get(),
+							&rhsWidget));
 						rhsLayout.addWidget(dataTable.get());
 						blankRhsLabel.hide();
 						break;
-					}
+					}}
 				});
 			}
 		}

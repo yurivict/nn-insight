@@ -15,3 +15,9 @@ unsigned tensorNumMultiDims(const TensorShape &shape) {
 	return numMultiDims;
 }
 
+TensorShape tensorGetLastDims(const TensorShape &shape, unsigned ndims) {
+	TensorShape s = shape;
+	while (s.size() > ndims)
+		s.erase(s.begin());
+	return s;
+}

@@ -137,7 +137,28 @@ MainWindow::MainWindow()
 			}
 		}
 	});
-	connect(&computeButton, &QAbstractButton::pressed, []() {
+	connect(&computeButton, &QAbstractButton::pressed, [this]() {
+		// allocate tensors array
+		if (!tensorData) {
+			tensorData.reset(new std::vector<std::unique_ptr<float>>);
+			tensorData->resize(model->numTensors());
+		}
+		// find the model input
+		auto modelInputs = model->getInputs();
+		if (modelInputs.size() != 1) {
+			Util::warningOk(this, CSTR("We only support models with a single input, the current model has " << modelInputs.size() << " inputs"));
+			return;
+		}
+		// resize the source image
+		if (!(*tensorData.get())[modelInputs[0]]) {
+			TensorShape requiredShape = tensorGetLastDims(model->getTensorShape(modelInputs[0]), 3);
+			(*tensorData.get())[modelInputs[0]].reset(
+				sourceTensorShape != requiredShape ?
+					Image::resizeImage(sourceTensorData.get(), sourceTensorShape, requiredShape)
+					:
+					Util::copyFpArray(sourceTensorData.get(), tensorFlatSize(requiredShape))
+			);
+		}
 	});
 
 	// monitor memory use
@@ -405,5 +426,6 @@ void MainWindow::closeImage() {
 	sourceWidget.hide();
 	sourceImage.setPixmap(QPixmap());
 	sourceTensorData.reset(nullptr);
+	tensorData.reset(nullptr);
 }
 

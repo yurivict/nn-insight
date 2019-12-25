@@ -48,6 +48,7 @@ endif()
 message(STATUS "PNG++ found: includes ${png++_INCLUDE_DIRS}, libs ${png++_LIBRARIES}")
 
 include_directories(${png++_INCLUDE_DIRS})
+include_directories(${PROJECT_SOURCE_DIR}/3rdparty/avir)
 
 ##
 ## Targets

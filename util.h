@@ -22,6 +22,7 @@ std::string formatUIntHumanReadable(size_t u);
 std::string formatUIntHumanReadableSuffixed(size_t u);
 std::string formatFlops(size_t flops);
 std::tuple<float,float> arrayMinMax(const float *arr, size_t len);
+float* copyFpArray(const float *a, size_t sz);
 
 inline void splitString(const std::string& str, std::vector<std::string> &cont, char delim = ' ') {
 	std::stringstream ss(str);

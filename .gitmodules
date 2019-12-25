@@ -1,0 +1,3 @@
+[submodule "3rdparty/avir"]
+	path = 3rdparty/avir
+	url = https://github.com/avaneev/avir.git

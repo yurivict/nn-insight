@@ -43,4 +43,7 @@ size_t computeOperatorFlops(const PluginInterface::Model *model, PluginInterface
 	}
 }
 
+void computeTensors(const PluginInterface::Model *model, std::vector<std::unique_ptr<float>> *tensorData) {
+}
+
 }

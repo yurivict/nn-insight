@@ -5,6 +5,7 @@
 #include <vector>
 #include <array>
 #include <functional>
+#include <memory>
 
 #include <QMarginsF>
 #include <QSizeF>
@@ -26,5 +27,6 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 
 size_t computeModelFlops(const PluginInterface::Model *model);
 size_t computeOperatorFlops(const PluginInterface::Model *model, PluginInterface::OperatorId operatorId);
+void computeTensors(const PluginInterface::Model *model, std::vector<std::unique_ptr<float>> *tensorData);
 
 }

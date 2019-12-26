@@ -229,8 +229,8 @@ inline void Conv(const ConvParams& params, const RuntimeShape& input_shape,
   const int dilation_height_factor = params.dilation_height_factor;
   const int pad_width = params.padding_values.width;
   const int pad_height = params.padding_values.height;
-  const float output_activation_min = params.float_activation_min;
-  const float output_activation_max = params.float_activation_max;
+  //const float output_activation_min = params.float_activation_min;
+  //const float output_activation_max = params.float_activation_max;
   TFLITE_DCHECK_EQ(input_shape.DimensionsCount(), 4);
   TFLITE_DCHECK_EQ(filter_shape.DimensionsCount(), 4);
   TFLITE_DCHECK_EQ(output_shape.DimensionsCount(), 4);
@@ -309,8 +309,8 @@ inline void DepthwiseConv(
   const int pad_width = params.padding_values.width;
   const int pad_height = params.padding_values.height;
   const int depth_multiplier = params.depth_multiplier;
-  const float output_activation_min = params.float_activation_min;
-  const float output_activation_max = params.float_activation_max;
+  //const float output_activation_min = params.float_activation_min;
+  //const float output_activation_max = params.float_activation_max;
   TFLITE_DCHECK_EQ(input_shape.DimensionsCount(), 4);
   TFLITE_DCHECK_EQ(filter_shape.DimensionsCount(), 4);
   TFLITE_DCHECK_EQ(output_shape.DimensionsCount(), 4);
@@ -358,9 +358,13 @@ inline void DepthwiseConv(
               bias_value = bias_data[oc];
             }
             output_data[Offset(output_shape, b, out_y, out_x, oc)] =
-                ActivationFunctionWithMinMax(total + bias_value,
-                                             output_activation_min,
-                                             output_activation_max);
+              // DISABLE ActivationFunctionWithMinMax
+              //  ActivationFunctionWithMinMax(total + bias_value,
+              //                               output_activation_min,
+              //                               output_activation_max);
+
+	      // INSTEAD
+	      total + bias_value;
           }
         }
       }
@@ -453,8 +457,35 @@ void Conv2D(
 		tflite::RuntimeShape(biasShape),   biasData,
 		tflite::RuntimeShape(outputShape), outputData,
 		tflite::RuntimeShape(0),
-		nullptr);
+		nullptr
+	);
+}
+
+void DepthwiseConv2D(
+	const TensorShape &inputShape, const float *inputData,
+	const TensorShape &filterShape, const float *filterData,
+	const TensorShape &biasShape, const float *biasData,
+	const TensorShape &outputShape, float *outputData,
+	unsigned paddingWidth, unsigned paddingHeight,
+	unsigned strideWidth, unsigned strideHeight,
+	unsigned dilationWidthFactor, unsigned dilationHeightFactor,
+	unsigned depthMultiplier
+) {
+	tflite::DepthwiseParams params;
+	params.padding_values.width = paddingWidth;
+	params.padding_values.height = paddingHeight;
+	params.stride_width = strideWidth;
+	params.stride_height = strideHeight;
+	params.dilation_width_factor = dilationWidthFactor;
+	params.dilation_height_factor = dilationHeightFactor;
+	params.depth_multiplier = depthMultiplier;
+
+	tflite::DepthwiseConv(params,
+		tflite::RuntimeShape(inputShape),  inputData,
+		tflite::RuntimeShape(filterShape), filterData,
+		tflite::RuntimeShape(biasShape),   biasData,
+		tflite::RuntimeShape(outputShape), outputData
+	);
 }
 
 }
-

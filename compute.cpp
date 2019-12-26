@@ -233,6 +233,71 @@ bool compute(
 			cbTensorComputed(outputs[0]);
 
 			break;
+		} case PI::KindDepthwiseConv2D: {
+			assert(inputs.size()==3 && outputs.size()==1);
+			assert(opts); // need to have options present
+			assert((*tensorData)[inputs[0]]); // need to have the input data present
+
+			// operator options required to run this operator
+			int depthMultiplier=0;
+			int strideWidth=0, strideHeight=0;
+			int dilationWidth=0, dilationHeight=0;
+			PI::PaddingType paddingType;
+			PI::ActivationFunction activationFunction;
+
+			// parse the operator options supplied by the model into the above variables
+			unsigned numParsed =
+				OperatorOptions::GetOption1<PI::OperatorOption_DEPTH_MULTIPLIER,    PI::OperatorOption_TypeInt,int>(*opts, &depthMultiplier)
+				+ OperatorOptions::GetOption1<PI::OperatorOption_STRIDE_W,          PI::OperatorOption_TypeInt,int>(*opts, &strideWidth)
+				+ OperatorOptions::GetOption1<PI::OperatorOption_STRIDE_H,          PI::OperatorOption_TypeInt,int>(*opts, &strideHeight)
+				+ OperatorOptions::GetOption1<PI::OperatorOption_DILATION_W_FACTOR, PI::OperatorOption_TypeInt,int>(*opts, &dilationWidth)
+				+ OperatorOptions::GetOption1<PI::OperatorOption_DILATION_H_FACTOR, PI::OperatorOption_TypeInt,int>(*opts, &dilationHeight)
+				+ OperatorOptions::GetOption1<PI::OperatorOption_PADDING, PI::OperatorOption_TypePaddingType,PI::PaddingType>(*opts, &paddingType)
+				+ OperatorOptions::GetOption1<PI::OperatorOption_FUSED_ACTIVATION_FUNCTION,
+					PI::OperatorOption_TypeActivationFunction,PI::ActivationFunction>(*opts, &activationFunction);
+			assert(numParsed==7); // need to have 7 options
+			assert(numParsed==opts->size()); // all options are parsed
+
+			PRINT_OPTS("KindDepthwiseConv2D: have " << opts->size() << " options:"
+			           " depthMultiplier=" << depthMultiplier <<
+			           " strideWidth=" << strideWidth <<
+			           " strideHeight=" << strideHeight <<
+			           " dilationWidth=" << dilationWidth <<
+			           " strideHeight=" << strideHeight <<
+			           " paddingType=" << paddingType <<
+			           " activationFunction=" << activationFunction
+			)
+
+			// tensors
+			auto filterShape = model->getTensorShape(inputs[1]);
+			auto outputShape = model->getTensorShape(outputs[0]);
+			auto outputShapeSize = tensorFlatSize(outputShape);
+
+			// create output data
+			std::unique_ptr<float> outputData(new float[outputShapeSize]);
+
+			// compute
+			NnOperators::DepthwiseConv2D(
+				model->getTensorShape(inputs[0]), (*tensorData)[inputs[0]].get(), // input
+				filterShape, model->getTensorData(inputs[1]), // filter
+				model->getTensorShape(inputs[2]), model->getTensorData(inputs[2]), // bias
+				outputShape, outputData.get(), // output
+				translatePadding(filterShape,paddingType,WIDTH), translatePadding(filterShape,paddingType,HEIGHT),
+				strideWidth, strideHeight,
+				dilationWidth, dilationHeight,
+				depthMultiplier
+			);
+
+			// activation function
+			applyActivationFunction(outputShapeSize, outputData.get(), activationFunction);
+
+			// save the data
+			(*tensorData)[outputs[0]].reset(outputData.release());
+
+			// notify the caller
+			cbTensorComputed(outputs[0]);
+
+			break;
 		} default: {
 			cbWarningMessage(STR("Computation didn't succeed: operator #" << (oid+1) << ": " << model->getOperatorKind(oid) << " isn't yet implemented"));
 			return false; // failed to compute the model to the end

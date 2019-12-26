@@ -83,8 +83,8 @@ target_link_libraries(nn-insight
 )
 endif()
 
-if (NOT ${CMAKE_BUILD_TYPE} EQUAL "Release")
-	add_definitions(-DDEBUG)
+if (NOT ${CMAKE_BUILD_TYPE} STREQUAL "Release")
+	add_definitions(-DDEBUG) # -DNDEBUG is turned on by cmake, but only for some compilers (?)
 endif()
 
 ##

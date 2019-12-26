@@ -16,6 +16,18 @@ std::ostream& operator<<(std::ostream &os, PluginInterface::OperatorKind okind) 
 	return os;
 }
 
+std::ostream& operator<<(std::ostream &os, PluginInterface::PaddingType paddingType) {
+	switch (paddingType) {
+	case PluginInterface::PaddingType_SAME:
+		os << "SAME";
+		break;
+	case PluginInterface::PaddingType_VALID:
+		os << "VALID";
+		break;
+	}
+	return os;
+}
+
 std::ostream& operator<<(std::ostream &os, PluginInterface::ActivationFunction afunc) {
 	switch (afunc) {
 	case PluginInterface::ActivationFunction_NONE:
@@ -132,6 +144,9 @@ std::ostream& operator<<(std::ostream &os, PluginInterface::OperatorOptionType o
 	case PluginInterface::OperatorOption_TypeIntArray:
 		os << "array of int";
 		break;
+	case PluginInterface::OperatorOption_TypePaddingType:
+		os << "padding type";
+		break;
 	case PluginInterface::OperatorOption_TypeActivationFunction:
 		os << "activation function";
 		break;
@@ -159,6 +174,9 @@ std::ostream& operator<<(std::ostream &os, const PluginInterface::OperatorOption
 		for (auto i : optValue.ii)
 			os << (n++ > 0 ? ", " : "") << i;
 		os << "}";
+		break;
+	} case PluginInterface::OperatorOption_TypePaddingType: {
+		os << optValue.paddingType;
 		break;
 	} case PluginInterface::OperatorOption_TypeActivationFunction:
 		os << optValue.activationFunction;

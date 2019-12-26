@@ -50,6 +50,11 @@ public:
 	KindUnknown
   };
 
+	enum PaddingType {
+		PaddingType_SAME,    // pad with zeros where data isn't available, result has the same shape
+		PaddingType_VALID    // no padding, iterate only when all data is available for the extent of the kernel, result has a smaller shape
+	};
+
 	enum ActivationFunction {
 		ActivationFunction_NONE,
 		ActivationFunction_RELU,
@@ -148,6 +153,7 @@ if (false) {
 		OperatorOption_TypeInt,
 		OperatorOption_TypeUInt,
 		OperatorOption_TypeIntArray,
+		OperatorOption_TypePaddingType,
 		OperatorOption_TypeActivationFunction
 	};
 	struct OperatorOptionValue {
@@ -156,6 +162,7 @@ if (false) {
 		float    f;
 		int32_t  i;
 		uint32_t u;
+		PaddingType        paddingType;
 		ActivationFunction activationFunction;
 		std::vector<int32_t>  ii;
 		OperatorOptionValue(bool b_)                                : type(OperatorOption_TypeBool), b(b_) { }
@@ -163,6 +170,7 @@ if (false) {
 		OperatorOptionValue(int32_t i_)                             : type(OperatorOption_TypeInt), i(i_) { }
 		OperatorOptionValue(uint32_t u_)                            : type(OperatorOption_TypeUInt), u(u_) { }
 		OperatorOptionValue(const std::vector<int32_t> &ii_)        : type(OperatorOption_TypeIntArray), ii(ii_) { }
+		OperatorOptionValue(PaddingType paddingType_) : type(OperatorOption_TypePaddingType), paddingType(paddingType_) { }
 		OperatorOptionValue(ActivationFunction activationFunction_) : type(OperatorOption_TypeActivationFunction), activationFunction(activationFunction_) { }
 	};
 
@@ -175,6 +183,7 @@ if (false) {
 	typedef std::vector<OperatorOption> OperatorOptionsList;
 
 	friend std::ostream& operator<<(std::ostream &os, OperatorKind okind);
+	friend std::ostream& operator<<(std::ostream &os, PaddingType paddingType);
 	friend std::ostream& operator<<(std::ostream &os, ActivationFunction afunc);
 	friend std::ostream& operator<<(std::ostream &os, OperatorOptionName optName);
 	friend std::ostream& operator<<(std::ostream &os, OperatorOptionType optType);

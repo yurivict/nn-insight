@@ -29,6 +29,13 @@ namespace Helpers {
 		return v;
 	}
 
+	PluginInterface::PaddingType convertPaddingType(tflite::Padding padding) {
+		switch (padding) {
+		case tflite::Padding_SAME:                           return PluginInterface::PaddingType_SAME;
+		case tflite::Padding_VALID:                          return PluginInterface::PaddingType_VALID;
+		}
+	}
+
 	PluginInterface::ActivationFunction convertActivationFunction(tflite::ActivationFunctionType atype) {
 		switch (atype) {
 		case tflite::ActivationFunctionType_NONE:            return PluginInterface::ActivationFunction_NONE;

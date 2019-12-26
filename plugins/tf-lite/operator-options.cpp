@@ -59,6 +59,9 @@ if (true) {
 					case "squeeze_dims":
 						valueAdjustFn = "Helpers::convertFlatbuffersIntListToStl";
 						break;
+					case "padding":
+						valueAdjustFn = "Helpers::convertPaddingType";
+						break;
 					case "fused_activation_function":
 						valueAdjustFn = "Helpers::convertActivationFunction";
 						break;
@@ -150,7 +153,7 @@ case tflite::BuiltinOperator_CONV_2D: {
 	ourOpts->push_back({PluginInterface::OperatorOption_DILATION_H_FACTOR, PluginInterface::OperatorOptionValue((oo->dilation_h_factor()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_DILATION_W_FACTOR, PluginInterface::OperatorOptionValue((oo->dilation_w_factor()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue(Helpers::convertActivationFunction(oo->fused_activation_function()))});
-	ourOpts->push_back({PluginInterface::OperatorOption_PADDING, PluginInterface::OperatorOptionValue((oo->padding()))});
+	ourOpts->push_back({PluginInterface::OperatorOption_PADDING, PluginInterface::OperatorOptionValue(Helpers::convertPaddingType(oo->padding()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_STRIDE_H, PluginInterface::OperatorOptionValue((oo->stride_h()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_STRIDE_W, PluginInterface::OperatorOptionValue((oo->stride_w()))});
 	break;
@@ -172,7 +175,7 @@ case tflite::BuiltinOperator_DEPTHWISE_CONV_2D: {
 	ourOpts->push_back({PluginInterface::OperatorOption_DILATION_H_FACTOR, PluginInterface::OperatorOptionValue((oo->dilation_h_factor()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_DILATION_W_FACTOR, PluginInterface::OperatorOptionValue((oo->dilation_w_factor()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue(Helpers::convertActivationFunction(oo->fused_activation_function()))});
-	ourOpts->push_back({PluginInterface::OperatorOption_PADDING, PluginInterface::OperatorOptionValue((oo->padding()))});
+	ourOpts->push_back({PluginInterface::OperatorOption_PADDING, PluginInterface::OperatorOptionValue(Helpers::convertPaddingType(oo->padding()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_STRIDE_H, PluginInterface::OperatorOptionValue((oo->stride_h()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_STRIDE_W, PluginInterface::OperatorOptionValue((oo->stride_w()))});
 	break;
@@ -351,7 +354,7 @@ case tflite::BuiltinOperator_L2_POOL_2D: {
 	ourOpts->push_back({PluginInterface::OperatorOption_FILTER_HEIGHT, PluginInterface::OperatorOptionValue((oo->filter_height()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_FILTER_WIDTH, PluginInterface::OperatorOptionValue((oo->filter_width()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_FUSED_ACTIVATION_FUNCTION, PluginInterface::OperatorOptionValue(Helpers::convertActivationFunction(oo->fused_activation_function()))});
-	ourOpts->push_back({PluginInterface::OperatorOption_PADDING, PluginInterface::OperatorOptionValue((oo->padding()))});
+	ourOpts->push_back({PluginInterface::OperatorOption_PADDING, PluginInterface::OperatorOptionValue(Helpers::convertPaddingType(oo->padding()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_STRIDE_H, PluginInterface::OperatorOptionValue((oo->stride_h()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_STRIDE_W, PluginInterface::OperatorOptionValue((oo->stride_w()))});
 	break;
@@ -502,7 +505,7 @@ case tflite::BuiltinOperator_TOPK_V2: {
 }
 case tflite::BuiltinOperator_TRANSPOSE_CONV: {
 	auto oo = o->builtin_options_as_TransposeConvOptions();
-	ourOpts->push_back({PluginInterface::OperatorOption_PADDING, PluginInterface::OperatorOptionValue((oo->padding()))});
+	ourOpts->push_back({PluginInterface::OperatorOption_PADDING, PluginInterface::OperatorOptionValue(Helpers::convertPaddingType(oo->padding()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_STRIDE_H, PluginInterface::OperatorOptionValue((oo->stride_h()))});
 	ourOpts->push_back({PluginInterface::OperatorOption_STRIDE_W, PluginInterface::OperatorOptionValue((oo->stride_w()))});
 	break;

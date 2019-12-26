@@ -11,6 +11,7 @@
 #include "nn-types.h"
 #include "nn-operators.h"
 #include "image.h"
+#include "compute.h"
 
 #include <QEvent>
 #include <QWheelEvent>
@@ -313,46 +314,10 @@ MainWindow::MainWindow()
 			effectsChanged();
 	});
 	connect(&computeButton, &QAbstractButton::pressed, [this]() {
-		// allocate tensors array
-		if (!tensorData) {
-			tensorData.reset(new std::vector<std::shared_ptr<const float>>);
-			tensorData->resize(model->numTensors());
-		}
-		// find the model input
-		auto modelInputs = model->getInputs();
-		if (modelInputs.size() != 1) {
-			Util::warningOk(this, CSTR("We only support models with a single input, the current model has " << modelInputs.size() << " inputs"));
+		std::string msg;
+		if (!Compute::compute(model, sourceTensorDataAsUsed, sourceTensorShape, tensorData, msg)) {
+			Util::warningOk(this, msg.c_str());
 			return;
-		}
-		// resize the source image
-		if (!(*tensorData.get())[modelInputs[0]]) {
-			TensorShape requiredShape = model->getTensorShape(modelInputs[0]);
-			if (requiredShape.size() == 4) {
-				if (requiredShape[0] != 1) {
-					Util::warningOk(this, CSTR("Model's required shape " << requiredShape << " has 4 elements but doesn't begin with B=1,"
-					                           " don't know how to adjust the image for it"));
-					return;
-				}
-				requiredShape = tensorGetLastDims(requiredShape, 3);
-			} else if (requiredShape.size() == 3) {
-				if (requiredShape[0] == 1) { // assume [B=1,H,W], remove B and add C=1 for monochrome image
-					requiredShape = tensorGetLastDims(requiredShape, 2);
-					requiredShape.push_back(1);
-				} else { // see if the shape is image-like
-					if (requiredShape[2]!=1 && requiredShape[2]!=3) {
-						Util::warningOk(this, CSTR("Model's required shape " << requiredShape << " has 3 elements but have C=1 or C=3,"
-						                           " it doesn't look limke it describes an image,"
-					                                   " don't know how to adjust the image for it"));
-						return;
-					}
-				}
-			}
-
-			auto &sharedPtrInput = (*tensorData.get())[modelInputs[0]];
-			if (sourceTensorShape != requiredShape)
-				sharedPtrInput.reset(Image::resizeImage(sourceTensorDataAsUsed.get(), sourceTensorShape, requiredShape));
-			else
-				sharedPtrInput = sourceTensorDataAsUsed;
 		}
 	});
 
@@ -529,10 +494,10 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 					auto tableShape = model->getTensorShape(t);
 					switch (tensorNumMultiDims(tableShape)) {
 					case 0:
-						PRINT("WARNING tensor with all ones encountered, it is meaningless in the NN models context")
+						Util::warningOk(this, "WARNING tensor shape with all ones encountered, this is meaningless in the NN models context");
 						break;
 					case 1:
-						// TODO DataTable1D
+						Util::warningOk(this, "WARNING DataTable1D isn't yet implemented (TODO)");
 						break;
 					default: {
 						dataTable.reset(new DataTable2D(tableShape,

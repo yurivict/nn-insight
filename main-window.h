@@ -94,7 +94,7 @@ private: // fields
 	std::unique_ptr<PluginInterface> pluginInterface; // the file is opened through this handle
 	const PluginInterface::Model*    model;     // the model from the file that is currently open
 
-	// data associated with a specific input data (image) currently loaded by the user
+	// data associated with a specific input data (image) currently loaded by the user (static tensors from the model aren't here)
 	TensorShape                      sourceTensorShape;
 	std::shared_ptr<float>           sourceTensorDataAsLoaded; // original image that was loaded by the user
 	std::shared_ptr<float>           sourceTensorDataAsUsed;   // image that is used as an input of NN, might be different if effects are applied

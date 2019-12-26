@@ -38,9 +38,15 @@
 enum ConvolutionEffect {
 	ConvolutionEffect_None,
 	ConvolutionEffect_Blur_3x3,
-	ConvolutionEffect_Blur_5x5
+	ConvolutionEffect_Blur_5x5,
+	ConvolutionEffect_Gaussian_3x3,
+	ConvolutionEffect_Motion_3x3
 };
 #define THR 1./13.
+#define S01 1./16.
+#define S02 2./16.
+#define S04 4./16.
+#define TTT 1./3.
 static const std::map<ConvolutionEffect, std::tuple<TensorShape,std::vector<float>>> convolutionEffects = {
 	{ConvolutionEffect_None, {{},{}}},
 	{ConvolutionEffect_Blur_3x3, {{3,3,3,3}, {
@@ -74,9 +80,39 @@ static const std::map<ConvolutionEffect, std::tuple<TensorShape,std::vector<floa
 		0.0,0.0,THR, 0.0,0.0,THR, 0.0,0.0,THR, 0.0,0.0,THR, 0.0,0.0,THR,
 		0.0,0.0,0.0, 0.0,0.0,THR, 0.0,0.0,THR, 0.0,0.0,THR, 0.0,0.0,0.0,
 		0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,THR, 0.0,0.0,0.0, 0.0,0.0,0.0
+	}}},
+	{ConvolutionEffect_Gaussian_3x3, {{3,3,3,3}, {
+		S01,0.0,0.0, S02,0.0,0.0, S01,0.0,0.0,
+		S02,0.0,0.0, S04,0.0,0.0, S02,0.0,0.0,
+		S01,0.0,0.0, S02,0.0,0.0, S01,0.0,0.0,
+
+		0.0,S01,0.0, 0.0,S02,0.0, 0.0,S01,0.0,
+		0.0,S02,0.0, 0.0,S04,0.0, 0.0,S02,0.0,
+		0.0,S01,0.0, 0.0,S02,0.0, 0.0,S01,0.0,
+
+		0.0,0.0,S01, 0.0,0.0,S02, 0.0,0.0,S01,
+		0.0,0.0,S02, 0.0,0.0,S04, 0.0,0.0,S02,
+		0.0,0.0,S01, 0.0,0.0,S02, 0.0,0.0,S01
+	}}},
+	{ConvolutionEffect_Motion_3x3, {{3,3,3,3}, {
+		TTT,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
+		0.0,0.0,0.0, TTT,0.0,0.0, 0.0,0.0,0.0,
+		0.0,0.0,0.0, 0.0,0.0,0.0, TTT,0.0,0.0,
+
+		0.0,TTT,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
+		0.0,0.0,0.0, 0.0,TTT,0.0, 0.0,0.0,0.0,
+		0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,TTT,0.0,
+
+		0.0,0.0,TTT, 0.0,0.0,0.0, 0.0,0.0,0.0,
+		0.0,0.0,0.0, 0.0,0.0,TTT, 0.0,0.0,0.0,
+		0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,TTT
 	}}}
 };
 #undef THR
+#undef S01
+#undef S02
+#undef S04
+#undef TTT
 
 MainWindow::MainWindow()
 : mainSplitter(this)
@@ -220,9 +256,11 @@ MainWindow::MainWindow()
 	noDetails.setEnabled(false); // always grayed out
 
 	// fill lists
-	sourceEffectConvolutionTypeComboBox.addItem("None",       ConvolutionEffect_None);
-	sourceEffectConvolutionTypeComboBox.addItem("Blur (3x3)", ConvolutionEffect_Blur_3x3);
-	sourceEffectConvolutionTypeComboBox.addItem("Blur (5x5)", ConvolutionEffect_Blur_5x5);
+	sourceEffectConvolutionTypeComboBox.addItem("None",         ConvolutionEffect_None);
+	sourceEffectConvolutionTypeComboBox.addItem("Blur (3x3)",   ConvolutionEffect_Blur_3x3);
+	sourceEffectConvolutionTypeComboBox.addItem("Blur (5x5)",   ConvolutionEffect_Blur_5x5);
+	sourceEffectConvolutionTypeComboBox.addItem("Gauss (3x3)",  ConvolutionEffect_Gaussian_3x3);
+	sourceEffectConvolutionTypeComboBox.addItem("Motion (3x3)", ConvolutionEffect_Motion_3x3);
 	for (unsigned c = 1; c <= 20; c++)
 		sourceEffectConvolutionCountComboBox.addItem(QString("x%1").arg(c), c);
 

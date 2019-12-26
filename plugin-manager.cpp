@@ -44,7 +44,7 @@ static std::map<std::string, std::unique_ptr<Plugin>> registry; // all loaded pl
 // local helpers
 
 static std::string pluginNameToPluginLibraryPath(const std::string &pluginName) {
-    return STR("plugins/" << pluginName << "/lib" << pluginName << "-plugin.so");
+    return STR("plugins/" << pluginName << "/" << pluginName << "-plugin.so");
 }
 
 //

@@ -10,6 +10,11 @@
 
 typedef std::vector<unsigned> TensorShape;
 
+enum WidthHeight {
+	WIDTH,
+	HEIGHT
+};
+
 size_t tensorFlatSize(const TensorShape &shape);
 unsigned tensorNumMultiDims(const TensorShape &shape);
 TensorShape tensorGetLastDims(const TensorShape &shape, unsigned ndims);

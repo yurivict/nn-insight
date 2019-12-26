@@ -168,6 +168,12 @@ if (false) {
 		OperatorOptionValue(const std::vector<int32_t> &ii_)        : type(OperatorOption_TypeIntArray), ii(ii_) { }
 		OperatorOptionValue(PaddingType paddingType_) : type(OperatorOption_TypePaddingType), paddingType(paddingType_) { }
 		OperatorOptionValue(ActivationFunction activationFunction_) : type(OperatorOption_TypeActivationFunction), activationFunction(activationFunction_) { }
+
+		// templetized getter
+		template<typename T> T as() const; // not implemented by default
+		template<> int32_t as() const {return i;}
+		template<> PaddingType as() const {return paddingType;}
+		template<> ActivationFunction as() const {return activationFunction;}
 	};
 
 	// OperatorOption is what is returned by the plugin for individual operators

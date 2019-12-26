@@ -314,11 +314,16 @@ MainWindow::MainWindow()
 			effectsChanged();
 	});
 	connect(&computeButton, &QAbstractButton::pressed, [this]() {
-		std::string msg;
-		if (!Compute::compute(model, sourceTensorDataAsUsed, sourceTensorShape, tensorData, msg)) {
+		bool succ = Compute::compute(model, sourceTensorDataAsUsed, sourceTensorShape, tensorData, [this](const std::string &msg) {
 			Util::warningOk(this, msg.c_str());
-			return;
-		}
+		}, [](PluginInterface::TensorId tid) {
+			PRINT("QAbstractButton::pressed: Tensor DONE tid=" << tid)
+		});
+
+		if (succ)
+			PRINT("computation succeeded")
+		else
+			PRINT("WARNING computation didn't succeed")
 	});
 
 	// monitor memory use

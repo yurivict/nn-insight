@@ -2,6 +2,7 @@
 #include "compute.h"
 #include "plugin-interface.h"
 #include "nn-types.h"
+#include "nn-operators.h"
 #include "image.h"
 #include "misc.h"
 #include "util.h"
@@ -9,14 +10,48 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <functional>
+
+#include <assert.h>
+
+#if defined(DEBUG)
+#define PRINT_OPTS(opts...) PRINT(opts)
+#else
+#define PRINT_OPTS(opts...)
+#endif
 
 namespace Compute {
 
+typedef PluginInterface PI;
+
+//
+// local helpers
+//
+
+class OperatorOptions {
+public:
+	template<PI::OperatorOptionName Option, PI::OperatorOptionType OType, typename CType>
+	static bool GetOption1(const PI::OperatorOptionsList &opts, CType *val1) {
+		for (auto &o : opts)
+			if (o.name == Option) {
+				assert(o.value.type == OType);
+				*val1 = o.value.as<CType>();
+				return true; // found
+			}
+		return false; // not found
+	}
+};
+
+//
+// exported functions
+//
+
 bool compute(
-	const PluginInterface::Model *model,
+	const PI::Model *model,
 	std::shared_ptr<float> &inputTensor, const TensorShape &inputShape,
 	std::unique_ptr<std::vector<std::shared_ptr<const float>>> &tensorData,
-	std::string &outWarningMessage)
+	std::function<void(const std::string&)> cbWarningMessage,
+	std::function<void(PI::TensorId)> cbTensorComputed)
 {
 
 	// allocate tensors array
@@ -24,22 +59,24 @@ bool compute(
 		tensorData.reset(new std::vector<std::shared_ptr<const float>>);
 		tensorData->resize(model->numTensors());
 	}
-	// find the model input
+
+	// find the model's input
 	auto modelInputs = model->getInputs();
 	if (modelInputs.size() != 1) {
-		outWarningMessage = STR("We only support models with a single input, the current model has " << modelInputs.size() << " inputs");
+		cbWarningMessage(STR("We currently only support models with a single input, the current model has " << modelInputs.size() << " inputs"));
 		return false;
 	}
+
 	// resize the source image
-	if (!(*tensorData.get())[modelInputs[0]]) {
+	if (!(*tensorData.get())[modelInputs[0]]) { // tensor not ready
 		assert(inputShape.size()==3);
 		TensorShape requiredShape = model->getTensorShape(modelInputs[0]);
 
 		// adjust the required shape to the form [H,W,C]
 		if (requiredShape.size() == 4) { // assume [B,H,W,C]
 			if (requiredShape[0] != 1) {
-				outWarningMessage = STR("Model's required shape " << requiredShape << " has 4 elements but doesn't begin with B=1,"
-				                        " don't know how to adjust the image for it");
+				cbWarningMessage(STR("Model's required shape " << requiredShape << " has 4 elements but doesn't begin with B=1,"
+				                     " don't know how to adjust the image for it"));
 				return false;
 			}
 			requiredShape = tensorGetLastDims(requiredShape, 3);
@@ -49,14 +86,14 @@ bool compute(
 				requiredShape.push_back(1);
 			} else { // see if the shape is image-like
 				if (requiredShape[2]!=1 && requiredShape[2]!=3) { // expect C=1 or C=3, otherwise we can't handle it
-					outWarningMessage = STR("Model's required shape " << requiredShape << " has 3 elements but has C=1 or C=3,"
-					                        " it doesn't look like it describes an image,"
-					                        " don't know how to adjust the image for it");
+					cbWarningMessage(STR("Model's required shape " << requiredShape << " has 3 elements but has C=1 or C=3,"
+					                     " it doesn't look like it describes an image,"
+					                     " don't know how to adjust the image for it"));
 					return false;
 				}
 			}
 		} else {
-			outWarningMessage = STR("Model's required shape " << requiredShape << " isn't standard, don't know how to adjust the image for it");
+			cbWarningMessage(STR("Model's required shape " << requiredShape << " isn't standard, don't know how to adjust the image for it"));
 			return false;
 		}
 
@@ -66,9 +103,90 @@ bool compute(
 			sharedPtrInput.reset(Image::resizeImage(inputTensor.get(), inputShape, requiredShape));
 		else
 			sharedPtrInput = inputTensor;
+		// notify the caller
+		cbTensorComputed(modelInputs[0]);
 	}
 
-	return true; // success
+	// compute operators
+	for (PI::OperatorId oid = 0, oide = (PI::OperatorId)model->numOperators(); oid<oide; oid++) {
+		// get operator's inputs/outputs
+		std::vector<PI::TensorId> inputs, outputs;
+		model->getOperatorIo(oid, inputs, outputs);
+
+		// get operator options from the model
+		std::unique_ptr<PI::OperatorOptionsList> opts(model->getOperatorOptions(oid));
+
+		// helper
+		auto translatePadding = [](const TensorShape &filterShape, PI::PaddingType paddingType, WidthHeight wh) {
+			return filterShape[wh==WIDTH ? 2:1]/2;
+		};
+
+		// by operator kind
+		switch (model->getOperatorKind(oid)) {
+		case PI::KindConv2D: {
+			assert(inputs.size()==3 && outputs.size()==1);
+			assert(opts); // need to have options present
+			assert((*tensorData)[inputs[0]]); // need to have the input data present
+
+			// operator options required to run this operator
+			int strideWidth=0, strideHeight=0;
+			int dilationWidth=0, dilationHeight=0;
+			PI::PaddingType paddingType;
+			PI::ActivationFunction activationFunction;
+
+			// parse the operator options supplied by the model into the above variables
+			unsigned numParsed =
+				OperatorOptions::GetOption1<PI::OperatorOption_STRIDE_W,            PI::OperatorOption_TypeInt,int>(*opts, &strideWidth)
+				+ OperatorOptions::GetOption1<PI::OperatorOption_STRIDE_H,          PI::OperatorOption_TypeInt,int>(*opts, &strideHeight)
+				+ OperatorOptions::GetOption1<PI::OperatorOption_DILATION_W_FACTOR, PI::OperatorOption_TypeInt,int>(*opts, &dilationWidth)
+				+ OperatorOptions::GetOption1<PI::OperatorOption_DILATION_H_FACTOR, PI::OperatorOption_TypeInt,int>(*opts, &dilationHeight)
+				+ OperatorOptions::GetOption1<PI::OperatorOption_PADDING, PI::OperatorOption_TypePaddingType,PI::PaddingType>(*opts, &paddingType)
+				+ OperatorOptions::GetOption1<PI::OperatorOption_FUSED_ACTIVATION_FUNCTION,
+					PI::OperatorOption_TypeActivationFunction,PI::ActivationFunction>(*opts, &activationFunction);
+			assert(numParsed==6); // need to have 6 options
+			assert(numParsed==opts->size()); // all options are parsed
+
+			PRINT_OPTS("KindConv2D: have " << opts->size() << " options:"
+			           " strideWidth=" << strideWidth <<
+			           " strideHeight=" << strideHeight <<
+			           " dilationWidth=" << dilationWidth <<
+			           " strideHeight=" << strideHeight <<
+			           " paddingType=" << paddingType <<
+			           " activationFunction=" << activationFunction
+			)
+
+			// tensors
+			auto filterShape = model->getTensorShape(inputs[1]);
+			auto outputShape = model->getTensorShape(outputs[0]);
+
+			// create output data
+			std::unique_ptr<float> outputData(new float[tensorFlatSize(outputShape)]);
+
+			// compute
+			NnOperators::Conv2D(
+				model->getTensorShape(inputs[0]), (*tensorData)[inputs[0]].get(), // input
+				filterShape, model->getTensorData(inputs[1]), // filter
+				model->getTensorShape(inputs[2]), model->getTensorData(inputs[2]), // bias
+				outputShape, outputData.get(), // output
+				translatePadding(filterShape,paddingType,WIDTH), translatePadding(filterShape,paddingType,HEIGHT),
+				strideWidth, strideHeight,
+				dilationWidth, dilationHeight
+			);
+
+			// save the data
+			(*tensorData)[outputs[0]].reset(outputData.release());
+
+			// notify the caller
+			cbTensorComputed(outputs[0]);
+
+			break;
+		} default: {
+			cbWarningMessage(STR("Computation didn't succeed: operator #" << (oid+1) << ": " << model->getOperatorKind(oid) << " isn't yet implemented"));
+			return false; // failed to compute the model to the end
+		}}
+	}
+
+	return true; // successfully computed the model to the end
 }
 
 }

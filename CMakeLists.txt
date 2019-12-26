@@ -42,8 +42,8 @@ else()
 	message(STATUS "Found the dot program: ${DOT_PROGRAM}")
 endif()
 if (USE_PERFTOOLS)
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(libtcmalloc REQUIRED IMPORTED_TARGET libtcmalloc)
+	find_package(PkgConfig REQUIRED)
+	pkg_check_modules(libtcmalloc REQUIRED IMPORTED_TARGET libtcmalloc)
 add_definitions(-DUSE_PERFTOOLS)
 endif()
 
@@ -81,6 +81,10 @@ if (USE_PERFTOOLS)
 target_link_libraries(nn-insight
 	PkgConfig::libtcmalloc
 )
+endif()
+
+if (NOT ${CMAKE_BUILD_TYPE} EQUAL "Release")
+	add_definitions(-DDEBUG)
 endif()
 
 ##

@@ -86,3 +86,9 @@ endif()
 ## Subdirectories
 ##
 subdirs(plugins)
+
+##
+## Install targets
+##
+
+install(TARGETS nn-insight DESTINATION bin)

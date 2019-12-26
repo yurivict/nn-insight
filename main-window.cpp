@@ -40,7 +40,8 @@ enum ConvolutionEffect {
 	ConvolutionEffect_Blur_3x3,
 	ConvolutionEffect_Blur_5x5,
 	ConvolutionEffect_Gaussian_3x3,
-	ConvolutionEffect_Motion_3x3
+	ConvolutionEffect_Motion_3x3,
+	ConvolutionEffect_Sharpen_3x3
 };
 #define THR 1./13.
 #define S01 1./16.
@@ -106,6 +107,19 @@ static const std::map<ConvolutionEffect, std::tuple<TensorShape,std::vector<floa
 		0.0,0.0,TTT, 0.0,0.0,0.0, 0.0,0.0,0.0,
 		0.0,0.0,0.0, 0.0,0.0,TTT, 0.0,0.0,0.0,
 		0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,TTT
+	}}},
+	{ConvolutionEffect_Sharpen_3x3, {{3,3,3,3}, {
+		-1.,0.0,0.0, -1.,0.0,0.0, -1.,0.0,0.0,
+		-1.,0.0,0.0, 9.0,0.0,0.0, -1.,0.0,0.0,
+		-1.,0.0,0.0, -1.,0.0,0.0, -1.,0.0,0.0,
+
+		0.0,-1.,0.0, 0.0,-1.,0.0, 0.0,-1.,0.0,
+		0.0,-1.,0.0, 0.0,9.0,0.0, 0.0,-1.,0.0,
+		0.0,-1.,0.0, 0.0,-1.,0.0, 0.0,-1.,0.0,
+
+		0.0,0.0,-1., 0.0,0.0,-1., 0.0,0.0,-1.,
+		0.0,0.0,-1., 0.0,0.0,9.0, 0.0,0.0,-1.,
+		0.0,0.0,-1., 0.0,0.0,-1., 0.0,0.0,-1.
 	}}}
 };
 #undef THR
@@ -256,11 +270,12 @@ MainWindow::MainWindow()
 	noDetails.setEnabled(false); // always grayed out
 
 	// fill lists
-	sourceEffectConvolutionTypeComboBox.addItem("None",         ConvolutionEffect_None);
-	sourceEffectConvolutionTypeComboBox.addItem("Blur (3x3)",   ConvolutionEffect_Blur_3x3);
-	sourceEffectConvolutionTypeComboBox.addItem("Blur (5x5)",   ConvolutionEffect_Blur_5x5);
-	sourceEffectConvolutionTypeComboBox.addItem("Gauss (3x3)",  ConvolutionEffect_Gaussian_3x3);
-	sourceEffectConvolutionTypeComboBox.addItem("Motion (3x3)", ConvolutionEffect_Motion_3x3);
+	sourceEffectConvolutionTypeComboBox.addItem("None",          ConvolutionEffect_None);
+	sourceEffectConvolutionTypeComboBox.addItem("Blur (3x3)",    ConvolutionEffect_Blur_3x3);
+	sourceEffectConvolutionTypeComboBox.addItem("Blur (5x5)",    ConvolutionEffect_Blur_5x5);
+	sourceEffectConvolutionTypeComboBox.addItem("Gauss (3x3)",   ConvolutionEffect_Gaussian_3x3);
+	sourceEffectConvolutionTypeComboBox.addItem("Motion (3x3)",  ConvolutionEffect_Motion_3x3);
+	sourceEffectConvolutionTypeComboBox.addItem("Sharpen (3x3)", ConvolutionEffect_Sharpen_3x3);
 	for (unsigned c = 1; c <= 20; c++)
 		sourceEffectConvolutionCountComboBox.addItem(QString("x%1").arg(c), c);
 
@@ -710,17 +725,26 @@ float* MainWindow::applyEffects(const float *image, const TensorShape &shape,
 	if (!std::get<1>(convolution).empty()) {
 		TensorShape shapeWithBatch = shape;
 		shapeWithBatch.insert(shapeWithBatch.begin(), 1/*batch*/);
+		auto clip = [](float *a, size_t sz) {
+			for (auto ae = a+sz; a<ae; a++)
+				if (*a < 0.)
+					*a = 0.;
+				else if (*a > 255.)
+					*a = 255.;
+		};
 		const static float bias[3] = {0,0,0};
 		for (unsigned i = 1; i <= convolutionCount; i++) {
+			float *d = dst(idx);
 			NnOperators::Conv2D(
 				shapeWithBatch, src(idx),
 				std::get<0>(convolution), std::get<1>(convolution).data(),
-					{3}, bias, // no bias
-				shapeWithBatch, dst(idx),
+				{3}, bias, // no bias
+				shapeWithBatch, d,
 				std::get<0>(convolution)[2]/2, std::get<0>(convolution)[1]/2, // padding, paddings not matching kernel size work but cause image shifts
 				1,1, // strides
 				1,1  // dilation factors
 			);
+			clip(d, tensorFlatSize(shapeWithBatch)); // we have to clip the result because otherwise some values are out of range 0..255.
 			idx = idxNext(idx);
 		}
 	}

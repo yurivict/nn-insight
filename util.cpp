@@ -17,6 +17,7 @@
 #include <memory>
 
 #include <unistd.h> // sleep
+#include <sys/stat.h>
 
 namespace Util {
 
@@ -130,6 +131,11 @@ unsigned char* convertArrayFloatToUInt8(const float *a, size_t size) { // ASSUME
 		*c++ = *a++;
 
 	return cc.release();
+}
+
+bool doesFileExist(const char *filePath) {
+	struct stat s;
+	return ::stat(filePath, &s)==0 && (s.st_mode&S_IFREG);
 }
 
 }

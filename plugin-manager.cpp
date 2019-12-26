@@ -3,6 +3,7 @@
 #include "plugin-manager.h"
 #include "plugin-interface.h"
 #include "misc.h"
+#include "util.h"
 
 #include <dlfcn.h>
 
@@ -44,7 +45,18 @@ static std::map<std::string, std::unique_ptr<Plugin>> registry; // all loaded pl
 // local helpers
 
 static std::string pluginNameToPluginLibraryPath(const std::string &pluginName) {
-    return STR("plugins/" << pluginName << "/" << pluginName << "-plugin.so");
+	// try locally built dir
+	auto pathLocalDevDir = STR("plugins/" << pluginName << "/" << pluginName << "-plugin.so");
+	if (Util::doesFileExist(pathLocalDevDir.c_str()))
+		return pathLocalDevDir;
+
+	// try globally installed situation
+	auto pathGlobalInstallDir = STR("../lib/libexec/nn-insight/" << pluginName << "-plugin.so");
+	if (Util::doesFileExist(pathGlobalInstallDir.c_str()))
+		return pathGlobalInstallDir;
+
+	// fail to find it
+	return "";
 }
 
 //
@@ -61,6 +73,9 @@ const Plugin* loadPlugin(const std::string &pluginName) {
 
 	// plugin name -> shared library object
 	auto pluginLibraryPath = pluginNameToPluginLibraryPath(pluginName);
+	if (pluginLibraryPath.empty())
+		return nullptr; // failed to find the plugin
+
 	auto handle = ::dlopen(pluginLibraryPath.c_str(), RTLD_NOW);
 	if (handle == nullptr) {
 		PRINT_ERR("Failed to instantiate the plugin '" << pluginName << "' to open the file " << pluginLibraryPath << "': " << ::dlerror())

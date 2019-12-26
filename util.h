@@ -28,6 +28,7 @@ float* copyFpArray(const float *a, size_t sz);
 size_t getFileSize(const QString &fileName);
 QPixmap getScreenshot(bool hideOurWindows);
 unsigned char* convertArrayFloatToUInt8(const float *a, size_t size);
+bool doesFileExist(const char *filePath);
 
 template<typename T>
 bool isValueIn(const std::vector<T> &v, T val) {

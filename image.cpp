@@ -2,6 +2,7 @@
 #include "image.h"
 #include "nn-types.h"
 #include "misc.h"
+#include "util.h"
 
 #include <png++/png.hpp>
 #include <avir.h>
@@ -10,6 +11,7 @@
 #include <QImage>
 
 #include <memory>
+#include <cstring>
 
 namespace Image {
 
@@ -86,6 +88,34 @@ float* resizeImage(const float *pixels, const TensorShape &shapeOld, const Tenso
 	}
 
 	return pixelsNew.release();
+}
+
+QPixmap toQPixmap(const float *image, const TensorShape &shape) {
+	return QPixmap::fromImage(QImage(
+		std::unique_ptr<const uchar>(Util::convertArrayFloatToUInt8(image, tensorFlatSize(shape))).get(),
+		shape[1], // width
+		shape[0], // height
+		shape[1]*shape[2], // bytesPerLine
+		QImage::Format_RGB888
+	));
+}
+
+template<typename T>
+static void reverseArray(const T *src, T *dst, unsigned rowSize, unsigned blockSize) {
+	dst = dst + rowSize-blockSize;
+	for (auto srce = src + rowSize; src<srce; src+=blockSize, dst-=blockSize)
+		std::memcpy(dst, src, blockSize*sizeof(T));
+}
+
+void flipHorizontally(const TensorShape &shape, const float *imgSrc, float *imgDst) {
+	unsigned rowSize = shape[1]*shape[2];
+	unsigned blockSize = shape[2];
+	for (auto imgSrce = imgSrc + tensorFlatSize(shape); imgSrc<imgSrce; imgSrc+=rowSize, imgDst+=rowSize)
+		reverseArray(imgSrc, imgDst, rowSize, blockSize);
+}
+
+void flipVertically(const TensorShape &shape, const float *imgSrc, float *imgDst) {
+	reverseArray(imgSrc, imgDst, tensorFlatSize(shape), shape[1]*shape[2]);
 }
 
 }

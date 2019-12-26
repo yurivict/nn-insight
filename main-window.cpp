@@ -45,6 +45,12 @@ MainWindow::MainWindow()
 ,          sourceImageFileName(&sourceDetails)
 ,          sourceImageFileSize(&sourceDetails)
 ,          sourceImageSize(&sourceDetails)
+,          sourceApplyEffectsWidget("Apply Effects", &sourceDetails)
+,            sourceApplyEffectsLayout(&sourceApplyEffectsWidget)
+,            sourceEffectFlipHorizontallyLabel("Flip horizontally", &sourceApplyEffectsWidget)
+,            sourceEffectFlipHorizontallyCheckBox(&sourceApplyEffectsWidget)
+,            sourceEffectFlipVerticallyLabel("Flip vertically", &sourceApplyEffectsWidget)
+,            sourceEffectFlipVerticallyCheckBox(&sourceApplyEffectsWidget)
 ,          sourceFiller(&sourceDetails)
 ,          computeButton("Compute", &sourceDetails)
 ,        sourceImage(&sourceWidget)
@@ -87,6 +93,11 @@ MainWindow::MainWindow()
 	    sourceDetailsLayout.addWidget(&sourceImageFileName);
 	    sourceDetailsLayout.addWidget(&sourceImageFileSize);
 	    sourceDetailsLayout.addWidget(&sourceImageSize);
+	    sourceDetailsLayout.addWidget(&sourceApplyEffectsWidget);
+	      sourceApplyEffectsLayout.addWidget(&sourceEffectFlipHorizontallyLabel,    0/*row*/, 0/*column*/);
+	      sourceApplyEffectsLayout.addWidget(&sourceEffectFlipHorizontallyCheckBox, 0/*row*/, 1/*column*/);
+	      sourceApplyEffectsLayout.addWidget(&sourceEffectFlipVerticallyLabel,      1/*row*/, 0/*column*/);
+	      sourceApplyEffectsLayout.addWidget(&sourceEffectFlipVerticallyCheckBox,   1/*row*/, 1/*column*/);
 	    sourceDetailsLayout.addWidget(&sourceFiller);
 	    sourceDetailsLayout.addWidget(&computeButton);
 	  sourceLayout.addWidget(&sourceImage);
@@ -107,23 +118,32 @@ MainWindow::MainWindow()
 	statusBar.addWidget(&memoryUseLabel);
 #endif
 
+	for (auto w : {&sourceEffectFlipHorizontallyLabel, &sourceEffectFlipVerticallyLabel})
+		w->setAlignment(Qt::AlignRight);
+
 	// tooltips
-	sourceImageFileName    .setToolTip("File name of the input image");
-	sourceImageFileSize    .setToolTip("File size of the input image");
-	sourceImageSize        .setToolTip("Input image size");
-	computeButton          .setToolTip("Perform neural network computation for the currently selected image as input");
-	sourceImage            .setToolTip("Image currently used as a NN input");
-	operatorTypeLabel      .setToolTip("Operator type: what kind of operation does it perform");
-	operatorComplexityValue.setToolTip("Complexity of the currntly selected NN in FLOPS");
+	sourceImageFileName                 .setToolTip("File name of the input image");
+	sourceImageFileSize                 .setToolTip("File size of the input image");
+	sourceImageSize                     .setToolTip("Input image size");
+	sourceApplyEffectsWidget            .setToolTip("Apply effects to the image");
+	sourceEffectFlipHorizontallyLabel   .setToolTip("Flip the image horizontally");
+	sourceEffectFlipHorizontallyCheckBox.setToolTip("Flip the image horizontally");
+	sourceEffectFlipVerticallyLabel     .setToolTip("Flip the image vertically");
+	sourceEffectFlipVerticallyCheckBox  .setToolTip("Flip the image vertically");
+	computeButton                       .setToolTip("Perform neural network computation for the currently selected image as input");
+	sourceImage                         .setToolTip("Image currently used as a NN input");
+	operatorTypeLabel                   .setToolTip("Operator type: what kind of operation does it perform");
+	operatorComplexityValue             .setToolTip("Complexity of the currntly selected NN in FLOPS");
 
 	// size policies
-	svgScrollArea       .setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
-	sourceImageFileName .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
-	sourceImageFileSize .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
-	sourceImageSize     .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+	svgScrollArea            .setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
+	sourceImageFileName      .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+	sourceImageFileSize      .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+	sourceApplyEffectsWidget .setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Maximum);
+	sourceImageSize          .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
 	//sourceFiller .setSizePolicy(QSizePolicy::Fixed, QSizePolicy::MinimumExpanding);
-	sourceImage         .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
-	detailsStack        .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+	sourceImage              .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+	detailsStack             .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
 	// widget options and flags
 	sourceWidget.hide(); // hidden by default
@@ -145,6 +165,12 @@ MainWindow::MainWindow()
 				// no object was found: ignore the signal
 			}
 		}
+	});
+	connect(&sourceEffectFlipHorizontallyCheckBox, &QCheckBox::stateChanged, [this](int) {
+		effectsChanged();
+	});
+	connect(&sourceEffectFlipVerticallyCheckBox, &QCheckBox::stateChanged, [this](int) {
+		effectsChanged();
 	});
 	connect(&computeButton, &QAbstractButton::pressed, [this]() {
 		// allocate tensors array
@@ -184,9 +210,9 @@ MainWindow::MainWindow()
 
 			auto &sharedPtrInput = (*tensorData.get())[modelInputs[0]];
 			if (sourceTensorShape != requiredShape)
-				sharedPtrInput.reset(Image::resizeImage(sourceTensorData.get(), sourceTensorShape, requiredShape));
+				sharedPtrInput.reset(Image::resizeImage(sourceTensorDataAsUsed.get(), sourceTensorShape, requiredShape));
 			else
-				sharedPtrInput = sourceTensorData;
+				sharedPtrInput = sourceTensorDataAsUsed;
 		}
 	});
 
@@ -455,11 +481,12 @@ void MainWindow::removeTableIfAny() {
 void MainWindow::openImageFile(const QString &imageFileName) {
 	// clear the previous image data if any
 	clearImageData();
+	// read the image as tensor
+	sourceTensorDataAsLoaded.reset(Image::readPngImageFile(Q2S(imageFileName), sourceTensorShape));
+	sourceTensorDataAsUsed = sourceTensorDataAsLoaded;
 	// enable widgets, show image
 	sourceWidget.show();
-	sourceImage.setPixmap(QPixmap(imageFileName));
-	// read the image as tensor
-	sourceTensorData.reset(Image::readPngImageFile(Q2S(imageFileName), sourceTensorShape));
+	updateSourceImageOnScreen();
 	// set info on the screen
 	sourceImageFileName.setText(QString("File name: %1").arg(imageFileName));
 	sourceImageFileSize.setText(QString("File size: %1 bytes").arg(S2Q(Util::formatUIntHumanReadable(Util::getFileSize(imageFileName)))));
@@ -470,24 +497,20 @@ void MainWindow::openImagePixmap(const QPixmap &imagePixmap, const char *sourceN
 	// clear the previous image data if any
 	clearImageData();
 	// read the image as tensor
-	sourceTensorData.reset(Image::readPixmap(imagePixmap, sourceTensorShape));
+	sourceTensorDataAsLoaded.reset(Image::readPixmap(imagePixmap, sourceTensorShape));
 	{ // TMP: scale down a huge screenshot 1/6
 		TensorShape sourceTensorShapeNew = {sourceTensorShape[0]/6, sourceTensorShape[1]/6, sourceTensorShape[2]};
-		sourceTensorData.reset(Image::resizeImage(sourceTensorData.get(), sourceTensorShape, sourceTensorShapeNew));
+		sourceTensorDataAsLoaded.reset(Image::resizeImage(sourceTensorDataAsLoaded.get(), sourceTensorShape, sourceTensorShapeNew));
 		sourceTensorShape = sourceTensorShapeNew;
 	}
-	if (!sourceTensorData) {
+	if (!sourceTensorDataAsLoaded) {
 		Util::warningOk(this, CSTR("Unable to take a screenshot"));
 		return;
 	}
+	sourceTensorDataAsUsed = sourceTensorDataAsLoaded;
 	// enable widgets, show image
 	sourceWidget.show();
-	sourceImage.setPixmap(QPixmap::fromImage(QImage(
-		std::unique_ptr<const uchar>(Util::convertArrayFloatToUInt8(sourceTensorData.get(), tensorFlatSize(sourceTensorShape))).get(),
-		sourceTensorShape[1],
-		sourceTensorShape[0],
-		QImage::Format_RGB888
-	)));
+	updateSourceImageOnScreen();
 	// set info on the screen
 	sourceImageFileName.setText(QString("File name: n/a: %1").arg(sourceName));
 	sourceImageFileSize.setText(QString("File size: n/a: %1").arg(sourceName));
@@ -497,8 +520,63 @@ void MainWindow::openImagePixmap(const QPixmap &imagePixmap, const char *sourceN
 void MainWindow::clearImageData() {
 	sourceWidget.hide();
 	sourceImage.setPixmap(QPixmap());
-	sourceTensorData = nullptr;
+	sourceTensorDataAsLoaded = nullptr;
+	sourceTensorDataAsUsed = nullptr;
 	sourceTensorShape = TensorShape();
 	tensorData.reset(nullptr);
 }
 
+void MainWindow::effectsChanged() {
+	// all available effects that can be applied
+	bool flipHorizontally = sourceEffectFlipHorizontallyCheckBox.isChecked();
+	bool flipVertically = sourceEffectFlipVerticallyCheckBox.isChecked();
+
+	// any effects to apply?
+	if (flipHorizontally || flipVertically) {
+		sourceTensorDataAsUsed.reset(applyEffects(sourceTensorDataAsLoaded.get(), sourceTensorShape,
+			flipHorizontally, flipVertically));
+	} else {
+		sourceTensorDataAsUsed = sourceTensorDataAsLoaded;
+	}
+
+	updateSourceImageOnScreen();
+}
+
+float* MainWindow::applyEffects(const float *image, const TensorShape &shape, bool flipHorizontally, bool flipVertically) {
+	assert(shape.size()==3);
+	assert(flipHorizontally || flipVertically);
+
+	unsigned idx = 0; // idx=0 is "image"
+	std::unique_ptr<float> withEffects[2]; // idx=1 and idx=2
+
+	auto idxNext = [](unsigned idx) {
+		return (idx+1)<3 ? idx+1 : 1;
+	};
+	auto src = [&](unsigned idx) {
+		if (idx==0)
+			return image;
+		else
+			return (const float*)withEffects[idx-1].get();
+	};
+	auto dst = [&](unsigned idx) {
+		auto idxDst = idxNext(idx);
+		if (!withEffects[idxDst-1])
+			withEffects[idxDst-1].reset(new float[tensorFlatSize(shape)]);
+		return withEffects[idxDst-1].get();
+	};
+
+	if (flipHorizontally) {
+		Image::flipHorizontally(shape, src(idx), dst(idx));
+		idx = idxNext(idx);
+	}
+	if (flipVertically) {
+		Image::flipVertically(shape, src(idx), dst(idx));
+		idx = idxNext(idx);
+	}
+
+	return withEffects[idx-1].release();
+}
+
+void MainWindow::updateSourceImageOnScreen() {
+	sourceImage.setPixmap(Image::toQPixmap(sourceTensorDataAsUsed.get(), sourceTensorShape));
+}

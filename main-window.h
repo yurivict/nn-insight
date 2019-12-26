@@ -9,6 +9,7 @@
 #include "DataTable2D.h"
 #include <QLabel>
 #include <QPushButton>
+#include <QCheckBox>
 #include <QVBoxLayout>
 #include <QGridLayout>
 #include <QMenuBar>
@@ -50,6 +51,12 @@ private: // fields
 	QLabel                                   sourceImageFileName;
 	QLabel                                   sourceImageFileSize;
 	QLabel                                   sourceImageSize;
+	QGroupBox                                sourceApplyEffectsWidget;
+	QGridLayout                                sourceApplyEffectsLayout;
+	QLabel                                     sourceEffectFlipHorizontallyLabel;
+	QCheckBox                                  sourceEffectFlipHorizontallyCheckBox;
+	QLabel                                     sourceEffectFlipVerticallyLabel;
+	QCheckBox                                  sourceEffectFlipVerticallyCheckBox;
 	QWidget                                  sourceFiller;
 	QPushButton                              computeButton;
 	QLabel                                 sourceImage;
@@ -80,8 +87,9 @@ private: // fields
 	const PluginInterface::Model*    model;     // the model from the file that is currently open
 
 	// data associated with a specific input data (image) currently loaded by the user
-	std::shared_ptr<float>           sourceTensorData; // currently used data source, can be shapred with tensorData
 	TensorShape                      sourceTensorShape;
+	std::shared_ptr<float>           sourceTensorDataAsLoaded; // original image that was loaded by the user
+	std::shared_ptr<float>           sourceTensorDataAsUsed;   // image that is used as an input of NN, might be different if effects are applied
 	std::unique_ptr<std::vector<std::shared_ptr<const float>>>   tensorData; // tensors corresponding to the currently used image, shared because reshape/input often shared
 
 	struct {
@@ -104,5 +112,8 @@ private: // private methods
 	void openImageFile(const QString &imageFileName);
 	void openImagePixmap(const QPixmap &imagePixmap, const char *sourceName);
 	void clearImageData();
+	void effectsChanged();
+	float* applyEffects(const float *image, const TensorShape &shape, bool flipHorizontally, bool flipVertically);
+	void updateSourceImageOnScreen();
 };
 

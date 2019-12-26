@@ -51,7 +51,7 @@ static std::string pluginNameToPluginLibraryPath(const std::string &pluginName) 
 		return pathLocalDevDir;
 
 	// try globally installed situation
-	auto pathGlobalInstallDir = STR("../lib/libexec/nn-insight/" << pluginName << "-plugin.so");
+	auto pathGlobalInstallDir = STR("../libexec/nn-insight/" << pluginName << "-plugin.so");
 	if (Util::doesFileExist(pathGlobalInstallDir.c_str()))
 		return pathGlobalInstallDir;
 

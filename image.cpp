@@ -5,7 +5,7 @@
 #include "util.h"
 
 #include <png++/png.hpp>
-#include <avir.h>
+#include <avir/avir.h>
 
 #include <QPixmap>
 #include <QImage>

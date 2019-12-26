@@ -618,10 +618,10 @@ float* MainWindow::applyEffects(const float *image, const TensorShape &shape,
 	const std::tuple<TensorShape,std::vector<float>> &convolution) const
 {
 	assert(shape.size()==3);
-	assert(flipHorizontally || flipVertically || makeGrayscale);
+	assert(flipHorizontally || flipVertically || makeGrayscale || !std::get<1>(convolution).empty());
 
 	unsigned idx = 0; // idx=0 is "image"
-	std::unique_ptr<float> withEffects[2]; // idx=1 and idx=2
+	std::unique_ptr<float> withEffects[2]; // idx=1 and idx=2 are allocatable "images"
 
 	auto idxNext = [](unsigned idx) {
 		return (idx+1)<3 ? idx+1 : 1;
@@ -633,10 +633,10 @@ float* MainWindow::applyEffects(const float *image, const TensorShape &shape,
 			return (const float*)withEffects[idx-1].get();
 	};
 	auto dst = [&](unsigned idx) {
-		auto idxDst = idxNext(idx);
-		if (!withEffects[idxDst-1])
-			withEffects[idxDst-1].reset(new float[tensorFlatSize(shape)]);
-		return withEffects[idxDst-1].get();
+		auto &we = withEffects[idxNext(idx)-1];
+		if (!we)
+			we.reset(new float[tensorFlatSize(shape)]);
+		return we.get();
 	};
 
 	if (flipHorizontally) {

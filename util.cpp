@@ -126,7 +126,7 @@ unsigned char* convertArrayFloatToUInt8(const float *a, size_t size) { // ASSUME
 	std::unique_ptr<unsigned char> cc(new unsigned char[size]);
 
 	auto c = cc.get();
-	for (const float *ae = a+size; a < ae; )
+	for (const float *ae = a+size; a<ae; )
 		*c++ = *a++;
 
 	return cc.release();

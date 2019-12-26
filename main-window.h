@@ -10,6 +10,7 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QCheckBox>
+#include <QComboBox>
 #include <QVBoxLayout>
 #include <QGridLayout>
 #include <QMenuBar>
@@ -59,6 +60,8 @@ private: // fields
 	QCheckBox                                  sourceEffectFlipVerticallyCheckBox;
 	QLabel                                     sourceEffectMakeGrayscaleLabel;
 	QCheckBox                                  sourceEffectMakeGrayscaleCheckBox;
+	QLabel                                     sourceEffectConvolutionLabel;
+	QComboBox                                  sourceEffectConvolutionComboBox;
 	QWidget                                  sourceFiller;
 	QPushButton                              computeButton;
 	QLabel                                 sourceImage;
@@ -115,7 +118,9 @@ private: // private methods
 	void openImagePixmap(const QPixmap &imagePixmap, const char *sourceName);
 	void clearImageData();
 	void effectsChanged();
-	float* applyEffects(const float *image, const TensorShape &shape, bool flipHorizontally, bool flipVertically, bool makeGrayscale);
+	float* applyEffects(const float *image, const TensorShape &shape,
+		bool flipHorizontally, bool flipVertically, bool makeGrayscale,
+		const std::tuple<TensorShape,std::vector<float>> &convolution) const;
 	void updateSourceImageOnScreen();
 };
 

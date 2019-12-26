@@ -68,6 +68,7 @@ add_executable(nn-insight
 	ZoomableSvgWidget.cpp
 	DataTable2D.cpp
 	image.cpp
+	3rdparty/tensorflow/tflite-reference-implementation.cpp
 )
 target_link_libraries(nn-insight
 	Qt5::Widgets Qt5::Svg

@@ -9,6 +9,7 @@
 #include "util.h"
 #include "misc.h"
 #include "nn-types.h"
+#include "nn-operators.h"
 #include "image.h"
 
 #include <QEvent>
@@ -25,12 +26,57 @@
 
 #include <assert.h>
 
+#include <map>
 #include <memory>
 
 #if defined(USE_PERFTOOLS)
 #include <gperftools/malloc_extension.h>
 #endif
 
+/// local enums and values
+
+enum ConvolutionEffect {
+	ConvolutionEffect_None,
+	ConvolutionEffect_Blur_3x3,
+	ConvolutionEffect_Blur_5x5
+};
+#define THR 1./13.
+static const std::map<ConvolutionEffect, std::tuple<TensorShape,std::vector<float>>> convolutionEffects = {
+	{ConvolutionEffect_None, {{},{}}},
+	{ConvolutionEffect_Blur_3x3, {{3,3,3,3}, {
+		0.0,0.0,0.0, 0.2,0.0,0.0, 0.0,0.0,0.0,
+		0.2,0.0,0.0, 0.2,0.0,0.0, 0.2,0.0,0.0,
+		0.0,0.0,0.0, 0.2,0.0,0.0, 0.0,0.0,0.0,
+
+		0.0,0.0,0.0, 0.0,0.2,0.0, 0.0,0.0,0.0,
+		0.0,0.2,0.0, 0.0,0.2,0.0, 0.0,0.2,0.0,
+		0.0,0.0,0.0, 0.0,0.2,0.0, 0.0,0.0,0.0,
+
+		0.0,0.0,0.0, 0.0,0.0,0.2, 0.0,0.0,0.0,
+		0.0,0.0,0.2, 0.0,0.0,0.2, 0.0,0.0,0.2,
+		0.0,0.0,0.0, 0.0,0.0,0.2, 0.0,0.0,0.0
+	}}},
+	{ConvolutionEffect_Blur_5x5, {{3,5,5,3}, {
+		0.0,0.0,0.0, 0.0,0.0,0.0, THR,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
+		0.0,0.0,0.0, THR,0.0,0.0, THR,0.0,0.0, THR,0.0,0.0, 0.0,0.0,0.0,
+		THR,0.0,0.0, THR,0.0,0.0, THR,0.0,0.0, THR,0.0,0.0, THR,0.0,0.0,
+		0.0,0.0,0.0, THR,0.0,0.0, THR,0.0,0.0, THR,0.0,0.0, 0.0,0.0,0.0,
+		0.0,0.0,0.0, 0.0,0.0,0.0, THR,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
+
+		0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,THR,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
+		0.0,0.0,0.0, 0.0,THR,0.0, 0.0,THR,0.0, 0.0,THR,0.0, 0.0,0.0,0.0,
+		0.0,THR,0.0, 0.0,THR,0.0, 0.0,THR,0.0, 0.0,THR,0.0, 0.0,THR,0.0,
+		0.0,0.0,0.0, 0.0,THR,0.0, 0.0,THR,0.0, 0.0,THR,0.0, 0.0,0.0,0.0,
+		0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,THR,0.0, 0.0,0.0,0.0, 0.0,0.0,0.0,
+
+		0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,THR, 0.0,0.0,0.0, 0.0,0.0,0.0,
+		0.0,0.0,0.0, 0.0,0.0,THR, 0.0,0.0,THR, 0.0,0.0,THR, 0.0,0.0,0.0,
+		0.0,0.0,THR, 0.0,0.0,THR, 0.0,0.0,THR, 0.0,0.0,THR, 0.0,0.0,THR,
+		0.0,0.0,0.0, 0.0,0.0,THR, 0.0,0.0,THR, 0.0,0.0,THR, 0.0,0.0,0.0,
+		0.0,0.0,0.0, 0.0,0.0,0.0, 0.0,0.0,THR, 0.0,0.0,0.0, 0.0,0.0,0.0
+	}}}
+};
+#undef THR
 
 MainWindow::MainWindow()
 : mainSplitter(this)
@@ -53,6 +99,8 @@ MainWindow::MainWindow()
 ,            sourceEffectFlipVerticallyCheckBox(&sourceApplyEffectsWidget)
 ,            sourceEffectMakeGrayscaleLabel("Make grayscale", &sourceApplyEffectsWidget)
 ,            sourceEffectMakeGrayscaleCheckBox(&sourceApplyEffectsWidget)
+,            sourceEffectConvolutionLabel("Convolution", &sourceApplyEffectsWidget)
+,            sourceEffectConvolutionComboBox(&sourceApplyEffectsWidget)
 ,          sourceFiller(&sourceDetails)
 ,          computeButton("Compute", &sourceDetails)
 ,        sourceImage(&sourceWidget)
@@ -102,6 +150,8 @@ MainWindow::MainWindow()
 	      sourceApplyEffectsLayout.addWidget(&sourceEffectFlipVerticallyCheckBox,   1/*row*/, 1/*column*/);
 	      sourceApplyEffectsLayout.addWidget(&sourceEffectMakeGrayscaleLabel,       2/*row*/, 0/*column*/);
 	      sourceApplyEffectsLayout.addWidget(&sourceEffectMakeGrayscaleCheckBox,    2/*row*/, 1/*column*/);
+	      sourceApplyEffectsLayout.addWidget(&sourceEffectConvolutionLabel,         3/*row*/, 0/*column*/);
+	      sourceApplyEffectsLayout.addWidget(&sourceEffectConvolutionComboBox,      3/*row*/, 1/*column*/);
 	    sourceDetailsLayout.addWidget(&sourceFiller);
 	    sourceDetailsLayout.addWidget(&computeButton);
 	  sourceLayout.addWidget(&sourceImage);
@@ -122,7 +172,7 @@ MainWindow::MainWindow()
 	statusBar.addWidget(&memoryUseLabel);
 #endif
 
-	for (auto w : {&sourceEffectFlipHorizontallyLabel, &sourceEffectFlipVerticallyLabel, &sourceEffectMakeGrayscaleLabel})
+	for (auto w : {&sourceEffectFlipHorizontallyLabel, &sourceEffectFlipVerticallyLabel, &sourceEffectMakeGrayscaleLabel, &sourceEffectConvolutionLabel})
 		w->setAlignment(Qt::AlignRight);
 
 	// tooltips
@@ -136,6 +186,8 @@ MainWindow::MainWindow()
 	sourceEffectFlipVerticallyCheckBox  .setToolTip("Flip the image vertically");
 	sourceEffectMakeGrayscaleLabel      .setToolTip("Make the image grayscale");
 	sourceEffectMakeGrayscaleCheckBox   .setToolTip("Make the image grayscale");
+	sourceEffectConvolutionLabel        .setToolTip("Apply convolution to the image");
+	sourceEffectConvolutionComboBox     .setToolTip("Apply convolution to the image");
 	computeButton                       .setToolTip("Perform neural network computation for the currently selected image as input");
 	sourceImage                         .setToolTip("Image currently used as a NN input");
 	operatorTypeLabel                   .setToolTip("Operator type: what kind of operation does it perform");
@@ -154,6 +206,11 @@ MainWindow::MainWindow()
 	// widget options and flags
 	sourceWidget.hide(); // hidden by default
 	noDetails.setEnabled(false); // always grayed out
+
+	// fill lists
+	sourceEffectConvolutionComboBox.addItem("None",       ConvolutionEffect_None);
+	sourceEffectConvolutionComboBox.addItem("Blur (3x3)", ConvolutionEffect_Blur_3x3);
+	sourceEffectConvolutionComboBox.addItem("Blur (5x5)", ConvolutionEffect_Blur_5x5);
 
 	// fonts
 	for (auto widget : {&operatorTypeLabel, &operatorOptionsLabel, &operatorInputsLabel, &operatorOutputsLabel, &operatorComplexityLabel})
@@ -179,6 +236,9 @@ MainWindow::MainWindow()
 		effectsChanged();
 	});
 	connect(&sourceEffectMakeGrayscaleCheckBox, &QCheckBox::stateChanged, [this](int) {
+		effectsChanged();
+	});
+	connect(&sourceEffectConvolutionComboBox, QOverload<int>::of(&QComboBox::activated), [this](int) {
 		effectsChanged();
 	});
 	connect(&computeButton, &QAbstractButton::pressed, [this]() {
@@ -540,11 +600,12 @@ void MainWindow::effectsChanged() {
 	bool flipHorizontally = sourceEffectFlipHorizontallyCheckBox.isChecked();
 	bool flipVertically   = sourceEffectFlipVerticallyCheckBox.isChecked();
 	bool makeGrayscale    = sourceEffectMakeGrayscaleCheckBox.isChecked();
+	auto convolution      = convolutionEffects.find((ConvolutionEffect)sourceEffectConvolutionComboBox.currentData().toUInt())->second;
 
 	// any effects to apply?
-	if (flipHorizontally || flipVertically || makeGrayscale) {
+	if (flipHorizontally || flipVertically || makeGrayscale || !std::get<1>(convolution).empty()) {
 		sourceTensorDataAsUsed.reset(applyEffects(sourceTensorDataAsLoaded.get(), sourceTensorShape,
-			flipHorizontally, flipVertically, makeGrayscale));
+			flipHorizontally, flipVertically, makeGrayscale, convolution));
 	} else {
 		sourceTensorDataAsUsed = sourceTensorDataAsLoaded;
 	}
@@ -552,7 +613,10 @@ void MainWindow::effectsChanged() {
 	updateSourceImageOnScreen();
 }
 
-float* MainWindow::applyEffects(const float *image, const TensorShape &shape, bool flipHorizontally, bool flipVertically, bool makeGrayscale) {
+float* MainWindow::applyEffects(const float *image, const TensorShape &shape,
+	bool flipHorizontally, bool flipVertically, bool makeGrayscale,
+	const std::tuple<TensorShape,std::vector<float>> &convolution) const
+{
 	assert(shape.size()==3);
 	assert(flipHorizontally || flipVertically || makeGrayscale);
 
@@ -585,6 +649,21 @@ float* MainWindow::applyEffects(const float *image, const TensorShape &shape, bo
 	}
 	if (makeGrayscale) {
 		Image::makeGrayscale(shape, src(idx), dst(idx));
+		idx = idxNext(idx);
+	}
+	if (!std::get<1>(convolution).empty()) {
+		TensorShape shapeWithBatch = shape;
+		shapeWithBatch.insert(shapeWithBatch.begin(), 1/*batch*/);
+		const float bias[3] = {0,0,0};
+		NnOperators::Conv2D(
+			shapeWithBatch, src(idx),
+			std::get<0>(convolution), std::get<1>(convolution).data(),
+			{3}, bias, // no bias
+			shapeWithBatch, dst(idx),
+			std::get<0>(convolution)[2]/2, std::get<0>(convolution)[1]/2, // padding
+			1,1, // strides
+			1,1  // dilation factors
+		);
 		idx = idxNext(idx);
 	}
 

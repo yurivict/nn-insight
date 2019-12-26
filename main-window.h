@@ -61,7 +61,10 @@ private: // fields
 	QLabel                                     sourceEffectMakeGrayscaleLabel;
 	QCheckBox                                  sourceEffectMakeGrayscaleCheckBox;
 	QLabel                                     sourceEffectConvolutionLabel;
-	QComboBox                                  sourceEffectConvolutionComboBox;
+	QWidget                                    sourceEffectConvolutionParamsWidget;
+	QHBoxLayout                                  sourceEffectConvolutionParamsLayout;
+	QComboBox                                    sourceEffectConvolutionTypeComboBox;
+	QComboBox                                    sourceEffectConvolutionCountComboBox;
 	QWidget                                  sourceFiller;
 	QPushButton                              computeButton;
 	QLabel                                 sourceImage;
@@ -120,7 +123,7 @@ private: // private methods
 	void effectsChanged();
 	float* applyEffects(const float *image, const TensorShape &shape,
 		bool flipHorizontally, bool flipVertically, bool makeGrayscale,
-		const std::tuple<TensorShape,std::vector<float>> &convolution) const;
+		const std::tuple<TensorShape,std::vector<float>> &convolution, unsigned convolutionCount) const;
 	void updateSourceImageOnScreen();
 };
 

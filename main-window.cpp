@@ -100,7 +100,10 @@ MainWindow::MainWindow()
 ,            sourceEffectMakeGrayscaleLabel("Make grayscale", &sourceApplyEffectsWidget)
 ,            sourceEffectMakeGrayscaleCheckBox(&sourceApplyEffectsWidget)
 ,            sourceEffectConvolutionLabel("Convolution", &sourceApplyEffectsWidget)
-,            sourceEffectConvolutionComboBox(&sourceApplyEffectsWidget)
+,            sourceEffectConvolutionParamsWidget(&sourceApplyEffectsWidget)
+,              sourceEffectConvolutionParamsLayout(&sourceEffectConvolutionParamsWidget)
+,              sourceEffectConvolutionTypeComboBox(&sourceEffectConvolutionParamsWidget)
+,              sourceEffectConvolutionCountComboBox(&sourceEffectConvolutionParamsWidget)
 ,          sourceFiller(&sourceDetails)
 ,          computeButton("Compute", &sourceDetails)
 ,        sourceImage(&sourceWidget)
@@ -151,7 +154,9 @@ MainWindow::MainWindow()
 	      sourceApplyEffectsLayout.addWidget(&sourceEffectMakeGrayscaleLabel,       2/*row*/, 0/*column*/);
 	      sourceApplyEffectsLayout.addWidget(&sourceEffectMakeGrayscaleCheckBox,    2/*row*/, 1/*column*/);
 	      sourceApplyEffectsLayout.addWidget(&sourceEffectConvolutionLabel,         3/*row*/, 0/*column*/);
-	      sourceApplyEffectsLayout.addWidget(&sourceEffectConvolutionComboBox,      3/*row*/, 1/*column*/);
+	      sourceApplyEffectsLayout.addWidget(&sourceEffectConvolutionParamsWidget,  3/*row*/, 1/*column*/);
+	        sourceEffectConvolutionParamsLayout.addWidget(&sourceEffectConvolutionTypeComboBox);
+	        sourceEffectConvolutionParamsLayout.addWidget(&sourceEffectConvolutionCountComboBox);
 	    sourceDetailsLayout.addWidget(&sourceFiller);
 	    sourceDetailsLayout.addWidget(&computeButton);
 	  sourceLayout.addWidget(&sourceImage);
@@ -187,7 +192,8 @@ MainWindow::MainWindow()
 	sourceEffectMakeGrayscaleLabel      .setToolTip("Make the image grayscale");
 	sourceEffectMakeGrayscaleCheckBox   .setToolTip("Make the image grayscale");
 	sourceEffectConvolutionLabel        .setToolTip("Apply convolution to the image");
-	sourceEffectConvolutionComboBox     .setToolTip("Apply convolution to the image");
+	sourceEffectConvolutionTypeComboBox .setToolTip("Convolution type to apply to the image");
+	sourceEffectConvolutionCountComboBox.setToolTip("How many times to apply the convolution");
 	computeButton                       .setToolTip("Perform neural network computation for the currently selected image as input");
 	sourceImage                         .setToolTip("Image currently used as a NN input");
 	operatorTypeLabel                   .setToolTip("Operator type: what kind of operation does it perform");
@@ -198,19 +204,27 @@ MainWindow::MainWindow()
 	sourceImageFileName      .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
 	sourceImageFileSize      .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
 	sourceApplyEffectsWidget .setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Maximum);
+	for (QWidget *w : {&sourceEffectConvolutionParamsWidget, (QWidget*)&sourceEffectConvolutionTypeComboBox, (QWidget*)&sourceEffectConvolutionCountComboBox})
+		w->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
 	sourceImageSize          .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
 	//sourceFiller .setSizePolicy(QSizePolicy::Fixed, QSizePolicy::MinimumExpanding);
 	sourceImage              .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
 	detailsStack             .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+
+	// margins and spacing
+	sourceEffectConvolutionParamsLayout.setContentsMargins(0,0,0,0);
+	sourceEffectConvolutionParamsLayout.setSpacing(0);
 
 	// widget options and flags
 	sourceWidget.hide(); // hidden by default
 	noDetails.setEnabled(false); // always grayed out
 
 	// fill lists
-	sourceEffectConvolutionComboBox.addItem("None",       ConvolutionEffect_None);
-	sourceEffectConvolutionComboBox.addItem("Blur (3x3)", ConvolutionEffect_Blur_3x3);
-	sourceEffectConvolutionComboBox.addItem("Blur (5x5)", ConvolutionEffect_Blur_5x5);
+	sourceEffectConvolutionTypeComboBox.addItem("None",       ConvolutionEffect_None);
+	sourceEffectConvolutionTypeComboBox.addItem("Blur (3x3)", ConvolutionEffect_Blur_3x3);
+	sourceEffectConvolutionTypeComboBox.addItem("Blur (5x5)", ConvolutionEffect_Blur_5x5);
+	for (unsigned c = 1; c <= 20; c++)
+		sourceEffectConvolutionCountComboBox.addItem(QString("x%1").arg(c), c);
 
 	// fonts
 	for (auto widget : {&operatorTypeLabel, &operatorOptionsLabel, &operatorInputsLabel, &operatorOutputsLabel, &operatorComplexityLabel})
@@ -238,8 +252,12 @@ MainWindow::MainWindow()
 	connect(&sourceEffectMakeGrayscaleCheckBox, &QCheckBox::stateChanged, [this](int) {
 		effectsChanged();
 	});
-	connect(&sourceEffectConvolutionComboBox, QOverload<int>::of(&QComboBox::activated), [this](int) {
+	connect(&sourceEffectConvolutionTypeComboBox, QOverload<int>::of(&QComboBox::activated), [this](int) {
 		effectsChanged();
+	});
+	connect(&sourceEffectConvolutionCountComboBox, QOverload<int>::of(&QComboBox::activated), [this](int) {
+		if (sourceEffectConvolutionTypeComboBox.currentIndex() != 0)
+			effectsChanged();
 	});
 	connect(&computeButton, &QAbstractButton::pressed, [this]() {
 		// allocate tensors array
@@ -600,12 +618,12 @@ void MainWindow::effectsChanged() {
 	bool flipHorizontally = sourceEffectFlipHorizontallyCheckBox.isChecked();
 	bool flipVertically   = sourceEffectFlipVerticallyCheckBox.isChecked();
 	bool makeGrayscale    = sourceEffectMakeGrayscaleCheckBox.isChecked();
-	auto convolution      = convolutionEffects.find((ConvolutionEffect)sourceEffectConvolutionComboBox.currentData().toUInt())->second;
+	auto convolution      = convolutionEffects.find((ConvolutionEffect)sourceEffectConvolutionTypeComboBox.currentData().toUInt())->second;
 
 	// any effects to apply?
 	if (flipHorizontally || flipVertically || makeGrayscale || !std::get<1>(convolution).empty()) {
 		sourceTensorDataAsUsed.reset(applyEffects(sourceTensorDataAsLoaded.get(), sourceTensorShape,
-			flipHorizontally, flipVertically, makeGrayscale, convolution));
+			flipHorizontally, flipVertically, makeGrayscale, convolution,sourceEffectConvolutionCountComboBox.currentData().toUInt()));
 	} else {
 		sourceTensorDataAsUsed = sourceTensorDataAsLoaded;
 	}
@@ -615,12 +633,12 @@ void MainWindow::effectsChanged() {
 
 float* MainWindow::applyEffects(const float *image, const TensorShape &shape,
 	bool flipHorizontally, bool flipVertically, bool makeGrayscale,
-	const std::tuple<TensorShape,std::vector<float>> &convolution) const
+	const std::tuple<TensorShape,std::vector<float>> &convolution, unsigned convolutionCount) const
 {
 	assert(shape.size()==3);
 	assert(flipHorizontally || flipVertically || makeGrayscale || !std::get<1>(convolution).empty());
 
-	unsigned idx = 0; // idx=0 is "image"
+	unsigned idx = 0; // idx=0 is "image", idx can be 0,1,2
 	std::unique_ptr<float> withEffects[2]; // idx=1 and idx=2 are allocatable "images"
 
 	auto idxNext = [](unsigned idx) {
@@ -654,17 +672,19 @@ float* MainWindow::applyEffects(const float *image, const TensorShape &shape,
 	if (!std::get<1>(convolution).empty()) {
 		TensorShape shapeWithBatch = shape;
 		shapeWithBatch.insert(shapeWithBatch.begin(), 1/*batch*/);
-		const float bias[3] = {0,0,0};
-		NnOperators::Conv2D(
-			shapeWithBatch, src(idx),
-			std::get<0>(convolution), std::get<1>(convolution).data(),
-			{3}, bias, // no bias
-			shapeWithBatch, dst(idx),
-			std::get<0>(convolution)[2]/2, std::get<0>(convolution)[1]/2, // padding
-			1,1, // strides
-			1,1  // dilation factors
-		);
-		idx = idxNext(idx);
+		const static float bias[3] = {0,0,0};
+		for (unsigned i = 1; i <= convolutionCount; i++) {
+			NnOperators::Conv2D(
+				shapeWithBatch, src(idx),
+				std::get<0>(convolution), std::get<1>(convolution).data(),
+					{3}, bias, // no bias
+				shapeWithBatch, dst(idx),
+				std::get<0>(convolution)[2]/2, std::get<0>(convolution)[1]/2, // padding, paddings not matching kernel size work but cause image shifts
+				1,1, // strides
+				1,1  // dilation factors
+			);
+			idx = idxNext(idx);
+		}
 	}
 
 	return withEffects[idx-1].release();

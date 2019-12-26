@@ -57,6 +57,8 @@ private: // fields
 	QCheckBox                                  sourceEffectFlipHorizontallyCheckBox;
 	QLabel                                     sourceEffectFlipVerticallyLabel;
 	QCheckBox                                  sourceEffectFlipVerticallyCheckBox;
+	QLabel                                     sourceEffectMakeGrayscaleLabel;
+	QCheckBox                                  sourceEffectMakeGrayscaleCheckBox;
 	QWidget                                  sourceFiller;
 	QPushButton                              computeButton;
 	QLabel                                 sourceImage;
@@ -113,7 +115,7 @@ private: // private methods
 	void openImagePixmap(const QPixmap &imagePixmap, const char *sourceName);
 	void clearImageData();
 	void effectsChanged();
-	float* applyEffects(const float *image, const TensorShape &shape, bool flipHorizontally, bool flipVertically);
+	float* applyEffects(const float *image, const TensorShape &shape, bool flipHorizontally, bool flipVertically, bool makeGrayscale);
 	void updateSourceImageOnScreen();
 };
 

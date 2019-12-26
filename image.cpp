@@ -118,4 +118,13 @@ void flipVertically(const TensorShape &shape, const float *imgSrc, float *imgDst
 	reverseArray(imgSrc, imgDst, tensorFlatSize(shape), shape[1]*shape[2]);
 }
 
+void makeGrayscale(const TensorShape &shape, const float *imgSrc, float *imgDst) {
+	assert(shape[2]==3);
+	auto convertColor = [](float R, float G, float B) {
+		return (R+G+B)/3;
+	};
+	for (auto imgSrce = imgSrc + tensorFlatSize(shape); imgSrc<imgSrce; imgSrc+=3, imgDst+=3)
+		imgDst[0] = imgDst[1] = imgDst[2] = convertColor(imgSrc[0], imgSrc[1], imgSrc[2]);
+}
+
 }

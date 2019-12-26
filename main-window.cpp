@@ -51,6 +51,8 @@ MainWindow::MainWindow()
 ,            sourceEffectFlipHorizontallyCheckBox(&sourceApplyEffectsWidget)
 ,            sourceEffectFlipVerticallyLabel("Flip vertically", &sourceApplyEffectsWidget)
 ,            sourceEffectFlipVerticallyCheckBox(&sourceApplyEffectsWidget)
+,            sourceEffectMakeGrayscaleLabel("Make grayscale", &sourceApplyEffectsWidget)
+,            sourceEffectMakeGrayscaleCheckBox(&sourceApplyEffectsWidget)
 ,          sourceFiller(&sourceDetails)
 ,          computeButton("Compute", &sourceDetails)
 ,        sourceImage(&sourceWidget)
@@ -98,6 +100,8 @@ MainWindow::MainWindow()
 	      sourceApplyEffectsLayout.addWidget(&sourceEffectFlipHorizontallyCheckBox, 0/*row*/, 1/*column*/);
 	      sourceApplyEffectsLayout.addWidget(&sourceEffectFlipVerticallyLabel,      1/*row*/, 0/*column*/);
 	      sourceApplyEffectsLayout.addWidget(&sourceEffectFlipVerticallyCheckBox,   1/*row*/, 1/*column*/);
+	      sourceApplyEffectsLayout.addWidget(&sourceEffectMakeGrayscaleLabel,       2/*row*/, 0/*column*/);
+	      sourceApplyEffectsLayout.addWidget(&sourceEffectMakeGrayscaleCheckBox,    2/*row*/, 1/*column*/);
 	    sourceDetailsLayout.addWidget(&sourceFiller);
 	    sourceDetailsLayout.addWidget(&computeButton);
 	  sourceLayout.addWidget(&sourceImage);
@@ -118,7 +122,7 @@ MainWindow::MainWindow()
 	statusBar.addWidget(&memoryUseLabel);
 #endif
 
-	for (auto w : {&sourceEffectFlipHorizontallyLabel, &sourceEffectFlipVerticallyLabel})
+	for (auto w : {&sourceEffectFlipHorizontallyLabel, &sourceEffectFlipVerticallyLabel, &sourceEffectMakeGrayscaleLabel})
 		w->setAlignment(Qt::AlignRight);
 
 	// tooltips
@@ -130,6 +134,8 @@ MainWindow::MainWindow()
 	sourceEffectFlipHorizontallyCheckBox.setToolTip("Flip the image horizontally");
 	sourceEffectFlipVerticallyLabel     .setToolTip("Flip the image vertically");
 	sourceEffectFlipVerticallyCheckBox  .setToolTip("Flip the image vertically");
+	sourceEffectMakeGrayscaleLabel      .setToolTip("Make the image grayscale");
+	sourceEffectMakeGrayscaleCheckBox   .setToolTip("Make the image grayscale");
 	computeButton                       .setToolTip("Perform neural network computation for the currently selected image as input");
 	sourceImage                         .setToolTip("Image currently used as a NN input");
 	operatorTypeLabel                   .setToolTip("Operator type: what kind of operation does it perform");
@@ -170,6 +176,9 @@ MainWindow::MainWindow()
 		effectsChanged();
 	});
 	connect(&sourceEffectFlipVerticallyCheckBox, &QCheckBox::stateChanged, [this](int) {
+		effectsChanged();
+	});
+	connect(&sourceEffectMakeGrayscaleCheckBox, &QCheckBox::stateChanged, [this](int) {
 		effectsChanged();
 	});
 	connect(&computeButton, &QAbstractButton::pressed, [this]() {
@@ -529,12 +538,13 @@ void MainWindow::clearImageData() {
 void MainWindow::effectsChanged() {
 	// all available effects that can be applied
 	bool flipHorizontally = sourceEffectFlipHorizontallyCheckBox.isChecked();
-	bool flipVertically = sourceEffectFlipVerticallyCheckBox.isChecked();
+	bool flipVertically   = sourceEffectFlipVerticallyCheckBox.isChecked();
+	bool makeGrayscale    = sourceEffectMakeGrayscaleCheckBox.isChecked();
 
 	// any effects to apply?
-	if (flipHorizontally || flipVertically) {
+	if (flipHorizontally || flipVertically || makeGrayscale) {
 		sourceTensorDataAsUsed.reset(applyEffects(sourceTensorDataAsLoaded.get(), sourceTensorShape,
-			flipHorizontally, flipVertically));
+			flipHorizontally, flipVertically, makeGrayscale));
 	} else {
 		sourceTensorDataAsUsed = sourceTensorDataAsLoaded;
 	}
@@ -542,9 +552,9 @@ void MainWindow::effectsChanged() {
 	updateSourceImageOnScreen();
 }
 
-float* MainWindow::applyEffects(const float *image, const TensorShape &shape, bool flipHorizontally, bool flipVertically) {
+float* MainWindow::applyEffects(const float *image, const TensorShape &shape, bool flipHorizontally, bool flipVertically, bool makeGrayscale) {
 	assert(shape.size()==3);
-	assert(flipHorizontally || flipVertically);
+	assert(flipHorizontally || flipVertically || makeGrayscale);
 
 	unsigned idx = 0; // idx=0 is "image"
 	std::unique_ptr<float> withEffects[2]; // idx=1 and idx=2
@@ -571,6 +581,10 @@ float* MainWindow::applyEffects(const float *image, const TensorShape &shape, bo
 	}
 	if (flipVertically) {
 		Image::flipVertically(shape, src(idx), dst(idx));
+		idx = idxNext(idx);
+	}
+	if (makeGrayscale) {
+		Image::makeGrayscale(shape, src(idx), dst(idx));
 		idx = idxNext(idx);
 	}
 

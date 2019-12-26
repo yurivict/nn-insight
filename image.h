@@ -15,5 +15,6 @@ float* resizeImage(const float *pixels, const TensorShape &shapeOld, const Tenso
 QPixmap toQPixmap(const float *image, const TensorShape &shape);
 void flipHorizontally(const TensorShape &shape, const float *imgSrc, float *imgDst);
 void flipVertically(const TensorShape &shape, const float *imgSrc, float *imgDst);
+void makeGrayscale(const TensorShape &shape, const float *imgSrc, float *imgDst);
 
 }

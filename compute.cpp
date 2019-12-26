@@ -11,6 +11,7 @@
 #include <vector>
 #include <memory>
 #include <functional>
+#include <cmath>
 
 #include <assert.h>
 
@@ -116,9 +117,57 @@ bool compute(
 		// get operator options from the model
 		std::unique_ptr<PI::OperatorOptionsList> opts(model->getOperatorOptions(oid));
 
-		// helper
+		// helpers
 		auto translatePadding = [](const TensorShape &filterShape, PI::PaddingType paddingType, WidthHeight wh) {
 			return filterShape[wh==WIDTH ? 2:1]/2;
+		};
+		auto applyActivationFunction = [](size_t size, float *data, PI::ActivationFunction activationFunction) {
+			auto applyRELU = [](float &val) {
+				if (val < 0)
+					val = 0;
+			};
+			auto applyRELU_N1_TO_1 = [](float &val) {
+				if (val < -1)
+					val = -1;
+				else if (val > 1)
+					val = 1;
+			};
+			auto applyRELU6 = [](float &val) {
+				if (val < 0)
+					val = 0;
+				else if (val > 6)
+					val = 6;
+			};
+			auto applyTANH = [](float &val) {
+				val = std::tanh(val);
+			};
+			auto applySIGN_BIT = [](float &val) {
+				val = std::signbit(val) ? 1 : 0;
+			};
+			switch (activationFunction) {
+			case PI::ActivationFunction_RELU:
+				for (auto e = data+size; data<e; data++)
+					applyRELU(*data);
+				return;
+			case PI::ActivationFunction_RELU_N1_TO_1:
+				for (auto e = data+size; data<e; data++)
+					applyRELU_N1_TO_1(*data);
+				return;
+			case PI::ActivationFunction_RELU6:
+				for (auto e = data+size; data<e; data++)
+					applyRELU6(*data);
+				return;
+			case PI::ActivationFunction_TANH:
+				for (auto e = data+size; data<e; data++)
+					applyTANH(*data);
+				return;
+			case PI::ActivationFunction_SIGN_BIT:
+				for (auto e = data+size; data<e; data++)
+					applySIGN_BIT(*data);
+				return;
+			case PI::ActivationFunction_NONE:
+				return;
+			}
 		};
 
 		// by operator kind
@@ -158,9 +207,10 @@ bool compute(
 			// tensors
 			auto filterShape = model->getTensorShape(inputs[1]);
 			auto outputShape = model->getTensorShape(outputs[0]);
+			auto outputShapeSize = tensorFlatSize(outputShape);
 
 			// create output data
-			std::unique_ptr<float> outputData(new float[tensorFlatSize(outputShape)]);
+			std::unique_ptr<float> outputData(new float[outputShapeSize]);
 
 			// compute
 			NnOperators::Conv2D(
@@ -172,6 +222,9 @@ bool compute(
 				strideWidth, strideHeight,
 				dilationWidth, dilationHeight
 			);
+
+			// activation function
+			applyActivationFunction(outputShapeSize, outputData.get(), activationFunction);
 
 			// save the data
 			(*tensorData)[outputs[0]].reset(outputData.release());

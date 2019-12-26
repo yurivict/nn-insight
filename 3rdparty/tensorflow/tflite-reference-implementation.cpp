@@ -1,6 +1,6 @@
 
 //
-// tflite-reference-implementation.cpp contains portions of the Apech 2.0 licensed code from the TensorFlow source tree
+// tflite-reference-implementation.cpp contains portions of the Apache 2.0 licensed code from the TensorFlow source tree
 //
 
 #include <cstdint>

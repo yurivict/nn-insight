@@ -49,6 +49,7 @@ public:
 
 bool compute(
 	const PI::Model *model,
+	std::tuple<InputNormalizationRange,InputNormalizationColorOrder> inputNormalization,
 	std::shared_ptr<float> &inputTensor, const TensorShape &inputShape,
 	std::unique_ptr<std::vector<std::shared_ptr<const float>>> &tensorData,
 	std::function<void(const std::string&)> cbWarningMessage,
@@ -72,7 +73,8 @@ bool compute(
 
 	/// resize the source image
 
-	if (!(*tensorData.get())[modelInputs[0]]) { // tensor not ready
+	float *inputAllocated = nullptr;
+	{
 		assert(inputShape.size()==3);
 		TensorShape requiredShape = model->getTensorShape(modelInputs[0]);
 
@@ -104,12 +106,99 @@ bool compute(
 		// now we have requiredShape=[H,W,C], resize the image
 		auto &sharedPtrInput = (*tensorData.get())[modelInputs[0]];
 		if (inputShape != requiredShape)
-			sharedPtrInput.reset(Image::resizeImage(inputTensor.get(), inputShape, requiredShape));
+			sharedPtrInput.reset((inputAllocated = Image::resizeImage(inputTensor.get(), inputShape, requiredShape)));
 		else
-			sharedPtrInput = inputTensor;
-		// notify the caller
-		cbTensorComputed(modelInputs[0]);
+			sharedPtrInput = inputTensor; // reuse the original input image as an input tensor
 	}
+
+	/// normalize input
+
+	if (inputNormalization != InputNormalization{InputNormalizationRange_0_255,InputNormalizationColorOrder_RGB}) { // 0..255/RGB is how images are imported from files
+		auto inputShapeSize = tensorFlatSize(inputShape);
+
+		auto &input = (*tensorData.get())[modelInputs[0]]; // input tensor has been set above eithor to a resized value, or to inputTensor
+		const float *src = input.get();
+		if (!inputAllocated) // need to allocate because we change the data, otherwise use the allocated above one
+			input.reset((inputAllocated = new float[inputShapeSize]));
+
+		// helpers
+		auto normalizeRange = [](const float *src, float *dst, size_t sz, float min, float max) {
+			float m = (max-min)/256.; // XXX or 255.?
+			for (auto srce = src+sz; src<srce; )
+				*dst++ = min + (*src++)*m;
+		};
+		auto normalizeSub = [](const float *src, float *dst, size_t sz, const std::vector<float> &sub) {
+			unsigned i = 0;
+			for (auto srce = src+sz; src<srce; ) {
+				*dst++ = *src++ - sub[i];
+				if (++i == sub.size())
+					i = 0;
+			}
+		};
+		auto reorderArrays = [](const float *src, float *dst, size_t sz, const std::vector<unsigned> &permutation) {
+			float tmp[permutation.size()];
+			for (auto srce = src+sz; src<srce; src+=permutation.size()) {
+				float *ptmp = tmp;
+				for (auto idx : permutation)
+					*ptmp++ = src[idx];
+				for (auto t : tmp)
+					*dst++ = t;
+			}
+		};
+
+		// normalize value range
+		switch (std::get<0>(inputNormalization)) {
+		case InputNormalizationRange_0_1:
+			PRINT("normalizing to 0..1")
+			normalizeRange(src, inputAllocated, inputShapeSize, 0, 1);
+			src = inputAllocated;
+			break;
+		case InputNormalizationRange_0_255:
+			break; // already at 0..255
+		case InputNormalizationRange_0_128:
+			normalizeRange(src, inputAllocated, inputShapeSize, 0, 128);
+			src = inputAllocated;
+			break;
+		case InputNormalizationRange_0_64:
+			normalizeRange(src, inputAllocated, inputShapeSize, 0, 64);
+			src = inputAllocated;
+			break;
+		case InputNormalizationRange_0_32:
+			normalizeRange(src, inputAllocated, inputShapeSize, 0, 32);
+			src = inputAllocated;
+			break;
+		case InputNormalizationRange_0_16:
+			normalizeRange(src, inputAllocated, inputShapeSize, 0, 16);
+			src = inputAllocated;
+			break;
+		case InputNormalizationRange_0_8:
+			normalizeRange(src, inputAllocated, inputShapeSize, 0, 8);
+			src = inputAllocated;
+			break;
+		case InputNormalizationRange_M1_P1:
+			normalizeRange(src, inputAllocated, inputShapeSize, -1, 1);
+			src = inputAllocated;
+			break;
+		case InputNormalizationRange_ImageNet:
+			assert(*inputShape.rbegin()==3);
+			normalizeSub(src, inputAllocated, inputShapeSize, {123.68, 116.78, 103.94});
+			src = inputAllocated;
+			break;
+		}
+
+		// normalize color order
+		switch (std::get<1>(inputNormalization)) {
+		case InputNormalizationColorOrder_RGB:
+			break; // already RGB
+		case InputNormalizationColorOrder_BGR:
+			reorderArrays(src, inputAllocated, inputShapeSize, {2,1,0});
+			break;
+		}
+	}
+
+	// notify the caller that the input tensor has been computed
+
+	cbTensorComputed(modelInputs[0]);
 
 	/// compute operators
 

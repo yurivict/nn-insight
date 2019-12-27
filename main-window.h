@@ -11,6 +11,7 @@
 #include <QPushButton>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QLineEdit>
 #include <QVBoxLayout>
 #include <QGridLayout>
 #include <QMenuBar>
@@ -75,6 +76,10 @@ private: // fields
 	QWidget                                    spacer1Widget;
 	QLabel                                     computationTimeLabel;
 	QWidget                                    spacer2Widget;
+	QLabel                                     outputInterpretationLabel;
+	QComboBox                                  outputInterpretationComboBox;
+	QLineEdit                                  outputInterpretationLineEdit;
+	QWidget                                    spacer3Widget;
 	QPushButton                                clearComputationResults;
 	QLabel                                 sourceImage;
 	QStackedWidget                       detailsStack;

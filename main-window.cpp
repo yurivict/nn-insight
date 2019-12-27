@@ -130,23 +130,6 @@ static const std::map<ConvolutionEffect, std::tuple<TensorShape,std::vector<floa
 #undef S04
 #undef TTT
 
-enum InputNormalizationRange {
-	InputNormalizationRange_0_255,
-	InputNormalizationRange_0_128,
-	InputNormalizationRange_0_64,
-	InputNormalizationRange_0_32,
-	InputNormalizationRange_0_16,
-	InputNormalizationRange_0_8,
-	InputNormalizationRange_0_1,
-	InputNormalizationRange_M1_P1,
-	InputNormalizationRange_ImageNet
-};
-
-enum InputNormalizationColorRange {
-	InputNormalizationColorOrder_RGB,
-	InputNormalizationColorOrder_BGR
-};
-
 MainWindow::MainWindow()
 : mainSplitter(this)
 ,   svgScrollArea(&mainSplitter)
@@ -182,6 +165,10 @@ MainWindow::MainWindow()
 ,            spacer1Widget(&computeByWidget)
 ,            computationTimeLabel(QString("Computation time: %1").arg("n/a"), &computeByWidget)
 ,            spacer2Widget(&computeByWidget)
+,            outputInterpretationLabel("Interpret as:", &computeByWidget)
+,            outputInterpretationComboBox(&computeByWidget)
+,            outputInterpretationLineEdit(&computeByWidget)
+,            spacer3Widget(&computeByWidget)
 ,            clearComputationResults("Clear Results", &computeByWidget)
 ,        sourceImage(&sourceWidget)
 ,      detailsStack(&rhsWidget)
@@ -243,6 +230,10 @@ MainWindow::MainWindow()
 	      computeByLayout.addWidget(&spacer1Widget);
 	      computeByLayout.addWidget(&computationTimeLabel);
 	      computeByLayout.addWidget(&spacer2Widget);
+	      computeByLayout.addWidget(&outputInterpretationLabel);
+	      computeByLayout.addWidget(&outputInterpretationComboBox);
+	      computeByLayout.addWidget(&outputInterpretationLineEdit);
+	      computeByLayout.addWidget(&spacer3Widget);
 	      computeByLayout.addWidget(&clearComputationResults);
 	  sourceLayout.addWidget(&sourceImage);
 	rhsLayout.addWidget(&detailsStack);
@@ -286,6 +277,8 @@ MainWindow::MainWindow()
 	inputNormalizationRangeComboBox     .setToolTip("Specify what value range does this NN expect its input data be normalized to");
 	inputNormalizationColorOrderComboBox.setToolTip("Specify what color order does this NN expect its input data be supplied in");
 	computationTimeLabel                .setToolTip("Show how long did the the NN computation take");
+	for (QWidget *w : {(QWidget*)&outputInterpretationLabel,(QWidget*)&outputInterpretationComboBox,(QWidget*)&outputInterpretationLineEdit})
+		w->                          setToolTip("How to interpret the computation result?");
 	clearComputationResults             .setToolTip("Clear computation results");
 	sourceImage                         .setToolTip("Image currently used as a NN input");
 	operatorTypeLabel                   .setToolTip("Operator type: what kind of operation does it perform");
@@ -303,7 +296,13 @@ MainWindow::MainWindow()
 	inputNormalizationLabel              .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum); //The sizeHint() is a maximum
 	inputNormalizationRangeComboBox      .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
 	inputNormalizationColorOrderComboBox .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+	spacer1Widget                        .setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum);
 	computationTimeLabel                 .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+	spacer2Widget                        .setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum);
+	outputInterpretationLabel            .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+	outputInterpretationComboBox         .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+	outputInterpretationLineEdit         .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+	spacer3Widget                        .setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum);
 	sourceImage                          .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
 	detailsStack                         .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
@@ -312,10 +311,13 @@ MainWindow::MainWindow()
 	sourceEffectConvolutionParamsLayout.setSpacing(0);
 	computeByLayout.setContentsMargins(0,0,0,0);
 	computeByLayout.setSpacing(0);
+	for (auto w : {&spacer1Widget, &spacer2Widget, &spacer3Widget})
+		w->setMinimumWidth(10);
 
 	// widget options and flags
 	sourceWidget.hide(); // hidden by default
 	noDetails.setEnabled(false); // always grayed out
+	outputInterpretationLineEdit.setReadOnly(true); // it only displays interpretation
 
 	// fill lists
 	sourceEffectConvolutionTypeComboBox.addItem("None",          ConvolutionEffect_None);
@@ -327,17 +329,22 @@ MainWindow::MainWindow()
 	for (unsigned c = 1; c <= 20; c++)
 		sourceEffectConvolutionCountComboBox.addItem(QString("x%1").arg(c), c);
 
-	inputNormalizationRangeComboBox.addItem("0..255",       InputNormalizationRange_0_255); // default
+	inputNormalizationRangeComboBox.addItem("0..1",         InputNormalizationRange_0_1); // default
+	inputNormalizationRangeComboBox.addItem("0..255",       InputNormalizationRange_0_255);
 	inputNormalizationRangeComboBox.addItem("0..128",       InputNormalizationRange_0_128);
 	inputNormalizationRangeComboBox.addItem("0..64",        InputNormalizationRange_0_64);
 	inputNormalizationRangeComboBox.addItem("0..32",        InputNormalizationRange_0_32);
 	inputNormalizationRangeComboBox.addItem("0..16",        InputNormalizationRange_0_16);
 	inputNormalizationRangeComboBox.addItem("0..8",         InputNormalizationRange_0_8);
-	inputNormalizationRangeComboBox.addItem("0..1",         InputNormalizationRange_0_1);
 	inputNormalizationRangeComboBox.addItem("-1..1",        InputNormalizationRange_M1_P1);
 	inputNormalizationRangeComboBox.addItem("ImageNet",     InputNormalizationRange_ImageNet);
+	//
 	inputNormalizationColorOrderComboBox.addItem("RGB",     InputNormalizationColorOrder_RGB); // default
 	inputNormalizationColorOrderComboBox.addItem("BGR",     InputNormalizationColorOrder_BGR);
+	//
+	outputInterpretationComboBox.addItem("ImageNet-1001",   ConvolutionEffect_None);
+	outputInterpretationComboBox.addItem("Yes/No",          ConvolutionEffect_None);
+	outputInterpretationComboBox.addItem("No/Yes",          ConvolutionEffect_None);
 
 	// fonts
 	for (auto widget : {&operatorTypeLabel, &operatorOptionsLabel, &operatorInputsLabel, &operatorOutputsLabel, &operatorComplexityLabel})
@@ -375,15 +382,34 @@ MainWindow::MainWindow()
 	connect(&computeButton, &QAbstractButton::pressed, [this]() {
 		QTime timer;
 		timer.start();
-		bool succ = Compute::compute(model, sourceTensorDataAsUsed, sourceTensorShape, tensorData, [this](const std::string &msg) {
+
+		InputNormalization inputNormalization = {
+			(InputNormalizationRange)inputNormalizationRangeComboBox.currentData().toUInt(),
+			(InputNormalizationColorOrder)inputNormalizationColorOrderComboBox.currentData().toUInt()
+		};
+
+		bool succ = Compute::compute(model, inputNormalization, sourceTensorDataAsUsed, sourceTensorShape, tensorData, [this](const std::string &msg) {
 			Util::warningOk(this, msg.c_str());
 		}, [](PluginInterface::TensorId tid) {
 			PRINT("QAbstractButton::pressed: Tensor DONE tid=" << tid)
 		});
 
-		if (succ)
+		if (succ) {
 			PRINT("computation succeeded")
-		else
+
+			// interpret results: 1001
+			auto result = (*tensorData)[model->getOutputs()[0]].get();
+			typedef std::tuple<unsigned/*order num*/,float/*likelihood*/> Likelihood;
+			std::vector<Likelihood> likelihoods;
+			for (unsigned i = 0; i < 1001; i++)
+				likelihoods.push_back({i,result[i]});
+			std::sort(likelihoods.begin(), likelihoods.end(), [](const Likelihood &a, const Likelihood &b) {return std::get<1>(a) > std::get<1>(b);});
+			outputInterpretationLineEdit.setText(QString("%1=%2;%3=%4;%5=%6")
+				.arg(std::get<0>(likelihoods[0])).arg(std::get<1>(likelihoods[0]))
+				.arg(std::get<0>(likelihoods[1])).arg(std::get<1>(likelihoods[1]))
+				.arg(std::get<0>(likelihoods[2])).arg(std::get<1>(likelihoods[2]))
+			);
+		} else
 			PRINT("WARNING computation didn't succeed")
 
 		computationTimeLabel.setText(QString("Computation time: %1 ms").arg(S2Q(Util::formatUIntHumanReadable(timer.elapsed()))));
@@ -716,6 +742,8 @@ void MainWindow::clearComputedTensorData() {
 	removeTableIfAny();
 	// clear tensor data
 	tensorData.reset(nullptr);
+	// clear result interpretation
+	outputInterpretationLineEdit.clear();
 }
 
 void MainWindow::effectsChanged() {

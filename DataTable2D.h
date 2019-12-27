@@ -7,6 +7,7 @@
 #include <QCheckBox>
 #include <QStackedWidget>
 #include <QScrollArea>
+#include <QSpinBox>
 #include <QAbstractTableModel>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -37,6 +38,8 @@ class DataTable2D : public QWidget {
 	QWidget                              header1Widget; // second line
 	QHBoxLayout                            header1Layout;
 	QWidget                                filler1Widget;
+	QLabel                                 scaleBwImageLabel;
+	QSpinBox                               scaleBwImageSpinBox;
 	QCheckBox                              viewDataAsBwImageCheckBox;
 	QStackedWidget                       dataViewStackWidget; // to be able to stack various views of the same data
 	QTableView                             tableView;

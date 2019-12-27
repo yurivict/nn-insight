@@ -249,6 +249,8 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 , header1Widget(this)
 ,   header1Layout(&header1Widget)
 ,   filler1Widget(&header1Widget)
+,   scaleBwImageLabel("Scale image", &header1Widget)
+,   scaleBwImageSpinBox(&header1Widget)
 ,   viewDataAsBwImageCheckBox("View Data as B/W Image", &header1Widget)
 , dataViewStackWidget(this)
 ,   tableView(&dataViewStackWidget)
@@ -265,6 +267,8 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 	  headerLayout.addWidget(&colorSchemaComboBox);
 	layout.addWidget(&header1Widget);
 	  header1Layout.addWidget(&filler1Widget);
+	  header1Layout.addWidget(&scaleBwImageLabel);
+	  header1Layout.addWidget(&scaleBwImageSpinBox);
 	  header1Layout.addWidget(&viewDataAsBwImageCheckBox);
 	layout.addWidget(&dataViewStackWidget);
 	dataViewStackWidget.insertWidget(0, &tableView);
@@ -389,6 +393,8 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 	colorSchemaComboBox      .setSizePolicy(QSizePolicy::Maximum,          QSizePolicy::Fixed); // (H) The sizeHint() is a maximum
 	header1Widget            .setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Fixed);
 	filler1Widget            .setSizePolicy(QSizePolicy::Minimum,          QSizePolicy::Maximum); // (H) The widget can be expanded (V) The sizeHint() is a maximum
+	scaleBwImageLabel        .setSizePolicy(QSizePolicy::Maximum,          QSizePolicy::Maximum);
+	scaleBwImageSpinBox      .setSizePolicy(QSizePolicy::Maximum,          QSizePolicy::Maximum);
 	viewDataAsBwImageCheckBox.setSizePolicy(QSizePolicy::Maximum,          QSizePolicy::Fixed); // (H) The sizeHint() is a maximum
 	tableView    .setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
 	//imageView    .setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
@@ -419,6 +425,39 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 	colorSchemaComboBox.addItem("Grayscale Middle Up",   COLORSCHEME_GRAYSCALE_MIDDLE_UP);
 	colorSchemaComboBox.addItem("Grayscale Middle Down", COLORSCHEME_GRAYSCALE_MIDDLE_DOWN);
 
+	// set up the spin-box
+	scaleBwImageSpinBox.setRange(1,20);
+	scaleBwImageSpinBox.setSuffix(" times");
+	//scaleBwImageSpinBox.lineEdit()->setReadOnly(true);
+
+	// visibility
+	scaleBwImageLabel.setVisible(false); // scale widgets are only visible when the image to scale is displayed
+	scaleBwImageSpinBox.setVisible(false);
+
+	// helpers
+	auto dataSourceToBwImage = [](const DataSource *dataSource, unsigned scaleFactor, std::tuple<float,float> &minMax) {
+		std::unique_ptr<uchar> data(new uchar[dataSource->ncols()*dataSource->nrows()*scaleFactor*scaleFactor]);
+		minMax = dataSource->computeMinMax();
+		auto minMaxRange = std::get<1>(minMax)-std::get<0>(minMax);
+		auto normalize = [minMax,minMaxRange](float d) {
+			return 255.*(d-std::get<0>(minMax))/minMaxRange;
+		};
+		uchar *p = data.get();
+		for (unsigned r = 0, re = dataSource->nrows(); r < re; r++)
+			for (unsigned rptRow = 0; rptRow<scaleFactor; rptRow++)
+				for (unsigned c = 0, ce = dataSource->ncols(); c < ce; c++)
+					for (unsigned rptCol = 0; rptCol<scaleFactor; rptCol++)
+						*p++ = normalize(dataSource->value(r,c));
+		return QImage(data.get(), dataSource->ncols()*scaleFactor, dataSource->nrows()*scaleFactor, dataSource->ncols()*scaleFactor, QImage::Format_Grayscale8);
+	};
+	auto updateBwImageView = [this,dataSourceToBwImage]() {
+		std::tuple<float,float> minMax;
+		QImage img(dataSourceToBwImage((static_cast<DataModel*>(tableModel.get()))->getDataSource(), scaleBwImageSpinBox.value()/*scale 1+*/, minMax));
+		imageView.setPixmap(QPixmap::fromImage(img));
+		imageView.resize(img.width(), img.height());
+		return minMax;
+	};
+
 	// connect signals
 	connect(&colorSchemaComboBox, QOverload<int>::of(&QComboBox::activated), [this,dataRange](int index) {
 		(static_cast<DataModel*>(tableModel.get()))->setColorSchema(createColorSchema(
@@ -427,24 +466,15 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 			std::get<1>(dataRange)
 		));
 	});
-	connect(&viewDataAsBwImageCheckBox, &QCheckBox::stateChanged, [this](int state) {
-		dataViewStackWidget.setCurrentIndex(state!=0 ? 1/*imageView*/ : 0/*tableView*/);
-		if (state!=0) { // => imageView
+	connect(&scaleBwImageSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), [updateBwImageView](int i) {
+		(void)updateBwImageView();
+	});
+	connect(&viewDataAsBwImageCheckBox, &QCheckBox::stateChanged, [this,updateBwImageView](int state) {
+		bool showImageView = state!=0;
+		dataViewStackWidget.setCurrentIndex(showImageView ? 1/*imageView*/ : 0/*tableView*/);
+		if (showImageView) {
 			// create the image from the datasource that the table sees
-			auto dataSource = (static_cast<DataModel*>(tableModel.get()))->getDataSource();
-			std::unique_ptr<uchar> data(new uchar[dataSource->ncols()*dataSource->nrows()]);
-			auto minMax = dataSource->computeMinMax();
-			auto minMaxRange = std::get<1>(minMax)-std::get<0>(minMax);
-			auto normalize = [minMax,minMaxRange](float d) {
-				return 255.*(d-std::get<0>(minMax))/minMaxRange;
-			};
-			uchar *p = data.get();
-			for (unsigned r = 0, re = dataSource->nrows(); r < re; r++)
-				for (unsigned c = 0, ce = dataSource->ncols(); c < ce; c++)
-					*p++ = normalize(dataSource->value(r,c));
-			QImage img(data.get(), dataSource->ncols(), dataSource->nrows(), dataSource->ncols(), QImage::Format_Grayscale8);
-			imageView.setPixmap(QPixmap::fromImage(img));
-			imageView.resize(dataSource->ncols(), dataSource->nrows());
+			std::tuple<float,float> minMax = updateBwImageView();
 			// disable all other widgets so that the data view can't be changed
 			headerWidget.setEnabled(false);
 			// set tooltip with explanation custom to the data
@@ -457,6 +487,10 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 			imageView.resize(0,0);
 			headerWidget.setEnabled(true);
 		}
+
+		// visibility of scale controls
+		scaleBwImageLabel.setVisible(showImageView);
+		scaleBwImageSpinBox.setVisible(showImageView);
 	});
 
 	// tooltips
@@ -481,3 +515,5 @@ std::vector<unsigned> DataTable2D::mkIdxs() const {
 	}
 	return idxs;
 }
+
+

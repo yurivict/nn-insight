@@ -38,3 +38,6 @@ typedef std::tuple<InputNormalizationRange,InputNormalizationColorOrder> InputNo
 size_t tensorFlatSize(const TensorShape &shape);
 unsigned tensorNumMultiDims(const TensorShape &shape);
 TensorShape tensorGetLastDims(const TensorShape &shape, unsigned ndims);
+
+// based on ComputePaddingWithOffset from the TF Lite project in order to match the results
+std::tuple<unsigned,unsigned> computePaddingValues(unsigned stride, unsigned dilationRate, unsigned inSize, int filterSize, int outSize);

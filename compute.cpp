@@ -211,8 +211,11 @@ bool compute(
 		std::unique_ptr<PI::OperatorOptionsList> opts(model->getOperatorOptions(oid));
 
 		// helpers
-		auto translatePadding = [](const TensorShape &filterShape, PI::PaddingType paddingType, WidthHeight wh) {
-			return filterShape[wh==WIDTH ? 2:1]/2;
+		auto translatePadding = [](unsigned stride, unsigned dilationRate,
+		                           WidthHeight wh, const TensorShape &inputShape, const TensorShape &filterShape, const TensorShape &outputShape) {
+			//return filterShape[wh==WIDTH ? 2:1]/2;
+			unsigned shapeIdx = wh==WIDTH ? 2:1;
+			return std::get<0>(computePaddingValues(stride, dilationRate, inputShape[shapeIdx], filterShape[shapeIdx], outputShape[shapeIdx]));
 		};
 		auto applyActivationFunction = [](size_t size, float *data, PI::ActivationFunction activationFunction) {
 			auto applyRELU = [](float &val) {
@@ -300,6 +303,7 @@ bool compute(
 			)
 
 			// tensors
+			auto inputShape  = model->getTensorShape(inputs[0]);
 			auto filterShape = model->getTensorShape(inputs[1]);
 			auto outputShape = model->getTensorShape(outputs[0]);
 			auto outputShapeSize = tensorFlatSize(outputShape);
@@ -309,11 +313,12 @@ bool compute(
 
 			// compute
 			NnOperators::Conv2D(
-				model->getTensorShape(inputs[0]), (*tensorData)[inputs[0]].get(), // input
+				inputShape, (*tensorData)[inputs[0]].get(), // input
 				filterShape, model->getTensorData(inputs[1]), // filter
 				model->getTensorShape(inputs[2]), model->getTensorData(inputs[2]), // bias
 				outputShape, outputData.get(), // output
-				translatePadding(filterShape,paddingType,WIDTH), translatePadding(filterShape,paddingType,HEIGHT),
+				translatePadding(strideWidth,  dilationWidth,  WIDTH,  inputShape, filterShape, outputShape),
+				translatePadding(strideHeight, dilationHeight, HEIGHT, inputShape, filterShape, outputShape),
 				strideWidth, strideHeight,
 				dilationWidth, dilationHeight
 			);
@@ -365,6 +370,7 @@ bool compute(
 			)
 
 			// tensors
+			auto inputShape  = model->getTensorShape(inputs[0]);
 			auto filterShape = model->getTensorShape(inputs[1]);
 			auto outputShape = model->getTensorShape(outputs[0]);
 			auto outputShapeSize = tensorFlatSize(outputShape);
@@ -374,11 +380,12 @@ bool compute(
 
 			// compute
 			NnOperators::DepthwiseConv2D(
-				model->getTensorShape(inputs[0]), (*tensorData)[inputs[0]].get(), // input
+				inputShape, (*tensorData)[inputs[0]].get(), // input
 				filterShape, model->getTensorData(inputs[1]), // filter
 				model->getTensorShape(inputs[2]), model->getTensorData(inputs[2]), // bias
 				outputShape, outputData.get(), // output
-				translatePadding(filterShape,paddingType,WIDTH), translatePadding(filterShape,paddingType,HEIGHT),
+				translatePadding(strideWidth,  dilationWidth,  WIDTH,  inputShape, filterShape, outputShape),
+				translatePadding(strideHeight, dilationHeight, HEIGHT, inputShape, filterShape, outputShape),
 				strideWidth, strideHeight,
 				dilationWidth, dilationHeight,
 				depthMultiplier
@@ -422,13 +429,15 @@ bool compute(
 			PRINT_OPTS(operatorKind << ": have " << opts->size() << " options:"
 			           " strideHeight=" << strideHeight <<
 			           " strideHeight=" << strideHeight <<
-			           " filterHeight=" << filterHeight <<
+			           " filterWidth=" << filterWidth <<
 			           " filterHeight=" << filterHeight <<
 			           " paddingType=" << paddingType <<
 			           " activationFunction=" << activationFunction
 			)
 
 			// tensors
+			auto inputShape  = model->getTensorShape(inputs[0]);
+			TensorShape filterShape = {0,(unsigned)filterHeight,(unsigned)filterWidth,0};
 			auto outputShape = model->getTensorShape(outputs[0]);
 			auto outputShapeSize = tensorFlatSize(outputShape);
 
@@ -437,9 +446,10 @@ bool compute(
 
 			// compute
 			(operatorKind==PI::KindMaxPool ? NnOperators::MaxPool : NnOperators::AveragePool)(
-				model->getTensorShape(inputs[0]), (*tensorData)[inputs[0]].get(), // input
+				inputShape, (*tensorData)[inputs[0]].get(), // input
 				outputShape, outputData.get(), // output
-				filterWidth/2, filterHeight/2,
+				translatePadding(strideWidth,  1/*dilationWidth*/,  WIDTH,  inputShape, filterShape, outputShape),
+				translatePadding(strideHeight, 1/*dilationHeight*/, HEIGHT, inputShape, filterShape, outputShape),
 				strideWidth, strideHeight,
 				filterWidth, filterHeight
 			);

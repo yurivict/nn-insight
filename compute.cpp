@@ -114,12 +114,13 @@ bool compute(
 	/// normalize input
 
 	if (inputNormalization != InputNormalization{InputNormalizationRange_0_255,InputNormalizationColorOrder_RGB}) { // 0..255/RGB is how images are imported from files
-		auto inputShapeSize = tensorFlatSize(inputShape);
+		auto inputTensorShape = model->getTensorShape(modelInputs[0]);
+		auto inputTensorSize = tensorFlatSize(inputTensorShape);
 
 		auto &input = (*tensorData.get())[modelInputs[0]]; // input tensor has been set above eithor to a resized value, or to inputTensor
 		const float *src = input.get();
 		if (!inputAllocated) // need to allocate because we change the data, otherwise use the allocated above one
-			input.reset((inputAllocated = new float[inputShapeSize]));
+			input.reset((inputAllocated = new float[inputTensorSize]));
 
 		// helpers
 		auto normalizeRange = [](const float *src, float *dst, size_t sz, float min, float max) {
@@ -150,38 +151,38 @@ bool compute(
 		switch (std::get<0>(inputNormalization)) {
 		case InputNormalizationRange_0_1:
 			PRINT("normalizing to 0..1")
-			normalizeRange(src, inputAllocated, inputShapeSize, 0, 1);
+			normalizeRange(src, inputAllocated, inputTensorSize, 0, 1);
 			src = inputAllocated;
 			break;
 		case InputNormalizationRange_0_255:
 			break; // already at 0..255
 		case InputNormalizationRange_0_128:
-			normalizeRange(src, inputAllocated, inputShapeSize, 0, 128);
+			normalizeRange(src, inputAllocated, inputTensorSize, 0, 128);
 			src = inputAllocated;
 			break;
 		case InputNormalizationRange_0_64:
-			normalizeRange(src, inputAllocated, inputShapeSize, 0, 64);
+			normalizeRange(src, inputAllocated, inputTensorSize, 0, 64);
 			src = inputAllocated;
 			break;
 		case InputNormalizationRange_0_32:
-			normalizeRange(src, inputAllocated, inputShapeSize, 0, 32);
+			normalizeRange(src, inputAllocated, inputTensorSize, 0, 32);
 			src = inputAllocated;
 			break;
 		case InputNormalizationRange_0_16:
-			normalizeRange(src, inputAllocated, inputShapeSize, 0, 16);
+			normalizeRange(src, inputAllocated, inputTensorSize, 0, 16);
 			src = inputAllocated;
 			break;
 		case InputNormalizationRange_0_8:
-			normalizeRange(src, inputAllocated, inputShapeSize, 0, 8);
+			normalizeRange(src, inputAllocated, inputTensorSize, 0, 8);
 			src = inputAllocated;
 			break;
 		case InputNormalizationRange_M1_P1:
-			normalizeRange(src, inputAllocated, inputShapeSize, -1, 1);
+			normalizeRange(src, inputAllocated, inputTensorSize, -1, 1);
 			src = inputAllocated;
 			break;
 		case InputNormalizationRange_ImageNet:
-			assert(*inputShape.rbegin()==3);
-			normalizeSub(src, inputAllocated, inputShapeSize, {123.68, 116.78, 103.94});
+			assert(*inputTensorShape.rbegin()==3);
+			normalizeSub(src, inputAllocated, inputTensorSize, {123.68, 116.78, 103.94});
 			src = inputAllocated;
 			break;
 		}
@@ -191,7 +192,7 @@ bool compute(
 		case InputNormalizationColorOrder_RGB:
 			break; // already RGB
 		case InputNormalizationColorOrder_BGR:
-			reorderArrays(src, inputAllocated, inputShapeSize, {2,1,0});
+			reorderArrays(src, inputAllocated, inputTensorSize, {2,1,0});
 			break;
 		}
 	}

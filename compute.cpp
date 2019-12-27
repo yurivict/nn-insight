@@ -55,20 +55,23 @@ bool compute(
 	std::function<void(PI::TensorId)> cbTensorComputed)
 {
 
-	// allocate tensors array
+	/// allocate tensors array
+
 	if (!tensorData) {
 		tensorData.reset(new std::vector<std::shared_ptr<const float>>);
 		tensorData->resize(model->numTensors());
 	}
 
-	// find the model's input
+	/// find the model's input
+
 	auto modelInputs = model->getInputs();
 	if (modelInputs.size() != 1) {
 		cbWarningMessage(STR("We currently only support models with a single input, the current model has " << modelInputs.size() << " inputs"));
 		return false;
 	}
 
-	// resize the source image
+	/// resize the source image
+
 	if (!(*tensorData.get())[modelInputs[0]]) { // tensor not ready
 		assert(inputShape.size()==3);
 		TensorShape requiredShape = model->getTensorShape(modelInputs[0]);
@@ -108,7 +111,8 @@ bool compute(
 		cbTensorComputed(modelInputs[0]);
 	}
 
-	// compute operators
+	/// compute operators
+
 	for (PI::OperatorId oid = 0, oide = (PI::OperatorId)model->numOperators(); oid<oide; oid++) {
 		// get operator's inputs/outputs
 		std::vector<PI::TensorId> inputs, outputs;

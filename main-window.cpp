@@ -166,8 +166,8 @@ MainWindow::MainWindow()
 ,            computationTimeLabel(QString("Computation time: %1").arg("n/a"), &computeByWidget)
 ,            spacer2Widget(&computeByWidget)
 ,            outputInterpretationLabel("Interpret as:", &computeByWidget)
-,            outputInterpretationComboBox(&computeByWidget)
-,            outputInterpretationLineEdit(&computeByWidget)
+,            outputInterpretationKindComboBox(&computeByWidget)
+,            outputInterpretationSummaryLineEdit(&computeByWidget)
 ,            spacer3Widget(&computeByWidget)
 ,            clearComputationResults("Clear Results", &computeByWidget)
 ,        sourceImage(&sourceWidget)
@@ -231,8 +231,8 @@ MainWindow::MainWindow()
 	      computeByLayout.addWidget(&computationTimeLabel);
 	      computeByLayout.addWidget(&spacer2Widget);
 	      computeByLayout.addWidget(&outputInterpretationLabel);
-	      computeByLayout.addWidget(&outputInterpretationComboBox);
-	      computeByLayout.addWidget(&outputInterpretationLineEdit);
+	      computeByLayout.addWidget(&outputInterpretationKindComboBox);
+	      computeByLayout.addWidget(&outputInterpretationSummaryLineEdit);
 	      computeByLayout.addWidget(&spacer3Widget);
 	      computeByLayout.addWidget(&clearComputationResults);
 	  sourceLayout.addWidget(&sourceImage);
@@ -277,7 +277,7 @@ MainWindow::MainWindow()
 	inputNormalizationRangeComboBox     .setToolTip("Specify what value range does this NN expect its input data be normalized to");
 	inputNormalizationColorOrderComboBox.setToolTip("Specify what color order does this NN expect its input data be supplied in");
 	computationTimeLabel                .setToolTip("Show how long did the the NN computation take");
-	for (QWidget *w : {(QWidget*)&outputInterpretationLabel,(QWidget*)&outputInterpretationComboBox,(QWidget*)&outputInterpretationLineEdit})
+	for (QWidget *w : {(QWidget*)&outputInterpretationLabel,(QWidget*)&outputInterpretationKindComboBox})
 		w->                          setToolTip("How to interpret the computation result?");
 	clearComputationResults             .setToolTip("Clear computation results");
 	sourceImage                         .setToolTip("Image currently used as a NN input");
@@ -300,8 +300,8 @@ MainWindow::MainWindow()
 	computationTimeLabel                 .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
 	spacer2Widget                        .setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum);
 	outputInterpretationLabel            .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
-	outputInterpretationComboBox         .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
-	outputInterpretationLineEdit         .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+	outputInterpretationKindComboBox     .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+	outputInterpretationSummaryLineEdit  .setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum);
 	spacer3Widget                        .setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum);
 	sourceImage                          .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
 	detailsStack                         .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
@@ -317,7 +317,10 @@ MainWindow::MainWindow()
 	// widget options and flags
 	sourceWidget.hide(); // hidden by default
 	noDetails.setEnabled(false); // always grayed out
-	outputInterpretationLineEdit.setReadOnly(true); // it only displays interpretation
+	outputInterpretationSummaryLineEdit.setReadOnly(true); // it only displays interpretation
+
+	// widget states
+	updateResultInterpretationSummary("n/a", "n/a");
 
 	// fill lists
 	sourceEffectConvolutionTypeComboBox.addItem("None",          ConvolutionEffect_None);
@@ -342,9 +345,9 @@ MainWindow::MainWindow()
 	inputNormalizationColorOrderComboBox.addItem("RGB",     InputNormalizationColorOrder_RGB); // default
 	inputNormalizationColorOrderComboBox.addItem("BGR",     InputNormalizationColorOrder_BGR);
 	//
-	outputInterpretationComboBox.addItem("ImageNet-1001",   ConvolutionEffect_None);
-	outputInterpretationComboBox.addItem("Yes/No",          ConvolutionEffect_None);
-	outputInterpretationComboBox.addItem("No/Yes",          ConvolutionEffect_None);
+	outputInterpretationKindComboBox.addItem("ImageNet-1001",   ConvolutionEffect_None);
+	outputInterpretationKindComboBox.addItem("Yes/No",          ConvolutionEffect_None);
+	outputInterpretationKindComboBox.addItem("No/Yes",          ConvolutionEffect_None);
 
 	// fonts
 	for (auto widget : {&operatorTypeLabel, &operatorOptionsLabel, &operatorInputsLabel, &operatorOutputsLabel, &operatorComplexityLabel})
@@ -404,10 +407,13 @@ MainWindow::MainWindow()
 			for (unsigned i = 0; i < 1001; i++)
 				likelihoods.push_back({i,result[i]});
 			std::sort(likelihoods.begin(), likelihoods.end(), [](const Likelihood &a, const Likelihood &b) {return std::get<1>(a) > std::get<1>(b);});
-			outputInterpretationLineEdit.setText(QString("%1=%2;%3=%4;%5=%6")
-				.arg(std::get<0>(likelihoods[0])).arg(std::get<1>(likelihoods[0]))
-				.arg(std::get<0>(likelihoods[1])).arg(std::get<1>(likelihoods[1]))
-				.arg(std::get<0>(likelihoods[2])).arg(std::get<1>(likelihoods[2]))
+			// report it to the user
+			std::ostringstream ss;
+			for (unsigned i = 0; i<10; i++)
+				ss << (i>0 ? "\n" : "") << "• " << std::get<0>(likelihoods[i]) << " = " << std::get<1>(likelihoods[i]);
+			updateResultInterpretationSummary(
+				STR(std::get<0>(likelihoods[0]) << " = " << std::get<1>(likelihoods[0])),
+				ss.str()
 			);
 		} else
 			PRINT("WARNING computation didn't succeed")
@@ -743,7 +749,7 @@ void MainWindow::clearComputedTensorData() {
 	// clear tensor data
 	tensorData.reset(nullptr);
 	// clear result interpretation
-	outputInterpretationLineEdit.clear();
+	updateResultInterpretationSummary("n/a", "n/a");
 }
 
 void MainWindow::effectsChanged() {
@@ -841,3 +847,9 @@ float* MainWindow::applyEffects(const float *image, const TensorShape &shape,
 void MainWindow::updateSourceImageOnScreen() {
 	sourceImage.setPixmap(Image::toQPixmap(sourceTensorDataAsUsed.get(), sourceTensorShape));
 }
+
+void MainWindow::updateResultInterpretationSummary(const std::string &oneLine, const std::string &details) {
+	outputInterpretationSummaryLineEdit.setText(S2Q(oneLine));
+	outputInterpretationSummaryLineEdit.setToolTip(QString("Result interpretation:\n%1").arg(S2Q(details)));
+}
+

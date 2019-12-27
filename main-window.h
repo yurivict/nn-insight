@@ -77,8 +77,8 @@ private: // fields
 	QLabel                                     computationTimeLabel;
 	QWidget                                    spacer2Widget;
 	QLabel                                     outputInterpretationLabel;
-	QComboBox                                  outputInterpretationComboBox;
-	QLineEdit                                  outputInterpretationLineEdit;
+	QComboBox                                  outputInterpretationKindComboBox;
+	QLineEdit                                  outputInterpretationSummaryLineEdit;
 	QWidget                                    spacer3Widget;
 	QPushButton                                clearComputationResults;
 	QLabel                                 sourceImage;
@@ -141,5 +141,6 @@ private: // private methods
 		bool flipHorizontally, bool flipVertically, bool makeGrayscale,
 		const std::tuple<TensorShape,std::vector<float>> &convolution, unsigned convolutionCount) const;
 	void updateSourceImageOnScreen();
+	void updateResultInterpretationSummary(const std::string &oneLine, const std::string &details);
 };
 

@@ -171,6 +171,7 @@ if (false) {
 
 		// templetized getter
 		template<typename T> T as() const; // not implemented by default
+		template<> float as() const {return f;}
 		template<> int32_t as() const {return i;}
 		template<> PaddingType as() const {return paddingType;}
 		template<> ActivationFunction as() const {return activationFunction;}

@@ -5,7 +5,7 @@
 
 #include <cstdint>
 #include <vector>
-
+#include <cmath>
 
 
 namespace tflite {
@@ -213,6 +213,20 @@ struct PoolParams { // <= BuiltinOptions_Pool2DOptions = 5
   float float_activation_max;
 };
 
+// from: tensorflow/lite/kernels/internal/types.h
+struct SoftmaxParams { // <= BuiltinOptions_SoftmaxOptions = 9
+  // beta is not really used (not a Tensorflow parameter) and not implemented
+  // for LogSoftmax.
+  double beta;
+  // uint8 inference params.  Used even when beta defaults to 1.0.
+  int32 input_multiplier; // unused
+  int32 input_left_shift; // unused
+  // Reverse scaling is only used by LogSoftmax.
+  int32 reverse_scaling_divisor; // unused
+  int32 reverse_scaling_right_shift; // unused
+  int diff_min; // unused
+};
+
 
 /// operator code
 
@@ -415,14 +429,108 @@ inline void MaxPool(const PoolParams& params, const RuntimeShape& input_shape,
             }
           }
           output_data[Offset(output_shape, batch, out_y, out_x, channel)] =
-              ActivationFunctionWithMinMax(max, params.float_activation_min,
-                                           params.float_activation_max);
+              // DISABLE ActivationFunctionWithMinMax
+              //ActivationFunctionWithMinMax(max, params.float_activation_min,
+              //                             params.float_activation_max);
+
+	      // INSTEAD
+	      max;
         }
       }
     }
   }
 }
 
+// from: tensorflow/lite/kernels/internal/reference/pooling.h
+inline void AveragePool(const PoolParams& params,
+                        const RuntimeShape& input_shape,
+                        const float* input_data,
+                        const RuntimeShape& output_shape, float* output_data) {
+  TFLITE_DCHECK_EQ(input_shape.DimensionsCount(), 4);
+  TFLITE_DCHECK_EQ(output_shape.DimensionsCount(), 4);
+  const int batches = MatchingDim(input_shape, 0, output_shape, 0);
+  const int depth = MatchingDim(input_shape, 3, output_shape, 3);
+  const int input_height = input_shape.Dims(1);
+  const int input_width = input_shape.Dims(2);
+  const int output_height = output_shape.Dims(1);
+  const int output_width = output_shape.Dims(2);
+  const int stride_height = params.stride_height;
+  const int stride_width = params.stride_width;
+  for (int batch = 0; batch < batches; ++batch) {
+    for (int out_y = 0; out_y < output_height; ++out_y) {
+      for (int out_x = 0; out_x < output_width; ++out_x) {
+        for (int channel = 0; channel < depth; ++channel) {
+          const int in_x_origin =
+              (out_x * stride_width) - params.padding_values.width;
+          const int in_y_origin =
+              (out_y * stride_height) - params.padding_values.height;
+          // Compute the boundaries of the filter region clamped so as to
+          // ensure that the filter window fits in the input array.
+          const int filter_x_start = std::max(0, -in_x_origin);
+          const int filter_x_end =
+              std::min(params.filter_width, input_width - in_x_origin);
+          const int filter_y_start = std::max(0, -in_y_origin);
+          const int filter_y_end =
+              std::min(params.filter_height, input_height - in_y_origin);
+          float total = 0.f;
+          float filter_count = 0;
+          for (int filter_y = filter_y_start; filter_y < filter_y_end;
+               ++filter_y) {
+            for (int filter_x = filter_x_start; filter_x < filter_x_end;
+                 ++filter_x) {
+              const int in_x = in_x_origin + filter_x;
+              const int in_y = in_y_origin + filter_y;
+              total +=
+                  input_data[Offset(input_shape, batch, in_y, in_x, channel)];
+              filter_count++;
+            }
+          }
+          const float average = total / filter_count;
+          output_data[Offset(output_shape, batch, out_y, out_x, channel)] =
+              // DISABLE ActivationFunctionWithMinMax
+              //ActivationFunctionWithMinMax(average, params.float_activation_min,
+              //                             params.float_activation_max);
+
+	      // INSTEAD
+	      average;
+        }
+      }
+    }
+  }
+}
+
+// from: tensorflow/lite/kernels/internal/reference/softmax.h
+inline void Softmax(const SoftmaxParams& params,
+                    const RuntimeShape& input_shape, const float* input_data,
+                    const RuntimeShape& output_shape, float* output_data) {
+  const int trailing_dim = input_shape.DimensionsCount() - 1;
+  const int outer_size =
+      MatchingFlatSizeSkipDim(input_shape, trailing_dim, output_shape);
+  const int depth =
+      MatchingDim(input_shape, trailing_dim, output_shape, trailing_dim);
+
+  for (int i = 0; i < outer_size; ++i) {
+    // Find max element value which we'll use to ensure numerical stability
+    // taking advantage of the following equality:
+    // exp(x[i])/sum(exp(x[i])) == exp(x[i]+C)/sum(exp(x[i]+C))
+    float max = std::numeric_limits<float>::lowest();
+    for (int c = 0; c < depth; ++c) {
+      max = std::max(max, input_data[i * depth + c]);
+    }
+
+    // Compute sum.
+    float sum = 0.f;
+    for (int c = 0; c < depth; ++c) {
+      sum += std::exp((input_data[i * depth + c] - max) * params.beta);
+    }
+
+    // Compute result.
+    for (int c = 0; c < depth; ++c) {
+      output_data[i * depth + c] =
+          std::exp((input_data[i * depth + c] - max) * params.beta) / sum;
+    }
+  }
+}
 
 }
 
@@ -484,6 +592,62 @@ void DepthwiseConv2D(
 		tflite::RuntimeShape(inputShape),  inputData,
 		tflite::RuntimeShape(filterShape), filterData,
 		tflite::RuntimeShape(biasShape),   biasData,
+		tflite::RuntimeShape(outputShape), outputData
+	);
+}
+
+void MaxPool(
+	const TensorShape &inputShape, const float *inputData,
+	const TensorShape &outputShape, float *outputData,
+	unsigned paddingWidth, unsigned paddingHeight,
+	unsigned strideWidth, unsigned strideHeight,
+	unsigned filterWidth, unsigned filterHeight
+) {
+	tflite::PoolParams params;
+	params.padding_values.width = paddingWidth;
+	params.padding_values.height = paddingHeight;
+	params.stride_width = strideWidth;
+	params.stride_height = strideHeight;
+	params.filter_width = filterWidth;
+	params.filter_height = filterHeight;
+
+	tflite::MaxPool(params,
+		tflite::RuntimeShape(inputShape),  inputData,
+		tflite::RuntimeShape(outputShape), outputData
+	);
+}
+
+void AveragePool(
+	const TensorShape &inputShape, const float *inputData,
+	const TensorShape &outputShape, float *outputData,
+	unsigned paddingWidth, unsigned paddingHeight,
+	unsigned strideWidth, unsigned strideHeight,
+	unsigned filterWidth, unsigned filterHeight
+) {
+	tflite::PoolParams params;
+	params.padding_values.width = paddingWidth;
+	params.padding_values.height = paddingHeight;
+	params.stride_width = strideWidth;
+	params.stride_height = strideHeight;
+	params.filter_width = filterWidth;
+	params.filter_height = filterHeight;
+
+	tflite::AveragePool(params,
+		tflite::RuntimeShape(inputShape),  inputData,
+		tflite::RuntimeShape(outputShape), outputData
+	);
+}
+
+void Softmax(
+	const TensorShape &inputShape, const float *inputData,
+	const TensorShape &outputShape, float *outputData,
+	float beta
+) {
+	tflite::SoftmaxParams params;
+	params.beta = beta;
+
+	tflite::Softmax(params,
+		tflite::RuntimeShape(inputShape),  inputData,
 		tflite::RuntimeShape(outputShape), outputData
 	);
 }

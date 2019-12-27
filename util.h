@@ -82,3 +82,6 @@ inline std::ostream& operator<<(std::ostream &os, const std::vector<T> &c) {
 	os << "]";
 	return os;
 }
+
+// silence unwanted warnings about unused variables
+#define UNUSED(expr) do { (void)(expr); } while (0);

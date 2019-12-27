@@ -25,4 +25,26 @@ void DepthwiseConv2D(
 	unsigned depthMultiplier
 );
 
+void MaxPool(
+	const TensorShape &inputShape, const float *inputData,
+	const TensorShape &outputShape, float *outputData,
+	unsigned paddingWidth, unsigned paddingHeight,
+	unsigned strideWidth, unsigned strideHeight,
+	unsigned filterWidth, unsigned filterHeight
+);
+
+void AveragePool(
+	const TensorShape &inputShape, const float *inputData,
+	const TensorShape &outputShape, float *outputData,
+	unsigned paddingWidth, unsigned paddingHeight,
+	unsigned strideWidth, unsigned strideHeight,
+	unsigned filterWidth, unsigned filterHeight
+);
+
+void Softmax(
+	const TensorShape &inputShape, const float *inputData,
+	const TensorShape &outputShape, float *outputData,
+	float beta
+);
+
 }

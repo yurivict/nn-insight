@@ -67,6 +67,15 @@ private: // fields
 	QComboBox                                    sourceEffectConvolutionCountComboBox;
 	QWidget                                  sourceFiller;
 	QPushButton                              computeButton;
+	QWidget                                  computeByWidget;
+	QHBoxLayout                                computeByLayout;
+	QLabel                                     inputNormalizationLabel;
+	QComboBox                                  inputNormalizationRangeComboBox;
+	QComboBox                                  inputNormalizationColorOrderComboBox;
+	QWidget                                    spacer1Widget;
+	QLabel                                     computationTimeLabel;
+	QWidget                                    spacer2Widget;
+	QPushButton                                clearComputationResults;
 	QLabel                                 sourceImage;
 	QStackedWidget                       detailsStack;
 	QGroupBox                              noDetails;       // page#0
@@ -119,8 +128,10 @@ private: // private methods
 	void removeTableIfAny();
 	void openImageFile(const QString &imageFileName);
 	void openImagePixmap(const QPixmap &imagePixmap, const char *sourceName);
-	void clearImageData();
+	void clearInputImageDisplay();
+	void clearComputedTensorData();
 	void effectsChanged();
+	void inputNormalizationChanged();
 	float* applyEffects(const float *image, const TensorShape &shape,
 		bool flipHorizontally, bool flipVertically, bool makeGrayscale,
 		const std::tuple<TensorShape,std::vector<float>> &convolution, unsigned convolutionCount) const;

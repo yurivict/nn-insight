@@ -24,6 +24,7 @@
 #include <QApplication>
 #include <QFileDialog>
 #include <QPixmap>
+#include <QTime>
 
 #include <assert.h>
 
@@ -129,6 +130,23 @@ static const std::map<ConvolutionEffect, std::tuple<TensorShape,std::vector<floa
 #undef S04
 #undef TTT
 
+enum InputNormalizationRange {
+	InputNormalizationRange_0_255,
+	InputNormalizationRange_0_128,
+	InputNormalizationRange_0_64,
+	InputNormalizationRange_0_32,
+	InputNormalizationRange_0_16,
+	InputNormalizationRange_0_8,
+	InputNormalizationRange_0_1,
+	InputNormalizationRange_M1_P1,
+	InputNormalizationRange_ImageNet
+};
+
+enum InputNormalizationColorRange {
+	InputNormalizationColorOrder_RGB,
+	InputNormalizationColorOrder_BGR
+};
+
 MainWindow::MainWindow()
 : mainSplitter(this)
 ,   svgScrollArea(&mainSplitter)
@@ -157,6 +175,14 @@ MainWindow::MainWindow()
 ,              sourceEffectConvolutionCountComboBox(&sourceEffectConvolutionParamsWidget)
 ,          sourceFiller(&sourceDetails)
 ,          computeButton("Compute", &sourceDetails)
+,          computeByWidget(&sourceDetails)
+,            computeByLayout(&computeByWidget)
+,            inputNormalizationLabel("Input normalization", &computeByWidget)
+,            inputNormalizationRangeComboBox(&computeByWidget)
+,            spacer1Widget(&computeByWidget)
+,            computationTimeLabel(QString("Computation time: %1").arg("n/a"), &computeByWidget)
+,            spacer2Widget(&computeByWidget)
+,            clearComputationResults("Clear Results", &computeByWidget)
 ,        sourceImage(&sourceWidget)
 ,      detailsStack(&rhsWidget)
 ,        noDetails("Details", &detailsStack)
@@ -210,6 +236,14 @@ MainWindow::MainWindow()
 	        sourceEffectConvolutionParamsLayout.addWidget(&sourceEffectConvolutionCountComboBox);
 	    sourceDetailsLayout.addWidget(&sourceFiller);
 	    sourceDetailsLayout.addWidget(&computeButton);
+	    sourceDetailsLayout.addWidget(&computeByWidget);
+	      computeByLayout.addWidget(&inputNormalizationLabel);
+	      computeByLayout.addWidget(&inputNormalizationRangeComboBox);
+	      computeByLayout.addWidget(&inputNormalizationColorOrderComboBox);
+	      computeByLayout.addWidget(&spacer1Widget);
+	      computeByLayout.addWidget(&computationTimeLabel);
+	      computeByLayout.addWidget(&spacer2Widget);
+	      computeByLayout.addWidget(&clearComputationResults);
 	  sourceLayout.addWidget(&sourceImage);
 	rhsLayout.addWidget(&detailsStack);
 	rhsLayout.addWidget(&blankRhsLabel);
@@ -230,6 +264,8 @@ MainWindow::MainWindow()
 
 	for (auto w : {&sourceEffectFlipHorizontallyLabel, &sourceEffectFlipVerticallyLabel, &sourceEffectMakeGrayscaleLabel, &sourceEffectConvolutionLabel})
 		w->setAlignment(Qt::AlignRight);
+	for (auto w : {&inputNormalizationLabel, &computationTimeLabel})
+		w->setAlignment(Qt::AlignRight);
 
 	// tooltips
 	sourceImageFileName                 .setToolTip("File name of the input image");
@@ -246,25 +282,36 @@ MainWindow::MainWindow()
 	sourceEffectConvolutionTypeComboBox .setToolTip("Convolution type to apply to the image");
 	sourceEffectConvolutionCountComboBox.setToolTip("How many times to apply the convolution");
 	computeButton                       .setToolTip("Perform neural network computation for the currently selected image as input");
+	inputNormalizationLabel             .setToolTip("Specify how does this NN expect its input data be normalized");
+	inputNormalizationRangeComboBox     .setToolTip("Specify what value range does this NN expect its input data be normalized to");
+	inputNormalizationColorOrderComboBox.setToolTip("Specify what color order does this NN expect its input data be supplied in");
+	computationTimeLabel                .setToolTip("Show how long did the the NN computation take");
+	clearComputationResults             .setToolTip("Clear computation results");
 	sourceImage                         .setToolTip("Image currently used as a NN input");
 	operatorTypeLabel                   .setToolTip("Operator type: what kind of operation does it perform");
 	operatorComplexityValue             .setToolTip("Complexity of the currntly selected NN in FLOPS");
 
 	// size policies
-	svgScrollArea            .setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
-	sourceImageFileName      .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
-	sourceImageFileSize      .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
-	sourceApplyEffectsWidget .setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Maximum);
+	svgScrollArea                        .setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
+	sourceImageFileName                  .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+	sourceImageFileSize                  .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+	sourceApplyEffectsWidget             .setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Maximum);
 	for (QWidget *w : {&sourceEffectConvolutionParamsWidget, (QWidget*)&sourceEffectConvolutionTypeComboBox, (QWidget*)&sourceEffectConvolutionCountComboBox})
 		w->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
-	sourceImageSize          .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+	sourceImageSize                      .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
 	//sourceFiller .setSizePolicy(QSizePolicy::Fixed, QSizePolicy::MinimumExpanding);
-	sourceImage              .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
-	detailsStack             .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+	inputNormalizationLabel              .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum); //The sizeHint() is a maximum
+	inputNormalizationRangeComboBox      .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+	inputNormalizationColorOrderComboBox .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+	computationTimeLabel                 .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+	sourceImage                          .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+	detailsStack                         .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
 	// margins and spacing
 	sourceEffectConvolutionParamsLayout.setContentsMargins(0,0,0,0);
 	sourceEffectConvolutionParamsLayout.setSpacing(0);
+	computeByLayout.setContentsMargins(0,0,0,0);
+	computeByLayout.setSpacing(0);
 
 	// widget options and flags
 	sourceWidget.hide(); // hidden by default
@@ -279,6 +326,18 @@ MainWindow::MainWindow()
 	sourceEffectConvolutionTypeComboBox.addItem("Sharpen (3x3)", ConvolutionEffect_Sharpen_3x3);
 	for (unsigned c = 1; c <= 20; c++)
 		sourceEffectConvolutionCountComboBox.addItem(QString("x%1").arg(c), c);
+
+	inputNormalizationRangeComboBox.addItem("0..255",       InputNormalizationRange_0_255); // default
+	inputNormalizationRangeComboBox.addItem("0..128",       InputNormalizationRange_0_128);
+	inputNormalizationRangeComboBox.addItem("0..64",        InputNormalizationRange_0_64);
+	inputNormalizationRangeComboBox.addItem("0..32",        InputNormalizationRange_0_32);
+	inputNormalizationRangeComboBox.addItem("0..16",        InputNormalizationRange_0_16);
+	inputNormalizationRangeComboBox.addItem("0..8",         InputNormalizationRange_0_8);
+	inputNormalizationRangeComboBox.addItem("0..1",         InputNormalizationRange_0_1);
+	inputNormalizationRangeComboBox.addItem("-1..1",        InputNormalizationRange_M1_P1);
+	inputNormalizationRangeComboBox.addItem("ImageNet",     InputNormalizationRange_ImageNet);
+	inputNormalizationColorOrderComboBox.addItem("RGB",     InputNormalizationColorOrder_RGB); // default
+	inputNormalizationColorOrderComboBox.addItem("BGR",     InputNormalizationColorOrder_BGR);
 
 	// fonts
 	for (auto widget : {&operatorTypeLabel, &operatorOptionsLabel, &operatorInputsLabel, &operatorOutputsLabel, &operatorComplexityLabel})
@@ -314,6 +373,8 @@ MainWindow::MainWindow()
 			effectsChanged();
 	});
 	connect(&computeButton, &QAbstractButton::pressed, [this]() {
+		QTime timer;
+		timer.start();
 		bool succ = Compute::compute(model, sourceTensorDataAsUsed, sourceTensorShape, tensorData, [this](const std::string &msg) {
 			Util::warningOk(this, msg.c_str());
 		}, [](PluginInterface::TensorId tid) {
@@ -324,6 +385,17 @@ MainWindow::MainWindow()
 			PRINT("computation succeeded")
 		else
 			PRINT("WARNING computation didn't succeed")
+
+		computationTimeLabel.setText(QString("Computation time: %1 ms").arg(S2Q(Util::formatUIntHumanReadable(timer.elapsed()))));
+	});
+	connect(&inputNormalizationRangeComboBox, QOverload<int>::of(&QComboBox::activated), [this](int) {
+		inputNormalizationChanged();
+	});
+	connect(&inputNormalizationColorOrderComboBox, QOverload<int>::of(&QComboBox::activated), [this](int) {
+		inputNormalizationChanged();
+	});
+	connect(&clearComputationResults, &QAbstractButton::pressed, [this]() {
+		clearComputedTensorData();
 	});
 
 	// monitor memory use
@@ -353,7 +425,8 @@ MainWindow::MainWindow()
 		openImagePixmap(Util::getScreenshot(true/*hideOurWindows*/), "screenshot");
 	});
 	fileMenu->addAction("Close Image", [this]() {
-		clearImageData();
+		clearInputImageDisplay();
+		clearComputedTensorData(); // closing image invalidates computation results
 	});
 }
 
@@ -590,7 +663,8 @@ void MainWindow::removeTableIfAny() {
 
 void MainWindow::openImageFile(const QString &imageFileName) {
 	// clear the previous image data if any
-	clearImageData();
+	clearInputImageDisplay();
+	clearComputedTensorData(); // opening image invalidates computation results
 	// read the image as tensor
 	sourceTensorDataAsLoaded.reset(Image::readPngImageFile(Q2S(imageFileName), sourceTensorShape));
 	sourceTensorDataAsUsed = sourceTensorDataAsLoaded;
@@ -605,7 +679,8 @@ void MainWindow::openImageFile(const QString &imageFileName) {
 
 void MainWindow::openImagePixmap(const QPixmap &imagePixmap, const char *sourceName) {
 	// clear the previous image data if any
-	clearImageData();
+	clearInputImageDisplay();
+	clearComputedTensorData(); // opening image invalidates computation results
 	// read the image as tensor
 	sourceTensorDataAsLoaded.reset(Image::readPixmap(imagePixmap, sourceTensorShape));
 	{ // TMP: scale down a huge screenshot 1/6
@@ -627,7 +702,7 @@ void MainWindow::openImagePixmap(const QPixmap &imagePixmap, const char *sourceN
 	sourceImageSize.setText(QString("Image size: %1").arg(S2Q(STR(sourceTensorShape))));
 }
 
-void MainWindow::clearImageData() {
+void MainWindow::clearInputImageDisplay() {
 	sourceWidget.hide();
 	sourceImage.setPixmap(QPixmap());
 	sourceTensorDataAsLoaded = nullptr;
@@ -636,7 +711,16 @@ void MainWindow::clearImageData() {
 	tensorData.reset(nullptr);
 }
 
+void MainWindow::clearComputedTensorData() {
+	// clear table-like display of data about to be invalidated
+	removeTableIfAny();
+	// clear tensor data
+	tensorData.reset(nullptr);
+}
+
 void MainWindow::effectsChanged() {
+	clearComputedTensorData(); // effects change invalidates computation results
+
 	// all available effects that can be applied
 	bool flipHorizontally = sourceEffectFlipHorizontallyCheckBox.isChecked();
 	bool flipVertically   = sourceEffectFlipVerticallyCheckBox.isChecked();
@@ -652,6 +736,10 @@ void MainWindow::effectsChanged() {
 	}
 
 	updateSourceImageOnScreen();
+}
+
+void MainWindow::inputNormalizationChanged() {
+	clearComputedTensorData(); // input normalization change invalidates computation results
 }
 
 float* MainWindow::applyEffects(const float *image, const TensorShape &shape,

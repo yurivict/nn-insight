@@ -320,7 +320,7 @@ MainWindow::MainWindow()
 	outputInterpretationSummaryLineEdit.setReadOnly(true); // it only displays interpretation
 
 	// widget states
-	updateResultInterpretationSummary("n/a", "n/a");
+	updateResultInterpretationSummary(false/*enable*/, "n/a", "n/a");
 
 	// fill lists
 	sourceEffectConvolutionTypeComboBox.addItem("None",          ConvolutionEffect_None);
@@ -412,6 +412,7 @@ MainWindow::MainWindow()
 			for (unsigned i = 0; i<10; i++)
 				ss << (i>0 ? "\n" : "") << "• " << std::get<0>(likelihoods[i]) << " = " << std::get<1>(likelihoods[i]);
 			updateResultInterpretationSummary(
+				true/*enable*/,
 				STR(std::get<0>(likelihoods[0]) << " = " << std::get<1>(likelihoods[0])),
 				ss.str()
 			);
@@ -749,7 +750,7 @@ void MainWindow::clearComputedTensorData() {
 	// clear tensor data
 	tensorData.reset(nullptr);
 	// clear result interpretation
-	updateResultInterpretationSummary("n/a", "n/a");
+	updateResultInterpretationSummary(false/*enable*/, "n/a", "n/a");
 }
 
 void MainWindow::effectsChanged() {
@@ -848,7 +849,8 @@ void MainWindow::updateSourceImageOnScreen() {
 	sourceImage.setPixmap(Image::toQPixmap(sourceTensorDataAsUsed.get(), sourceTensorShape));
 }
 
-void MainWindow::updateResultInterpretationSummary(const std::string &oneLine, const std::string &details) {
+void MainWindow::updateResultInterpretationSummary(bool enable, const std::string &oneLine, const std::string &details) {
+	outputInterpretationSummaryLineEdit.setEnabled(enable);
 	outputInterpretationSummaryLineEdit.setText(S2Q(oneLine));
 	outputInterpretationSummaryLineEdit.setToolTip(QString("Result interpretation:\n%1").arg(S2Q(details)));
 }

@@ -766,7 +766,7 @@ void MainWindow::openImagePixmap(const QPixmap &imagePixmap, const QString &sour
 		sourceTensorShape = sourceTensorShapeNew;
 	}
 	if (!sourceTensorDataAsLoaded) {
-		Util::warningOk(this, tr("Unable to take a screenshot"));
+		Util::warningOk(this, QString(tr("Unable to accept %1")).arg(sourceName));
 		return;
 	}
 	sourceTensorDataAsUsed = sourceTensorDataAsLoaded;

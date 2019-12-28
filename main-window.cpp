@@ -25,6 +25,8 @@
 #include <QFileDialog>
 #include <QPixmap>
 #include <QTime>
+#include <QClipboard>
+#include <QMimeData>
 
 #include <assert.h>
 
@@ -467,6 +469,20 @@ MainWindow::MainWindow()
 	fileMenu->addAction(tr("Take screenshot as input"), [this]() {
 		openImagePixmap(Util::getScreenshot(true/*hideOurWindows*/), tr("screenshot"));
 	});
+	fileMenu->addAction(tr("Paste image as input"), [this]() {
+		const QClipboard *clipboard = QApplication::clipboard();
+		const QMimeData *mimeData = clipboard->mimeData();
+
+		if (mimeData->hasImage()) {
+			auto pixmap = qvariant_cast<QPixmap>(mimeData->imageData());
+			if (pixmap.height() != 0)
+				openImagePixmap(pixmap, tr("paste from clipboard"));
+			else // see https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=242932
+				Util::warningOk(this, QString(tr("No image to paste, clipboard contains an empty image")));
+		} else {
+			Util::warningOk(this, QString(tr("No image to paste, clipboard contains: %s")).arg(mimeData->formats().join(", ")));
+		}
+	});
 	fileMenu->addAction(tr("Close Image"), [this]() {
 		clearInputImageDisplay();
 		clearEffects();
@@ -729,7 +745,7 @@ void MainWindow::openImagePixmap(const QPixmap &imagePixmap, const QString &sour
 	clearComputedTensorData(); // opening image invalidates computation results
 	// read the image as tensor
 	sourceTensorDataAsLoaded.reset(Image::readPixmap(imagePixmap, sourceTensorShape));
-	{ // TMP: scale down a huge screenshot 1/6
+	if (0) { // TMP: scale down a huge screenshot 1/6
 		TensorShape sourceTensorShapeNew = {sourceTensorShape[0]/6, sourceTensorShape[1]/6, sourceTensorShape[2]};
 		sourceTensorDataAsLoaded.reset(Image::resizeImage(sourceTensorDataAsLoaded.get(), sourceTensorShape, sourceTensorShapeNew));
 		sourceTensorShape = sourceTensorShapeNew;

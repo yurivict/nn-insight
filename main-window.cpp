@@ -482,7 +482,10 @@ MainWindow::MainWindow()
 		openImagePixmap(Util::getScreenshot(true/*hideOurWindows*/), tr("screenshot"));
 	})->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_S)); // non-standard
 	fileMenu->addAction(tr("Copy Image"), [this]() {
-		QApplication::clipboard()->setPixmap(Image::toQPixmap(sourceTensorDataAsUsed.get(), sourceTensorShape), QClipboard::Clipboard);
+		if (sourceTensorDataAsUsed)
+			QApplication::clipboard()->setPixmap(Image::toQPixmap(sourceTensorDataAsUsed.get(), sourceTensorShape), QClipboard::Clipboard);
+		else
+			Util::warningOk(this, QString(tr("Can't copy the image: no image in currently open")));
 	})->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_C));
 	fileMenu->addAction(tr("Paste Image"), [this]() {
 		const QClipboard *clipboard = QApplication::clipboard();

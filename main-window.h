@@ -41,10 +41,13 @@ public:
 private: // fields
 	// widgets
 	QSplitter                        mainSplitter;
+	// Lhs
 	QScrollArea                        svgScrollArea;
 	ZoomableSvgWidget                  svgWidget;
+	// Rhs
 	QWidget                            rhsWidget;
 	QVBoxLayout                          rhsLayout;
+	// Rhs/Source
 	QGroupBox                            sourceWidget; // optionally visible
 	QHBoxLayout                            sourceLayout;
 	QWidget                                sourceDetails;
@@ -56,6 +59,7 @@ private: // fields
 	QLabel                                   sourceImageSizeLabel;
 	QLabel                                   sourceImageSizeText;
 	QLabel                                   outputInterpretationSummaryLineEdit;
+	// Rhs/Source/Effects
 	QGroupBox                                sourceApplyEffectsWidget;
 	QGridLayout                                sourceApplyEffectsLayout;
 	QLabel                                     sourceEffectFlipHorizontallyLabel;
@@ -69,6 +73,7 @@ private: // fields
 	QHBoxLayout                                  sourceEffectConvolutionParamsLayout;
 	QComboBox                                    sourceEffectConvolutionTypeComboBox;
 	QComboBox                                    sourceEffectConvolutionCountComboBox;
+	// Rhs/Source/Compute
 	QPushButton                              computeButton;
 	QWidget                                  computeByWidget;
 	QHBoxLayout                                computeByLayout;
@@ -84,20 +89,22 @@ private: // fields
 	QPushButton                                clearComputationResults;
 	QScrollArea                            sourceImageScrollArea;
 	QLabel                                   sourceImage;
-	QStackedWidget                       detailsStack;
+	// Rhs/NN details
+	QStackedWidget                       nnDetailsStack;
 	QGroupBox                              noDetails;       // page#0
-	QGroupBox                              operatorDetails; // page#1
-	QGridLayout                              operatorDetailsLayout;
-	QLabel                                   operatorTypeLabel;
-	QLabel                                   operatorTypeValue;
-	QLabel                                   operatorOptionsLabel;
-	QLabel                                   operatorInputsLabel;
-	QLabel                                   operatorOutputsLabel;
-	QLabel                                   operatorComplexityLabel;
-	QLabel                                   operatorComplexityValue;
-	QGroupBox                              tensorDetails;   // page#2
+	QGroupBox                              nnOperatorDetails; // page#1
+	QGridLayout                              nnOperatorDetailsLayout;
+	QLabel                                   nnOperatorTypeLabel;
+	QLabel                                   nnOperatorTypeValue;
+	QLabel                                   nnOperatorOptionsLabel;
+	QLabel                                   nnOperatorInputsLabel;
+	QLabel                                   nnOperatorOutputsLabel;
+	QLabel                                   nnOperatorComplexityLabel;
+	QLabel                                   nnOperatorComplexityValue;
+	QGroupBox                              nnTensorDetails;   // page#2
+	// Rhs/NN tables
 	QLabel                               blankRhsLabel; // leftover label
-	std::unique_ptr<DataTable2D>         dataTable;
+	std::unique_ptr<DataTable2D>         nnDataTable;
 
 	QMenuBar                       menuBar;
 	QStatusBar                     statusBar;

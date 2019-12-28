@@ -176,18 +176,18 @@ MainWindow::MainWindow()
 ,            clearComputationResults(tr("Clear"), &computeByWidget)
 ,        sourceImageScrollArea(&sourceWidget)
 ,          sourceImage(&sourceWidget)
-,      detailsStack(&rhsWidget)
-,        noDetails(tr("Details"), &detailsStack)
-,        operatorDetails(&detailsStack)
-,          operatorDetailsLayout(&operatorDetails)
-,          operatorTypeLabel(tr("Operator Type"), &operatorDetails)
-,          operatorTypeValue(&operatorDetails)
-,          operatorOptionsLabel(tr("Options"), &operatorDetails)
-,          operatorInputsLabel(tr("Inputs"), &operatorDetails)
-,          operatorOutputsLabel(tr("Outputs"), &operatorDetails)
-,          operatorComplexityLabel(tr("Complexity"), &operatorDetails)
-,          operatorComplexityValue(&operatorDetails)
-,        tensorDetails(&detailsStack)
+,      nnDetailsStack(&rhsWidget)
+,        noDetails(tr("Neural Network Details"), &nnDetailsStack)
+,        nnOperatorDetails(&nnDetailsStack)
+,          nnOperatorDetailsLayout(&nnOperatorDetails)
+,          nnOperatorTypeLabel(tr("Operator Type"), &nnOperatorDetails)
+,          nnOperatorTypeValue(&nnOperatorDetails)
+,          nnOperatorOptionsLabel(tr("Options"), &nnOperatorDetails)
+,          nnOperatorInputsLabel(tr("Inputs"), &nnOperatorDetails)
+,          nnOperatorOutputsLabel(tr("Outputs"), &nnOperatorDetails)
+,          nnOperatorComplexityLabel(tr("Complexity"), &nnOperatorDetails)
+,          nnOperatorComplexityValue(&nnOperatorDetails)
+,        nnTensorDetails(&nnDetailsStack)
 ,      blankRhsLabel(tr("Select some operator"), &rhsWidget)
 , menuBar(this)
 , statusBar(this)
@@ -244,12 +244,12 @@ MainWindow::MainWindow()
 	      computeByLayout.addWidget(&clearComputationResults);
 	  sourceLayout.addWidget(&sourceImageScrollArea);
 	    sourceImageScrollArea.setWidget(&sourceImage);
-	rhsLayout.addWidget(&detailsStack);
+	rhsLayout.addWidget(&nnDetailsStack);
 	rhsLayout.addWidget(&blankRhsLabel);
-	detailsStack.addWidget(&noDetails);
-	detailsStack.addWidget(&operatorDetails);
-		operatorDetails.setLayout(&operatorDetailsLayout);
-	detailsStack.addWidget(&tensorDetails);
+	nnDetailsStack.addWidget(&noDetails);
+	nnDetailsStack.addWidget(&nnOperatorDetails);
+		nnOperatorDetails.setLayout(&nnOperatorDetailsLayout);
+	nnDetailsStack.addWidget(&nnTensorDetails);
 
 	svgScrollArea.setWidgetResizable(true);
 	svgScrollArea.setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
@@ -309,8 +309,8 @@ MainWindow::MainWindow()
 		w->                          setToolTip(tr("How to interpret the computation result?"));
 	clearComputationResults             .setToolTip(tr("Clear computation results"));
 	sourceImage                         .setToolTip(tr("Image currently used as a NN input"));
-	operatorTypeLabel                   .setToolTip(tr("Operator type: what kind of operation does it perform"));
-	operatorComplexityValue             .setToolTip(tr("Complexity of the currntly selected NN in FLOPS"));
+	nnOperatorTypeLabel                 .setToolTip(tr("Operator type: what kind of operation does it perform"));
+	nnOperatorComplexityValue           .setToolTip(tr("Complexity of the currntly selected NN in FLOPS"));
 
 	// size policies
 	svgScrollArea                        .setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
@@ -328,7 +328,7 @@ MainWindow::MainWindow()
 	outputInterpretationKindComboBox     .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
 	spacer3Widget                        .setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum);
 	sourceImageScrollArea                .setSizePolicy(QSizePolicy::Fixed,   QSizePolicy::Fixed);
-	detailsStack                         .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+	nnDetailsStack                       .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
 	// margins and spacing
 	sourceEffectConvolutionParamsLayout.setContentsMargins(0,0,0,0);
@@ -374,7 +374,7 @@ MainWindow::MainWindow()
 	outputInterpretationKindComboBox.addItem("No/Yes",          ConvolutionEffect_None);
 
 	// fonts
-	for (auto widget : {&operatorTypeLabel, &operatorOptionsLabel, &operatorInputsLabel, &operatorOutputsLabel, &operatorComplexityLabel})
+	for (auto widget : {&nnOperatorTypeLabel, &nnOperatorOptionsLabel, &nnOperatorInputsLabel, &nnOperatorOutputsLabel, &nnOperatorComplexityLabel})
 		widget->setStyleSheet("font-weight: bold;");
 
 	// connect signals
@@ -575,12 +575,12 @@ MainWindow::AnyObject MainWindow::findObjectAtThePoint(const QPointF &pt) {
 void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 	removeTableIfAny();
 	// switch to the details page, set title
-	detailsStack.setCurrentIndex(/*page#1*/1);
-	operatorDetails.setTitle(QString("Operator#%1").arg(operatorId));
+	nnDetailsStack.setCurrentIndex(/*page#1*/1);
+	nnOperatorDetails.setTitle(QString("Operator#%1").arg(operatorId));
 
 	// clear items
-	while (operatorDetailsLayout.count() > 0)
-		operatorDetailsLayout.removeItem(operatorDetailsLayout.itemAt(0));
+	while (nnOperatorDetailsLayout.count() > 0)
+		nnOperatorDetailsLayout.removeItem(nnOperatorDetailsLayout.itemAt(0));
 	tempDetailWidgets.clear();
 
 	// helper
@@ -588,17 +588,17 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 		for (auto t : tensors) {
 			row++;
 			// tensor number
-			auto label = new QLabel(QString(tr("tensor#%1:")).arg(t), &operatorDetails);
+			auto label = new QLabel(QString(tr("tensor#%1:")).arg(t), &nnOperatorDetails);
 			label->setToolTip(tr("Tensor number"));
 			label->setAlignment(Qt::AlignRight);
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
-			operatorDetailsLayout.addWidget(label,         row,   0/*column*/);
+			nnOperatorDetailsLayout.addWidget(label,         row,   0/*column*/);
 			// tensor name
-			label = new QLabel(S2Q(model->getTensorName(t)), &operatorDetails);
+			label = new QLabel(S2Q(model->getTensorName(t)), &nnOperatorDetails);
 			label->setToolTip(tr("Tensor name"));
 			label->setAlignment(Qt::AlignLeft);
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
-			operatorDetailsLayout.addWidget(label,         row,   1/*column*/);
+			nnOperatorDetailsLayout.addWidget(label,         row,   1/*column*/);
 			// tensor shape
 			auto describeShape = [](const TensorShape &shape) {
 				auto flatSize = tensorFlatSize(shape);
@@ -609,11 +609,11 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 				          ")"
 				);
 			};
-			label = new QLabel(S2Q(describeShape(model->getTensorShape(t))), &operatorDetails);
+			label = new QLabel(S2Q(describeShape(model->getTensorShape(t))), &nnOperatorDetails);
 			label->setToolTip(tr("Tensor shape and data size"));
 			label->setAlignment(Qt::AlignLeft);
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
-			operatorDetailsLayout.addWidget(label,         row,   2/*column*/);
+			nnOperatorDetailsLayout.addWidget(label,         row,   2/*column*/);
 			// has buffer? is variable?
 			bool isInput = Util::isValueIn(model->getInputs(), t);
 			bool isOutput = Util::isValueIn(model->getOutputs(), t);
@@ -624,15 +624,15 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 				: isOutput ? tr("output")
 				: hasStaticData ? tr("static tensor")
 				: isVariable ? tr("variable") : tr("computed")),
-				&operatorDetails);
+				&nnOperatorDetails);
 			label->setToolTip(tr("Tensor type"));
 			label->setAlignment(Qt::AlignCenter);
 			label->setStyleSheet("font: italic");
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
-			operatorDetailsLayout.addWidget(label,         row,   3/*column*/);
+			nnOperatorDetailsLayout.addWidget(label,         row,   3/*column*/);
 			// button
 			if (hasStaticData || (tensorData && (*tensorData.get())[t])) {
-				auto button = new QPushButton("➞", &operatorDetails);
+				auto button = new QPushButton("➞", &nnOperatorDetails);
 				button->setContentsMargins(0,0,0,0);
 				button->setStyleSheet("color: blue;");
 				button->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
@@ -640,7 +640,7 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 				button->setMaximumSize(QFontMetrics(button->font()).size(Qt::TextSingleLine, button->text())+QSize(8,0));
 				button->setToolTip(tr("Show the tensor data as a table"));
 				tempDetailWidgets.push_back(std::unique_ptr<QWidget>(button));
-				operatorDetailsLayout.addWidget(button,         row,   4/*column*/);
+				nnOperatorDetailsLayout.addWidget(button,         row,   4/*column*/);
 				connect(button, &QAbstractButton::pressed, [this,t,hasStaticData]() {
 					removeTableIfAny();
 					// show table
@@ -653,10 +653,10 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 						Util::warningOk(this, "WARNING DataTable1D isn't yet implemented (TODO)");
 						break;
 					default: {
-						dataTable.reset(new DataTable2D(tableShape,
+						nnDataTable.reset(new DataTable2D(tableShape,
 							hasStaticData ? model->getTensorData(t) : (*tensorData.get())[t].get(),
 							&rhsWidget));
-						rhsLayout.addWidget(dataTable.get());
+						rhsLayout.addWidget(nnDataTable.get());
 						blankRhsLabel.hide();
 						break;
 					}}
@@ -671,67 +671,67 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 
 	// add items
 	unsigned row = 0;
-	operatorDetailsLayout.addWidget(&operatorTypeLabel,          row,   0/*column*/);
-	operatorDetailsLayout.addWidget(&operatorTypeValue,          row,   1/*column*/);
+	nnOperatorDetailsLayout.addWidget(&nnOperatorTypeLabel,          row,   0/*column*/);
+	nnOperatorDetailsLayout.addWidget(&nnOperatorTypeValue,          row,   1/*column*/);
 	row++;
-	operatorDetailsLayout.addWidget(&operatorOptionsLabel,       row,   0/*column*/);
+	nnOperatorDetailsLayout.addWidget(&nnOperatorOptionsLabel,       row,   0/*column*/);
 	{
 		std::unique_ptr<PluginInterface::OperatorOptionsList> opts(model->getOperatorOptions(operatorId));
 		for (auto &opt : *opts) {
 			row++;
 			// option name
-			auto label = new QLabel(S2Q(STR(opt.name)), &operatorDetails);
+			auto label = new QLabel(S2Q(STR(opt.name)), &nnOperatorDetails);
 			label->setToolTip("Option name");
 			label->setAlignment(Qt::AlignRight);
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
-			operatorDetailsLayout.addWidget(label,               row,   0/*column*/);
+			nnOperatorDetailsLayout.addWidget(label,               row,   0/*column*/);
 			// option type
-			label = new QLabel(S2Q(STR("<" << opt.value.type << ">")), &operatorDetails);
+			label = new QLabel(S2Q(STR("<" << opt.value.type << ">")), &nnOperatorDetails);
 			label->setToolTip(tr("Option type"));
 			label->setAlignment(Qt::AlignLeft);
 			label->setStyleSheet("font: italic");
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
-			operatorDetailsLayout.addWidget(label,               row,   1/*column*/);
+			nnOperatorDetailsLayout.addWidget(label,               row,   1/*column*/);
 			// option value
-			label = new QLabel(S2Q(STR(opt.value)), &operatorDetails);
+			label = new QLabel(S2Q(STR(opt.value)), &nnOperatorDetails);
 			label->setToolTip(tr("Option value"));
 			label->setAlignment(Qt::AlignLeft);
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
-			operatorDetailsLayout.addWidget(label,               row,   2/*column*/);
+			nnOperatorDetailsLayout.addWidget(label,               row,   2/*column*/);
 		}
 		if (opts->empty()) {
 			row++;
-			auto label = new QLabel("-none-", &operatorDetails);
+			auto label = new QLabel("-none-", &nnOperatorDetails);
 			label->setAlignment(Qt::AlignRight);
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
-			operatorDetailsLayout.addWidget(label,               row,   0/*column*/);
+			nnOperatorDetailsLayout.addWidget(label,               row,   0/*column*/);
 		}
 	}
 	row++;
-	operatorDetailsLayout.addWidget(&operatorInputsLabel,        row,   0/*column*/);
+	nnOperatorDetailsLayout.addWidget(&nnOperatorInputsLabel,        row,   0/*column*/);
 	addTensorLines(inputs, row);
 	row++;
-	operatorDetailsLayout.addWidget(&operatorOutputsLabel,       row,   0/*column*/);
+	nnOperatorDetailsLayout.addWidget(&nnOperatorOutputsLabel,       row,   0/*column*/);
 	addTensorLines(outputs, row);
 	row++;
-	operatorDetailsLayout.addWidget(&operatorComplexityLabel,    row,   0/*column*/);
-	operatorDetailsLayout.addWidget(&operatorComplexityValue,    row,   1/*column*/);
+	nnOperatorDetailsLayout.addWidget(&nnOperatorComplexityLabel,    row,   0/*column*/);
+	nnOperatorDetailsLayout.addWidget(&nnOperatorComplexityValue,    row,   1/*column*/);
 
 	// set texts
-	operatorTypeValue.setText(S2Q(STR(model->getOperatorKind(operatorId))));
-	operatorComplexityValue.setText(S2Q(Util::formatFlops(ModelFunctions::computeOperatorFlops(model, operatorId))));
+	nnOperatorTypeValue.setText(S2Q(STR(model->getOperatorKind(operatorId))));
+	nnOperatorComplexityValue.setText(S2Q(Util::formatFlops(ModelFunctions::computeOperatorFlops(model, operatorId))));
 }
 
 void MainWindow::showTensorDetails(PluginInterface::TensorId tensorId) {
 	removeTableIfAny();
-	detailsStack.setCurrentIndex(/*page#*/2);
-	tensorDetails.setTitle(QString("Tensor#%1: %2").arg(tensorId).arg(S2Q(model->getTensorName(tensorId))));
+	nnDetailsStack.setCurrentIndex(/*page#*/2);
+	nnTensorDetails.setTitle(QString("Tensor#%1: %2").arg(tensorId).arg(S2Q(model->getTensorName(tensorId))));
 }
 
 void MainWindow::removeTableIfAny() {
-	if (dataTable.get()) {
-		rhsLayout.removeWidget(dataTable.get());
-		dataTable.reset(nullptr);
+	if (nnDataTable.get()) {
+		rhsLayout.removeWidget(nnDataTable.get());
+		nnDataTable.reset(nullptr);
 		blankRhsLabel.show();
 	}
 }

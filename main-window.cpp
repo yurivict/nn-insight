@@ -476,12 +476,12 @@ MainWindow::MainWindow()
 		if (fileName != "")
 			openImageFile(fileName);
 	});
-	fileMenu->addAction(tr("Open NN file"), []() {
+	fileMenu->addAction(tr("Open Neural Network File"), []() {
 	});
-	fileMenu->addAction(tr("Take screenshot as input"), [this]() {
+	fileMenu->addAction(tr("Take Screenshot"), [this]() {
 		openImagePixmap(Util::getScreenshot(true/*hideOurWindows*/), tr("screenshot"));
 	});
-	fileMenu->addAction(tr("Paste image as input"), [this]() {
+	fileMenu->addAction(tr("Paste Image"), [this]() {
 		const QClipboard *clipboard = QApplication::clipboard();
 		const QMimeData *mimeData = clipboard->mimeData();
 
@@ -495,7 +495,7 @@ MainWindow::MainWindow()
 			Util::warningOk(this, QString(tr("No image to paste, clipboard contains: %s")).arg(mimeData->formats().join(", ")));
 		}
 	});
-	fileMenu->addAction(tr("Copy image"), [this]() {
+	fileMenu->addAction(tr("Copy Image"), [this]() {
 		QApplication::clipboard()->setPixmap(Image::toQPixmap(sourceTensorDataAsUsed.get(), sourceTensorShape), QClipboard::Clipboard);
 	});
 	fileMenu->addAction(tr("Close Image"), [this]() {

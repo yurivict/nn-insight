@@ -885,5 +885,6 @@ void MainWindow::updateResultInterpretationSummary(bool enable, const std::strin
 	outputInterpretationSummaryLineEdit.setEnabled(enable);
 	outputInterpretationSummaryLineEdit.setText(S2Q(oneLine));
 	outputInterpretationSummaryLineEdit.setToolTip(QString("Result interpretation:\n%1").arg(S2Q(details)));
+	outputInterpretationSummaryLineEdit.setCursorPosition(0);
 }
 

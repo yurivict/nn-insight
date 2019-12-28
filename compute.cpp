@@ -150,7 +150,6 @@ bool compute(
 		// normalize value range
 		switch (std::get<0>(inputNormalization)) {
 		case InputNormalizationRange_0_1:
-			PRINT("normalizing to 0..1")
 			normalizeRange(src, inputAllocated, inputTensorSize, 0, 1);
 			src = inputAllocated;
 			break;

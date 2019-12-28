@@ -405,12 +405,10 @@ MainWindow::MainWindow()
 		bool succ = Compute::compute(model, inputNormalization, sourceTensorDataAsUsed, sourceTensorShape, tensorData, [this](const std::string &msg) {
 			Util::warningOk(this, S2Q(msg));
 		}, [](PluginInterface::TensorId tid) {
-			PRINT("QAbstractButton::pressed: Tensor DONE tid=" << tid)
+			//PRINT("Tensor DONE: tid=" << tid)
 		});
 
 		if (succ) {
-			PRINT("computation succeeded")
-
 			// interpret results: 1001
 			auto result = (*tensorData)[model->getOutputs()[0]].get();
 			typedef std::tuple<unsigned/*order num*/,float/*likelihood*/> Likelihood;

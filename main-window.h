@@ -6,6 +6,7 @@
 #include <QStackedWidget>
 #include <QGroupBox>
 #include "ZoomableSvgWidget.h"
+#include "scale-image-widget.h"
 #include "DataTable2D.h"
 #include <QLabel>
 #include <QPushButton>
@@ -59,6 +60,10 @@ private: // fields
 	QLabel                                   sourceImageSizeLabel;
 	QLabel                                   sourceImageSizeText;
 	QLabel                                   outputInterpretationSummaryLineEdit;
+	QWidget                                  scaleImageWidget;
+	QHBoxLayout                                scaleImageLayout;
+	QLabel                                     scaleImageLabel;
+	ScaleImageWidget                           scaleImageSpinBoxes;
 	// Rhs/Source/Effects
 	QGroupBox                                sourceApplyEffectsWidget;
 	QGridLayout                                sourceApplyEffectsLayout;
@@ -106,11 +111,11 @@ private: // fields
 	QLabel                               blankRhsLabel; // leftover label
 	std::unique_ptr<DataTable2D>         nnDataTable;
 
-	QMenuBar                       menuBar;
-	QStatusBar                     statusBar;
+	QMenuBar                         menuBar;
+	QStatusBar                       statusBar;
 #if defined(USE_PERFTOOLS)
-	QLabel                         memoryUseLabel;
-	QTimer                         memoryUseTimer;
+	QLabel                           memoryUseLabel;
+	QTimer                           memoryUseTimer;
 #endif
 
 	const PluginManager::Plugin*     plugin;    // plugin in use for the model
@@ -128,6 +133,9 @@ private: // fields
 		std::vector<QRectF> allTensorLabelBoxes; // indexed based on TensorId
 	} modelIndexes;
 	std::vector<std::unique_ptr<QWidget>>   tempDetailWidgets;
+
+	unsigned                         scaleImageWidthPct;    // percentage to scale the image to show on the screen
+	unsigned                         scaleImageHeightPct;
 
 private: // types
 	struct AnyObject {

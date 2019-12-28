@@ -67,6 +67,7 @@ add_executable(nn-insight
 	svg-graphics-generator.cpp
 	ZoomableSvgWidget.cpp
 	DataTable2D.cpp
+	scale-image-widget.cpp
 	image.cpp
 	compute.cpp
 	3rdparty/tensorflow/tflite-reference-implementation.cpp

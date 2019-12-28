@@ -149,6 +149,10 @@ MainWindow::MainWindow()
 ,          sourceImageSizeLabel(tr("Image size:"), &sourceDetails)
 ,          sourceImageSizeText(&sourceDetails)
 ,          outputInterpretationSummaryLineEdit(&sourceDetails)
+,          scaleImageWidget(&sourceDetails)
+,            scaleImageLayout(&scaleImageWidget)
+,            scaleImageLabel(tr("Scale image:"), &scaleImageWidget)
+,            scaleImageSpinBoxes(&scaleImageWidget)
 ,          sourceApplyEffectsWidget(tr("Apply Effects"), &sourceDetails)
 ,            sourceApplyEffectsLayout(&sourceApplyEffectsWidget)
 ,            sourceEffectFlipHorizontallyLabel(tr("Flip horizontally"), &sourceApplyEffectsWidget)
@@ -196,6 +200,8 @@ MainWindow::MainWindow()
 ,   memoryUseTimer(&statusBar)
 #endif
 , plugin(nullptr)
+, scaleImageWidthPct(0)
+, scaleImageHeightPct(0)
 {
 	// window size and position
 	if (true) { // set it to center on the screen until we will have persistent app options
@@ -219,6 +225,9 @@ MainWindow::MainWindow()
 	    sourceDetailsLayout.addWidget(&sourceImageSizeLabel,     2/*row*/, 0/*col*/, 1/*rowSpan*/, 1/*columnSpan*/);
 	    sourceDetailsLayout.addWidget(&sourceImageSizeText,      2/*row*/, 1/*col*/, 1/*rowSpan*/, 1/*columnSpan*/);
 	    sourceDetailsLayout.addWidget(&outputInterpretationSummaryLineEdit, 0/*row*/, 2/*col*/, 2/*rowSpan*/, 2/*columnSpan*/);
+	    sourceDetailsLayout.addWidget(&scaleImageWidget,         2/*row*/, 2/*col*/, 1/*rowSpan*/, 2/*columnSpan*/);
+	      scaleImageLayout.addWidget(&scaleImageLabel);
+	      scaleImageLayout.addWidget(&scaleImageSpinBoxes);
 	    sourceDetailsLayout.addWidget(&sourceApplyEffectsWidget, 3/*row*/, 0/*col*/, 1/*rowSpan*/, 4/*columnSpan*/);
 	      sourceApplyEffectsLayout.addWidget(&sourceEffectFlipHorizontallyLabel,    0/*row*/, 0/*column*/);
 	      sourceApplyEffectsLayout.addWidget(&sourceEffectFlipHorizontallyCheckBox, 0/*row*/, 1/*column*/);
@@ -266,7 +275,7 @@ MainWindow::MainWindow()
 #endif
 
 	// alignment
-	for (auto w : {&sourceImageFileNameLabel, &sourceImageFileSizeLabel, &sourceImageSizeLabel})
+	for (auto w : {&sourceImageFileNameLabel, &sourceImageFileSizeLabel, &sourceImageSizeLabel, &scaleImageLabel})
 		w->setAlignment(Qt::AlignRight);
 	for (auto w : {&sourceImageFileNameText, &sourceImageFileSizeText, &sourceImageSizeText})
 		w->setAlignment(Qt::AlignLeft);
@@ -315,6 +324,15 @@ MainWindow::MainWindow()
 	// size policies
 	svgScrollArea                        .setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
 	sourceWidget                         .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+	sourceImageFileNameLabel             .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+	sourceImageFileNameText              .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+	sourceImageFileSizeLabel             .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+	sourceImageFileSizeText              .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+	sourceImageSizeLabel                 .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+	sourceImageSizeText                  .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+	scaleImageWidget                     .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+	scaleImageLabel                      .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+	scaleImageSpinBoxes                  .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
 	sourceApplyEffectsWidget             .setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Maximum);
 	for (QWidget *w : {&sourceEffectConvolutionParamsWidget, (QWidget*)&sourceEffectConvolutionTypeComboBox, (QWidget*)&sourceEffectConvolutionCountComboBox})
 		w->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
@@ -331,10 +349,11 @@ MainWindow::MainWindow()
 	nnDetailsStack                       .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
 	// margins and spacing
-	sourceEffectConvolutionParamsLayout.setContentsMargins(0,0,0,0);
-	sourceEffectConvolutionParamsLayout.setSpacing(0);
-	computeByLayout.setContentsMargins(0,0,0,0);
-	computeByLayout.setSpacing(0);
+	for (QLayout *l : {&scaleImageLayout, &sourceEffectConvolutionParamsLayout, &computeByLayout})
+		l->setContentsMargins(0,0,0,0);
+	for (QLayout *l : {&sourceEffectConvolutionParamsLayout, &computeByLayout})
+		l->setSpacing(0);
+
 	for (auto w : {&spacer1Widget, &spacer2Widget, &spacer3Widget})
 		w->setMinimumWidth(10);
 
@@ -389,6 +408,16 @@ MainWindow::MainWindow()
 				// no object was found: ignore the signal
 			}
 		}
+	});
+	connect(&scaleImageSpinBoxes, &ScaleImageWidget::scalingFactorChanged, [this](unsigned widthFactor, unsigned heightFactor) {
+		assert(scaleImageWidthPct!=0 && scaleImageHeightPct!=0); // scaling percentages are initially set when the image is open/pasted/etc
+
+		// accept percentages set by the user
+		scaleImageWidthPct = widthFactor;
+		scaleImageHeightPct = heightFactor;
+
+		// update the image on screen accordingly
+		updateSourceImageOnScreen();
 	});
 	connect(&sourceEffectFlipHorizontallyCheckBox, &QCheckBox::stateChanged, [this](int) {
 		effectsChanged();
@@ -802,6 +831,8 @@ void MainWindow::clearInputImageDisplay() {
 	sourceTensorDataAsUsed = nullptr;
 	sourceTensorShape = TensorShape();
 	tensorData.reset(nullptr);
+	scaleImageWidthPct = 0;
+	scaleImageHeightPct = 0;
 }
 
 void MainWindow::clearComputedTensorData() {
@@ -915,15 +946,46 @@ void MainWindow::clearEffects() {
 }
 
 void MainWindow::updateSourceImageOnScreen() {
-	auto pixmap = Image::toQPixmap(sourceTensorDataAsUsed.get(), sourceTensorShape);
-	sourceImage.setPixmap(pixmap);
-	sourceImage.resize(pixmap.width(), pixmap.height());
-
 	{ // fix image size to the size of details to its left, so that it would nicely align to them
 		auto height = sourceDetails.height();
 		sourceImageScrollArea.setMinimumSize(QSize(height,height));
 		sourceImageScrollArea.setMaximumSize(QSize(height,height));
 	}
+
+	// decide on the scaling percentage
+	if (scaleImageWidthPct == 0)  {
+		// compute the percentage
+		assert(sourceTensorShape.size() == 3);
+		auto screenSize = sourceImageScrollArea.minimumSize();
+		float scaleFactorWidth  = (float)screenSize.width()/(float)sourceTensorShape[1];
+		float scaleFactorHeight = (float)screenSize.height()/(float)sourceTensorShape[0];
+		float scaleFactor = std::min(scaleFactorWidth, scaleFactorHeight);
+		if (scaleFactor < 0.01) // we only scale down to 1%
+			scaleFactor = 0.01;
+		if (scaleFactor > ScaleImageWidget::maxValue) // do not exceed a max value set by ScaleImageWidget
+			scaleFactor = ScaleImageWidget::maxValue;
+		scaleImageWidthPct  = scaleFactor*100;
+		scaleImageHeightPct = scaleFactor*100;
+
+		// set the same percentage in the scaling widget
+		scaleImageSpinBoxes.setFactor(scaleImageWidthPct);
+	}
+
+	// generate and set the pixmap
+	QPixmap pixmap;
+	if (scaleImageWidthPct != 100 || scaleImageHeightPct != 100) {
+		assert(sourceTensorShape.size() == 3);
+		TensorShape resizedShape = {
+			sourceTensorShape[0]*scaleImageHeightPct/100,
+			sourceTensorShape[1]*scaleImageWidthPct/100,
+			sourceTensorShape[2]
+		};
+		std::unique_ptr<float> resizedImage(Image::resizeImage(sourceTensorDataAsUsed.get(), sourceTensorShape, resizedShape));
+		pixmap = Image::toQPixmap(resizedImage.get(), resizedShape);
+	} else
+		pixmap = Image::toQPixmap(sourceTensorDataAsUsed.get(), sourceTensorShape);
+	sourceImage.setPixmap(pixmap);
+	sourceImage.resize(pixmap.width(), pixmap.height());
 }
 
 void MainWindow::updateResultInterpretationSummary(bool enable, const QString &oneLine, const QString &details) {

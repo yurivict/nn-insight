@@ -495,6 +495,9 @@ MainWindow::MainWindow()
 			Util::warningOk(this, QString(tr("No image to paste, clipboard contains: %s")).arg(mimeData->formats().join(", ")));
 		}
 	});
+	fileMenu->addAction(tr("Copy image"), [this]() {
+		QApplication::clipboard()->setPixmap(Image::toQPixmap(sourceTensorDataAsUsed.get(), sourceTensorShape), QClipboard::Clipboard);
+	});
 	fileMenu->addAction(tr("Close Image"), [this]() {
 		clearInputImageDisplay();
 		clearEffects();

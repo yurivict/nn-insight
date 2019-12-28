@@ -276,14 +276,14 @@ MainWindow::MainWindow()
 
 	// alignment
 	for (auto w : {&sourceImageFileNameLabel, &sourceImageFileSizeLabel, &sourceImageSizeLabel, &scaleImageLabel})
-		w->setAlignment(Qt::AlignRight);
+		w->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
 	for (auto w : {&sourceImageFileNameText, &sourceImageFileSizeText, &sourceImageSizeText})
-		w->setAlignment(Qt::AlignLeft);
+		w->setAlignment(Qt::AlignLeft|Qt::AlignVCenter);
 	outputInterpretationSummaryLineEdit.setAlignment(Qt::AlignRight);
 	for (auto w : {&sourceEffectFlipHorizontallyLabel, &sourceEffectFlipVerticallyLabel, &sourceEffectMakeGrayscaleLabel, &sourceEffectConvolutionLabel})
-		w->setAlignment(Qt::AlignRight);
+		w->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
 	for (auto w : {&inputNormalizationLabel, &computationTimeLabel})
-		w->setAlignment(Qt::AlignRight);
+		w->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
 
 	{ // double the font size in the summary
 		QFont font = outputInterpretationSummaryLineEdit.font();
@@ -299,6 +299,8 @@ MainWindow::MainWindow()
 	sourceImageFileSizeText             .setToolTip(tr("File size of the input image"));
 	sourceImageSizeLabel                .setToolTip(tr("Input image size"));
 	sourceImageSizeText                 .setToolTip(tr("Input image size"));
+	for (QWidget *w : {(QWidget*)&scaleImageLabel,(QWidget*)&scaleImageSpinBoxes})
+		w->                          setToolTip(tr("Scale the image to fit the screen, or to select its area for NN computation"));
 	sourceApplyEffectsWidget            .setToolTip(tr("Apply effects to the image"));
 	sourceEffectFlipHorizontallyLabel   .setToolTip(tr("Flip the image horizontally"));
 	sourceEffectFlipHorizontallyCheckBox.setToolTip(tr("Flip the image horizontally"));
@@ -317,7 +319,7 @@ MainWindow::MainWindow()
 	for (QWidget *w : {(QWidget*)&outputInterpretationLabel,(QWidget*)&outputInterpretationKindComboBox})
 		w->                          setToolTip(tr("How to interpret the computation result?"));
 	clearComputationResults             .setToolTip(tr("Clear computation results"));
-	sourceImage                         .setToolTip(tr("Image currently used as a NN input"));
+	sourceImage                         .setToolTip(tr("Image currently used as NN input"));
 	nnOperatorTypeLabel                 .setToolTip(tr("Operator type: what kind of operation does it perform"));
 	nnOperatorComplexityValue           .setToolTip(tr("Complexity of the currntly selected NN in FLOPS"));
 
@@ -631,13 +633,13 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 			// tensor number
 			auto label = new QLabel(QString(tr("tensor#%1:")).arg(t), &nnOperatorDetails);
 			label->setToolTip(tr("Tensor number"));
-			label->setAlignment(Qt::AlignRight);
+			label->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
 			nnOperatorDetailsLayout.addWidget(label,         row,   0/*column*/);
 			// tensor name
 			label = new QLabel(S2Q(model->getTensorName(t)), &nnOperatorDetails);
 			label->setToolTip(tr("Tensor name"));
-			label->setAlignment(Qt::AlignLeft);
+			label->setAlignment(Qt::AlignLeft|Qt::AlignVCenter);
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
 			nnOperatorDetailsLayout.addWidget(label,         row,   1/*column*/);
 			// tensor shape
@@ -652,7 +654,7 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 			};
 			label = new QLabel(S2Q(describeShape(model->getTensorShape(t))), &nnOperatorDetails);
 			label->setToolTip(tr("Tensor shape and data size"));
-			label->setAlignment(Qt::AlignLeft);
+			label->setAlignment(Qt::AlignLeft|Qt::AlignVCenter);
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
 			nnOperatorDetailsLayout.addWidget(label,         row,   2/*column*/);
 			// has buffer? is variable?
@@ -667,7 +669,7 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 				: isVariable ? tr("variable") : tr("computed")),
 				&nnOperatorDetails);
 			label->setToolTip(tr("Tensor type"));
-			label->setAlignment(Qt::AlignCenter);
+			label->setAlignment(Qt::AlignCenter|Qt::AlignVCenter);
 			label->setStyleSheet("font: italic");
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
 			nnOperatorDetailsLayout.addWidget(label,         row,   3/*column*/);
@@ -723,27 +725,27 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 			// option name
 			auto label = new QLabel(S2Q(STR(opt.name)), &nnOperatorDetails);
 			label->setToolTip("Option name");
-			label->setAlignment(Qt::AlignRight);
+			label->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
 			nnOperatorDetailsLayout.addWidget(label,               row,   0/*column*/);
 			// option type
 			label = new QLabel(S2Q(STR("<" << opt.value.type << ">")), &nnOperatorDetails);
 			label->setToolTip(tr("Option type"));
-			label->setAlignment(Qt::AlignLeft);
+			label->setAlignment(Qt::AlignLeft|Qt::AlignVCenter);
 			label->setStyleSheet("font: italic");
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
 			nnOperatorDetailsLayout.addWidget(label,               row,   1/*column*/);
 			// option value
 			label = new QLabel(S2Q(STR(opt.value)), &nnOperatorDetails);
 			label->setToolTip(tr("Option value"));
-			label->setAlignment(Qt::AlignLeft);
+			label->setAlignment(Qt::AlignLeft|Qt::AlignVCenter);
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
 			nnOperatorDetailsLayout.addWidget(label,               row,   2/*column*/);
 		}
 		if (opts->empty()) {
 			row++;
 			auto label = new QLabel("-none-", &nnOperatorDetails);
-			label->setAlignment(Qt::AlignRight);
+			label->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
 			nnOperatorDetailsLayout.addWidget(label,               row,   0/*column*/);
 		}

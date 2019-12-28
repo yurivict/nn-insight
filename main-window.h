@@ -62,6 +62,7 @@ private: // fields
 	QLabel                                   outputInterpretationSummaryLineEdit;
 	QWidget                                  scaleImageWidget;
 	QHBoxLayout                                scaleImageLayout;
+	QWidget                                    spacerScaleWidget;
 	QLabel                                     scaleImageLabel;
 	ScaleImageWidget                           scaleImageSpinBoxes;
 	// Rhs/Source/Effects

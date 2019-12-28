@@ -151,6 +151,7 @@ MainWindow::MainWindow()
 ,          outputInterpretationSummaryLineEdit(&sourceDetails)
 ,          scaleImageWidget(&sourceDetails)
 ,            scaleImageLayout(&scaleImageWidget)
+,            spacerScaleWidget(&scaleImageWidget)
 ,            scaleImageLabel(tr("Scale image:"), &scaleImageWidget)
 ,            scaleImageSpinBoxes(&scaleImageWidget)
 ,          sourceApplyEffectsWidget(tr("Apply Effects"), &sourceDetails)
@@ -226,6 +227,7 @@ MainWindow::MainWindow()
 	    sourceDetailsLayout.addWidget(&sourceImageSizeText,      2/*row*/, 1/*col*/, 1/*rowSpan*/, 1/*columnSpan*/);
 	    sourceDetailsLayout.addWidget(&outputInterpretationSummaryLineEdit, 0/*row*/, 2/*col*/, 2/*rowSpan*/, 2/*columnSpan*/);
 	    sourceDetailsLayout.addWidget(&scaleImageWidget,         2/*row*/, 2/*col*/, 1/*rowSpan*/, 2/*columnSpan*/);
+	      scaleImageLayout.addWidget(&spacerScaleWidget);
 	      scaleImageLayout.addWidget(&scaleImageLabel);
 	      scaleImageLayout.addWidget(&scaleImageSpinBoxes);
 	    sourceDetailsLayout.addWidget(&sourceApplyEffectsWidget, 3/*row*/, 0/*col*/, 1/*rowSpan*/, 4/*columnSpan*/);
@@ -333,8 +335,9 @@ MainWindow::MainWindow()
 	sourceImageSizeLabel                 .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
 	sourceImageSizeText                  .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
 	scaleImageWidget                     .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
-	scaleImageLabel                      .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
-	scaleImageSpinBoxes                  .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+	spacerScaleWidget                    .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
+	scaleImageLabel                      .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+	scaleImageSpinBoxes                  .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 	sourceApplyEffectsWidget             .setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Maximum);
 	for (QWidget *w : {&sourceEffectConvolutionParamsWidget, (QWidget*)&sourceEffectConvolutionTypeComboBox, (QWidget*)&sourceEffectConvolutionCountComboBox})
 		w->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);

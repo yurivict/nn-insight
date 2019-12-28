@@ -148,6 +148,7 @@ MainWindow::MainWindow()
 ,          sourceImageFileSizeText(&sourceDetails)
 ,          sourceImageSizeLabel(tr("Image size:"), &sourceDetails)
 ,          sourceImageSizeText(&sourceDetails)
+,          outputInterpretationSummaryLineEdit(&sourceDetails)
 ,          sourceApplyEffectsWidget(tr("Apply Effects"), &sourceDetails)
 ,            sourceApplyEffectsLayout(&sourceApplyEffectsWidget)
 ,            sourceEffectFlipHorizontallyLabel(tr("Flip horizontally"), &sourceApplyEffectsWidget)
@@ -171,7 +172,6 @@ MainWindow::MainWindow()
 ,            spacer2Widget(&computeByWidget)
 ,            outputInterpretationLabel(tr("Interpret as"), &computeByWidget)
 ,            outputInterpretationKindComboBox(&computeByWidget)
-,            outputInterpretationSummaryLineEdit(&computeByWidget)
 ,            spacer3Widget(&computeByWidget)
 ,            clearComputationResults(tr("Clear"), &computeByWidget)
 ,        sourceImageScrollArea(&sourceWidget)
@@ -218,6 +218,7 @@ MainWindow::MainWindow()
 	    sourceDetailsLayout.addWidget(&sourceImageFileSizeText,  1/*row*/, 1/*col*/, 1/*rowSpan*/, 1/*columnSpan*/);
 	    sourceDetailsLayout.addWidget(&sourceImageSizeLabel,     2/*row*/, 0/*col*/, 1/*rowSpan*/, 1/*columnSpan*/);
 	    sourceDetailsLayout.addWidget(&sourceImageSizeText,      2/*row*/, 1/*col*/, 1/*rowSpan*/, 1/*columnSpan*/);
+	    sourceDetailsLayout.addWidget(&outputInterpretationSummaryLineEdit, 0/*row*/, 2/*col*/, 2/*rowSpan*/, 2/*columnSpan*/);
 	    sourceDetailsLayout.addWidget(&sourceApplyEffectsWidget, 3/*row*/, 0/*col*/, 1/*rowSpan*/, 4/*columnSpan*/);
 	      sourceApplyEffectsLayout.addWidget(&sourceEffectFlipHorizontallyLabel,    0/*row*/, 0/*column*/);
 	      sourceApplyEffectsLayout.addWidget(&sourceEffectFlipHorizontallyCheckBox, 0/*row*/, 1/*column*/);
@@ -239,7 +240,6 @@ MainWindow::MainWindow()
 	      computeByLayout.addWidget(&spacer2Widget);
 	      computeByLayout.addWidget(&outputInterpretationLabel);
 	      computeByLayout.addWidget(&outputInterpretationKindComboBox);
-	      computeByLayout.addWidget(&outputInterpretationSummaryLineEdit);
 	      computeByLayout.addWidget(&spacer3Widget);
 	      computeByLayout.addWidget(&clearComputationResults);
 	  sourceLayout.addWidget(&sourceImageScrollArea);
@@ -270,10 +270,18 @@ MainWindow::MainWindow()
 		w->setAlignment(Qt::AlignRight);
 	for (auto w : {&sourceImageFileNameText, &sourceImageFileSizeText, &sourceImageSizeText})
 		w->setAlignment(Qt::AlignLeft);
+	outputInterpretationSummaryLineEdit.setAlignment(Qt::AlignRight);
 	for (auto w : {&sourceEffectFlipHorizontallyLabel, &sourceEffectFlipVerticallyLabel, &sourceEffectMakeGrayscaleLabel, &sourceEffectConvolutionLabel})
 		w->setAlignment(Qt::AlignRight);
 	for (auto w : {&inputNormalizationLabel, &computationTimeLabel})
 		w->setAlignment(Qt::AlignRight);
+
+	{ // double the font size in the summary
+		QFont font = outputInterpretationSummaryLineEdit.font();
+		font.setPointSize(2*font.pointSize());
+		font.setBold(true);
+		outputInterpretationSummaryLineEdit.setFont(font);
+	}
 
 	// tooltips
 	sourceImageFileNameLabel            .setToolTip(tr("File name of the input image"));
@@ -318,7 +326,6 @@ MainWindow::MainWindow()
 	spacer2Widget                        .setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum);
 	outputInterpretationLabel            .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
 	outputInterpretationKindComboBox     .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
-	outputInterpretationSummaryLineEdit  .setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum);
 	spacer3Widget                        .setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum);
 	sourceImageScrollArea                .setSizePolicy(QSizePolicy::Fixed,   QSizePolicy::Fixed);
 	detailsStack                         .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
@@ -334,7 +341,6 @@ MainWindow::MainWindow()
 	// widget options and flags
 	sourceWidget.hide(); // hidden by default
 	noDetails.setEnabled(false); // always grayed out
-	outputInterpretationSummaryLineEdit.setReadOnly(true); // it only displays interpretation
 	sourceEffectConvolutionCountComboBox.setEnabled(false); // is only enabled when some convoulution is chosen
 
 	// widget states
@@ -432,7 +438,7 @@ MainWindow::MainWindow()
 				ss << (i>0 ? "\n" : "") << "• " << Q2S(labels[std::get<0>(likelihoods[i])]) << " = " << std::get<1>(likelihoods[i]);
 			updateResultInterpretationSummary(
 				true/*enable*/,
-				QString("%1 = %2").arg(labels[std::get<0>(likelihoods[0])]).arg(std::get<1>(likelihoods[0])),
+				QString("%1 (%2)").arg(labels[std::get<0>(likelihoods[0])]).arg(std::get<1>(likelihoods[0])),
 				S2Q(ss.str())
 			);
 		} else
@@ -902,9 +908,8 @@ void MainWindow::updateSourceImageOnScreen() {
 }
 
 void MainWindow::updateResultInterpretationSummary(bool enable, const QString &oneLine, const QString &details) {
-	outputInterpretationSummaryLineEdit.setEnabled(enable);
+	outputInterpretationSummaryLineEdit.setVisible(enable);
 	outputInterpretationSummaryLineEdit.setText(oneLine);
 	outputInterpretationSummaryLineEdit.setToolTip(QString(tr("Result interpretation:\n%1")).arg(details));
-	outputInterpretationSummaryLineEdit.setCursorPosition(0);
 }
 

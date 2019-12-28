@@ -55,6 +55,7 @@ private: // fields
 	QLabel                                   sourceImageFileSizeText;
 	QLabel                                   sourceImageSizeLabel;
 	QLabel                                   sourceImageSizeText;
+	QLabel                                   outputInterpretationSummaryLineEdit;
 	QGroupBox                                sourceApplyEffectsWidget;
 	QGridLayout                                sourceApplyEffectsLayout;
 	QLabel                                     sourceEffectFlipHorizontallyLabel;
@@ -79,7 +80,6 @@ private: // fields
 	QWidget                                    spacer2Widget;
 	QLabel                                     outputInterpretationLabel;
 	QComboBox                                  outputInterpretationKindComboBox;
-	QLineEdit                                  outputInterpretationSummaryLineEdit;
 	QWidget                                    spacer3Widget;
 	QPushButton                                clearComputationResults;
 	QScrollArea                            sourceImageScrollArea;

@@ -18,7 +18,6 @@
 #include <QStatusBar>
 #include <QPixmap>
 #include <QRectF>
-class QEvent;
 #if defined(USE_PERFTOOLS)
 #include <QTimer>
 #endif
@@ -81,7 +80,8 @@ private: // fields
 	QLineEdit                                  outputInterpretationSummaryLineEdit;
 	QWidget                                    spacer3Widget;
 	QPushButton                                clearComputationResults;
-	QLabel                                 sourceImage;
+	QScrollArea                            sourceImageScrollArea;
+	QLabel                                   sourceImage;
 	QStackedWidget                       detailsStack;
 	QGroupBox                              noDetails;       // page#0
 	QGroupBox                              operatorDetails; // page#1

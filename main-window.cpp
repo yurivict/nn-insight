@@ -170,7 +170,8 @@ MainWindow::MainWindow()
 ,            outputInterpretationSummaryLineEdit(&computeByWidget)
 ,            spacer3Widget(&computeByWidget)
 ,            clearComputationResults("Clear Results", &computeByWidget)
-,        sourceImage(&sourceWidget)
+,        sourceImageScrollArea(&sourceWidget)
+,          sourceImage(&sourceWidget)
 ,      detailsStack(&rhsWidget)
 ,        noDetails("Details", &detailsStack)
 ,        operatorDetails(&detailsStack)
@@ -235,7 +236,8 @@ MainWindow::MainWindow()
 	      computeByLayout.addWidget(&outputInterpretationSummaryLineEdit);
 	      computeByLayout.addWidget(&spacer3Widget);
 	      computeByLayout.addWidget(&clearComputationResults);
-	  sourceLayout.addWidget(&sourceImage);
+	  sourceLayout.addWidget(&sourceImageScrollArea);
+	    sourceImageScrollArea.setWidget(&sourceImage);
 	rhsLayout.addWidget(&detailsStack);
 	rhsLayout.addWidget(&blankRhsLabel);
 	detailsStack.addWidget(&noDetails);
@@ -246,6 +248,10 @@ MainWindow::MainWindow()
 	svgScrollArea.setWidgetResizable(true);
 	svgScrollArea.setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
 	svgScrollArea.setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+
+	sourceImageScrollArea.setWidgetResizable(true);
+	sourceImageScrollArea.setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+	sourceImageScrollArea.setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
 
 	setMenuBar(&menuBar);
 	setStatusBar(&statusBar);
@@ -286,6 +292,7 @@ MainWindow::MainWindow()
 
 	// size policies
 	svgScrollArea                        .setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
+	sourceWidget                         .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
 	sourceImageFileName                  .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
 	sourceImageFileSize                  .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
 	sourceApplyEffectsWidget             .setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Maximum);
@@ -303,7 +310,7 @@ MainWindow::MainWindow()
 	outputInterpretationKindComboBox     .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
 	outputInterpretationSummaryLineEdit  .setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum);
 	spacer3Widget                        .setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum);
-	sourceImage                          .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+	sourceImageScrollArea                .setSizePolicy(QSizePolicy::Fixed,   QSizePolicy::Fixed);
 	detailsStack                         .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
 	// margins and spacing
@@ -318,6 +325,7 @@ MainWindow::MainWindow()
 	sourceWidget.hide(); // hidden by default
 	noDetails.setEnabled(false); // always grayed out
 	outputInterpretationSummaryLineEdit.setReadOnly(true); // it only displays interpretation
+	sourceEffectConvolutionCountComboBox.setEnabled(false); // is only enabled when some convoulution is chosen
 
 	// widget states
 	updateResultInterpretationSummary(false/*enable*/, "n/a", "n/a");
@@ -375,8 +383,9 @@ MainWindow::MainWindow()
 	connect(&sourceEffectMakeGrayscaleCheckBox, &QCheckBox::stateChanged, [this](int) {
 		effectsChanged();
 	});
-	connect(&sourceEffectConvolutionTypeComboBox, QOverload<int>::of(&QComboBox::activated), [this](int) {
+	connect(&sourceEffectConvolutionTypeComboBox, QOverload<int>::of(&QComboBox::activated), [this](int index) {
 		effectsChanged();
+		sourceEffectConvolutionCountComboBox.setEnabled(index>0);
 	});
 	connect(&sourceEffectConvolutionCountComboBox, QOverload<int>::of(&QComboBox::activated), [this](int) {
 		if (sourceEffectConvolutionTypeComboBox.currentIndex() != 0)
@@ -846,7 +855,15 @@ float* MainWindow::applyEffects(const float *image, const TensorShape &shape,
 }
 
 void MainWindow::updateSourceImageOnScreen() {
-	sourceImage.setPixmap(Image::toQPixmap(sourceTensorDataAsUsed.get(), sourceTensorShape));
+	auto pixmap = Image::toQPixmap(sourceTensorDataAsUsed.get(), sourceTensorShape);
+	sourceImage.setPixmap(pixmap);
+	sourceImage.resize(pixmap.width(), pixmap.height());
+
+	{ // fix image size to the size of details to its left, so that it would nicely align to them
+		auto height = sourceDetails.height();
+		sourceImageScrollArea.setMinimumSize(QSize(height,height));
+		sourceImageScrollArea.setMaximumSize(QSize(height,height));
+	}
 }
 
 void MainWindow::updateResultInterpretationSummary(bool enable, const std::string &oneLine, const std::string &details) {

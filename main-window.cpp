@@ -142,9 +142,12 @@ MainWindow::MainWindow()
 ,        sourceLayout(&sourceWidget)
 ,        sourceDetails(&sourceWidget)
 ,          sourceDetailsLayout(&sourceDetails)
-,          sourceImageFileName(&sourceDetails)
-,          sourceImageFileSize(&sourceDetails)
-,          sourceImageSize(&sourceDetails)
+,          sourceImageFileNameLabel(tr("File name:"), &sourceDetails)
+,          sourceImageFileNameText(&sourceDetails)
+,          sourceImageFileSizeLabel(tr("File size:"), &sourceDetails)
+,          sourceImageFileSizeText(&sourceDetails)
+,          sourceImageSizeLabel(tr("Image size:"), &sourceDetails)
+,          sourceImageSizeText(&sourceDetails)
 ,          sourceApplyEffectsWidget(tr("Apply Effects"), &sourceDetails)
 ,            sourceApplyEffectsLayout(&sourceApplyEffectsWidget)
 ,            sourceEffectFlipHorizontallyLabel(tr("Flip horizontally"), &sourceApplyEffectsWidget)
@@ -158,7 +161,6 @@ MainWindow::MainWindow()
 ,              sourceEffectConvolutionParamsLayout(&sourceEffectConvolutionParamsWidget)
 ,              sourceEffectConvolutionTypeComboBox(&sourceEffectConvolutionParamsWidget)
 ,              sourceEffectConvolutionCountComboBox(&sourceEffectConvolutionParamsWidget)
-,          sourceFiller(&sourceDetails)
 ,          computeButton(tr("Compute"), &sourceDetails)
 ,          computeByWidget(&sourceDetails)
 ,            computeByLayout(&computeByWidget)
@@ -210,10 +212,13 @@ MainWindow::MainWindow()
 
 	rhsLayout.addWidget(&sourceWidget);
 	  sourceLayout.addWidget(&sourceDetails);
-	    sourceDetailsLayout.addWidget(&sourceImageFileName);
-	    sourceDetailsLayout.addWidget(&sourceImageFileSize);
-	    sourceDetailsLayout.addWidget(&sourceImageSize);
-	    sourceDetailsLayout.addWidget(&sourceApplyEffectsWidget);
+	    sourceDetailsLayout.addWidget(&sourceImageFileNameLabel, 0/*row*/, 0/*col*/, 1/*rowSpan*/, 1/*columnSpan*/);
+	    sourceDetailsLayout.addWidget(&sourceImageFileNameText,  0/*row*/, 1/*col*/, 1/*rowSpan*/, 1/*columnSpan*/);
+	    sourceDetailsLayout.addWidget(&sourceImageFileSizeLabel, 1/*row*/, 0/*col*/, 1/*rowSpan*/, 1/*columnSpan*/);
+	    sourceDetailsLayout.addWidget(&sourceImageFileSizeText,  1/*row*/, 1/*col*/, 1/*rowSpan*/, 1/*columnSpan*/);
+	    sourceDetailsLayout.addWidget(&sourceImageSizeLabel,     2/*row*/, 0/*col*/, 1/*rowSpan*/, 1/*columnSpan*/);
+	    sourceDetailsLayout.addWidget(&sourceImageSizeText,      2/*row*/, 1/*col*/, 1/*rowSpan*/, 1/*columnSpan*/);
+	    sourceDetailsLayout.addWidget(&sourceApplyEffectsWidget, 3/*row*/, 0/*col*/, 1/*rowSpan*/, 4/*columnSpan*/);
 	      sourceApplyEffectsLayout.addWidget(&sourceEffectFlipHorizontallyLabel,    0/*row*/, 0/*column*/);
 	      sourceApplyEffectsLayout.addWidget(&sourceEffectFlipHorizontallyCheckBox, 0/*row*/, 1/*column*/);
 	      sourceApplyEffectsLayout.addWidget(&sourceEffectFlipVerticallyLabel,      1/*row*/, 0/*column*/);
@@ -224,9 +229,8 @@ MainWindow::MainWindow()
 	      sourceApplyEffectsLayout.addWidget(&sourceEffectConvolutionParamsWidget,  3/*row*/, 1/*column*/);
 	        sourceEffectConvolutionParamsLayout.addWidget(&sourceEffectConvolutionTypeComboBox);
 	        sourceEffectConvolutionParamsLayout.addWidget(&sourceEffectConvolutionCountComboBox);
-	    sourceDetailsLayout.addWidget(&sourceFiller);
-	    sourceDetailsLayout.addWidget(&computeButton);
-	    sourceDetailsLayout.addWidget(&computeByWidget);
+	    sourceDetailsLayout.addWidget(&computeButton,            4/*row*/, 0/*col*/, 1/*rowSpan*/, 4/*columnSpan*/);
+	    sourceDetailsLayout.addWidget(&computeByWidget,          5/*row*/, 0/*col*/, 1/*rowSpan*/, 4/*columnSpan*/);
 	      computeByLayout.addWidget(&inputNormalizationLabel);
 	      computeByLayout.addWidget(&inputNormalizationRangeComboBox);
 	      computeByLayout.addWidget(&inputNormalizationColorOrderComboBox);
@@ -261,15 +265,23 @@ MainWindow::MainWindow()
 	statusBar.addWidget(&memoryUseLabel);
 #endif
 
+	// alignment
+	for (auto w : {&sourceImageFileNameLabel, &sourceImageFileSizeLabel, &sourceImageSizeLabel})
+		w->setAlignment(Qt::AlignRight);
+	for (auto w : {&sourceImageFileNameText, &sourceImageFileSizeText, &sourceImageSizeText})
+		w->setAlignment(Qt::AlignLeft);
 	for (auto w : {&sourceEffectFlipHorizontallyLabel, &sourceEffectFlipVerticallyLabel, &sourceEffectMakeGrayscaleLabel, &sourceEffectConvolutionLabel})
 		w->setAlignment(Qt::AlignRight);
 	for (auto w : {&inputNormalizationLabel, &computationTimeLabel})
 		w->setAlignment(Qt::AlignRight);
 
 	// tooltips
-	sourceImageFileName                 .setToolTip(tr("File name of the input image"));
-	sourceImageFileSize                 .setToolTip(tr("File size of the input image"));
-	sourceImageSize                     .setToolTip(tr("Input image size"));
+	sourceImageFileNameLabel            .setToolTip(tr("File name of the input image"));
+	sourceImageFileNameText             .setToolTip(tr("File name of the input image"));
+	sourceImageFileSizeLabel            .setToolTip(tr("File size of the input image"));
+	sourceImageFileSizeText             .setToolTip(tr("File size of the input image"));
+	sourceImageSizeLabel                .setToolTip(tr("Input image size"));
+	sourceImageSizeText                 .setToolTip(tr("Input image size"));
 	sourceApplyEffectsWidget            .setToolTip(tr("Apply effects to the image"));
 	sourceEffectFlipHorizontallyLabel   .setToolTip(tr("Flip the image horizontally"));
 	sourceEffectFlipHorizontallyCheckBox.setToolTip(tr("Flip the image horizontally"));
@@ -295,13 +307,9 @@ MainWindow::MainWindow()
 	// size policies
 	svgScrollArea                        .setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
 	sourceWidget                         .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
-	sourceImageFileName                  .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
-	sourceImageFileSize                  .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
 	sourceApplyEffectsWidget             .setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Maximum);
 	for (QWidget *w : {&sourceEffectConvolutionParamsWidget, (QWidget*)&sourceEffectConvolutionTypeComboBox, (QWidget*)&sourceEffectConvolutionCountComboBox})
 		w->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
-	sourceImageSize                      .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
-	//sourceFiller .setSizePolicy(QSizePolicy::Fixed, QSizePolicy::MinimumExpanding);
 	inputNormalizationLabel              .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum); //The sizeHint() is a maximum
 	inputNormalizationRangeComboBox      .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
 	inputNormalizationColorOrderComboBox .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
@@ -731,9 +739,9 @@ void MainWindow::openImageFile(const QString &imageFileName) {
 	sourceWidget.show();
 	updateSourceImageOnScreen();
 	// set info on the screen
-	sourceImageFileName.setText(QString("File name: %1").arg(imageFileName));
-	sourceImageFileSize.setText(QString("File size: %1 bytes").arg(S2Q(Util::formatUIntHumanReadable(Util::getFileSize(imageFileName)))));
-	sourceImageSize.setText(QString("Image size: %1").arg(S2Q(STR(sourceTensorShape))));
+	sourceImageFileNameText.setText(imageFileName);
+	sourceImageFileSizeText.setText(QString("%1 bytes").arg(S2Q(Util::formatUIntHumanReadable(Util::getFileSize(imageFileName)))));
+	sourceImageSizeText.setText(S2Q(STR(sourceTensorShape)));
 }
 
 void MainWindow::openImagePixmap(const QPixmap &imagePixmap, const QString &sourceName) {
@@ -757,9 +765,9 @@ void MainWindow::openImagePixmap(const QPixmap &imagePixmap, const QString &sour
 	sourceWidget.show();
 	updateSourceImageOnScreen();
 	// set info on the screen
-	sourceImageFileName.setText(QString(tr("File name: n/a: %1")).arg(sourceName));
-	sourceImageFileSize.setText(QString(tr("File size: n/a: %1")).arg(sourceName));
-	sourceImageSize.setText(QString(tr("Image size: %1")).arg(S2Q(STR(sourceTensorShape))));
+	sourceImageFileNameText.setText(QString("{%1}").arg(sourceName));
+	sourceImageFileSizeText.setText(QString("{%1}").arg(sourceName));
+	sourceImageSizeText.setText(S2Q(STR(sourceTensorShape)));
 }
 
 void MainWindow::clearInputImageDisplay() {

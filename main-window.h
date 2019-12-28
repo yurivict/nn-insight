@@ -48,10 +48,13 @@ private: // fields
 	QGroupBox                            sourceWidget; // optionally visible
 	QHBoxLayout                            sourceLayout;
 	QWidget                                sourceDetails;
-	QVBoxLayout                              sourceDetailsLayout;
-	QLabel                                   sourceImageFileName;
-	QLabel                                   sourceImageFileSize;
-	QLabel                                   sourceImageSize;
+	QGridLayout                              sourceDetailsLayout;
+	QLabel                                   sourceImageFileNameLabel;
+	QLabel                                   sourceImageFileNameText;
+	QLabel                                   sourceImageFileSizeLabel;
+	QLabel                                   sourceImageFileSizeText;
+	QLabel                                   sourceImageSizeLabel;
+	QLabel                                   sourceImageSizeText;
 	QGroupBox                                sourceApplyEffectsWidget;
 	QGridLayout                                sourceApplyEffectsLayout;
 	QLabel                                     sourceEffectFlipHorizontallyLabel;
@@ -65,7 +68,6 @@ private: // fields
 	QHBoxLayout                                  sourceEffectConvolutionParamsLayout;
 	QComboBox                                    sourceEffectConvolutionTypeComboBox;
 	QComboBox                                    sourceEffectConvolutionCountComboBox;
-	QWidget                                  sourceFiller;
 	QPushButton                              computeButton;
 	QWidget                                  computeByWidget;
 	QHBoxLayout                                computeByLayout;

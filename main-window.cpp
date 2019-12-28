@@ -314,7 +314,7 @@ MainWindow::MainWindow()
 
 	// size policies
 	svgScrollArea                        .setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
-	sourceWidget                         .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+	sourceWidget                         .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 	sourceApplyEffectsWidget             .setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Maximum);
 	for (QWidget *w : {&sourceEffectConvolutionParamsWidget, (QWidget*)&sourceEffectConvolutionTypeComboBox, (QWidget*)&sourceEffectConvolutionCountComboBox})
 		w->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);

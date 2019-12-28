@@ -495,7 +495,13 @@ MainWindow::MainWindow()
 			else // see https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=242932
 				Util::warningOk(this, QString(tr("No image to paste, clipboard contains an empty image")));
 		} else {
-			Util::warningOk(this, QString(tr("No image to paste, clipboard contains: %s")).arg(mimeData->formats().join(", ")));
+			auto formats = mimeData->formats();
+			if (!formats.empty())
+				Util::warningOk(this, QString(tr("%1:\n• %2"))
+					.arg(tr("No image to paste, clipboard can be interpreted as"))
+					.arg(mimeData->formats().join("\n• ")));
+			else
+				Util::warningOk(this, QString(tr("No image to paste, clipboard s empty")));
 		}
 	})->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_V));
 	fileMenu->addAction(tr("Close Image"), [this]() {

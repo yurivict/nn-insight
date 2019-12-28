@@ -754,6 +754,8 @@ void MainWindow::openImageFile(const QString &imageFileName) {
 	sourceImageFileNameText.setText(imageFileName);
 	sourceImageFileSizeText.setText(QString("%1 bytes").arg(S2Q(Util::formatUIntHumanReadable(Util::getFileSize(imageFileName)))));
 	sourceImageSizeText.setText(S2Q(STR(sourceTensorShape)));
+	// focus
+	computeButton.setFocus();
 }
 
 void MainWindow::openImagePixmap(const QPixmap &imagePixmap, const QString &sourceName) {
@@ -780,6 +782,8 @@ void MainWindow::openImagePixmap(const QPixmap &imagePixmap, const QString &sour
 	sourceImageFileNameText.setText(QString("{%1}").arg(sourceName));
 	sourceImageFileSizeText.setText(QString("{%1}").arg(sourceName));
 	sourceImageSizeText.setText(S2Q(STR(sourceTensorShape)));
+	// focus
+	computeButton.setFocus();
 }
 
 void MainWindow::clearInputImageDisplay() {

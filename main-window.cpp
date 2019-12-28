@@ -136,55 +136,55 @@ MainWindow::MainWindow()
 ,     svgWidget(&mainSplitter)
 ,   rhsWidget(&mainSplitter)
 ,      rhsLayout(&rhsWidget)
-,      sourceWidget("Source Data", &rhsWidget)
+,      sourceWidget(tr("Source Data"), &rhsWidget)
 ,        sourceLayout(&sourceWidget)
 ,        sourceDetails(&sourceWidget)
 ,          sourceDetailsLayout(&sourceDetails)
 ,          sourceImageFileName(&sourceDetails)
 ,          sourceImageFileSize(&sourceDetails)
 ,          sourceImageSize(&sourceDetails)
-,          sourceApplyEffectsWidget("Apply Effects", &sourceDetails)
+,          sourceApplyEffectsWidget(tr("Apply Effects"), &sourceDetails)
 ,            sourceApplyEffectsLayout(&sourceApplyEffectsWidget)
-,            sourceEffectFlipHorizontallyLabel("Flip horizontally", &sourceApplyEffectsWidget)
+,            sourceEffectFlipHorizontallyLabel(tr("Flip horizontally"), &sourceApplyEffectsWidget)
 ,            sourceEffectFlipHorizontallyCheckBox(&sourceApplyEffectsWidget)
-,            sourceEffectFlipVerticallyLabel("Flip vertically", &sourceApplyEffectsWidget)
+,            sourceEffectFlipVerticallyLabel(tr("Flip vertically"), &sourceApplyEffectsWidget)
 ,            sourceEffectFlipVerticallyCheckBox(&sourceApplyEffectsWidget)
-,            sourceEffectMakeGrayscaleLabel("Make grayscale", &sourceApplyEffectsWidget)
+,            sourceEffectMakeGrayscaleLabel(tr("Make grayscale"), &sourceApplyEffectsWidget)
 ,            sourceEffectMakeGrayscaleCheckBox(&sourceApplyEffectsWidget)
-,            sourceEffectConvolutionLabel("Convolution", &sourceApplyEffectsWidget)
+,            sourceEffectConvolutionLabel(tr("Convolution"), &sourceApplyEffectsWidget)
 ,            sourceEffectConvolutionParamsWidget(&sourceApplyEffectsWidget)
 ,              sourceEffectConvolutionParamsLayout(&sourceEffectConvolutionParamsWidget)
 ,              sourceEffectConvolutionTypeComboBox(&sourceEffectConvolutionParamsWidget)
 ,              sourceEffectConvolutionCountComboBox(&sourceEffectConvolutionParamsWidget)
 ,          sourceFiller(&sourceDetails)
-,          computeButton("Compute", &sourceDetails)
+,          computeButton(tr("Compute"), &sourceDetails)
 ,          computeByWidget(&sourceDetails)
 ,            computeByLayout(&computeByWidget)
-,            inputNormalizationLabel("Normalization", &computeByWidget)
+,            inputNormalizationLabel(tr("Normalization"), &computeByWidget)
 ,            inputNormalizationRangeComboBox(&computeByWidget)
 ,            spacer1Widget(&computeByWidget)
-,            computationTimeLabel(QString("Computed in %1").arg(": n/a"), &computeByWidget)
+,            computationTimeLabel(QString(tr("Computed in %1")).arg(tr(": n/a")), &computeByWidget)
 ,            spacer2Widget(&computeByWidget)
-,            outputInterpretationLabel("Interpret as", &computeByWidget)
+,            outputInterpretationLabel(tr("Interpret as"), &computeByWidget)
 ,            outputInterpretationKindComboBox(&computeByWidget)
 ,            outputInterpretationSummaryLineEdit(&computeByWidget)
 ,            spacer3Widget(&computeByWidget)
-,            clearComputationResults("Clear", &computeByWidget)
+,            clearComputationResults(tr("Clear"), &computeByWidget)
 ,        sourceImageScrollArea(&sourceWidget)
 ,          sourceImage(&sourceWidget)
 ,      detailsStack(&rhsWidget)
-,        noDetails("Details", &detailsStack)
+,        noDetails(tr("Details"), &detailsStack)
 ,        operatorDetails(&detailsStack)
 ,          operatorDetailsLayout(&operatorDetails)
-,          operatorTypeLabel("Operator Type", &operatorDetails)
+,          operatorTypeLabel(tr("Operator Type"), &operatorDetails)
 ,          operatorTypeValue(&operatorDetails)
-,          operatorOptionsLabel("Options", &operatorDetails)
-,          operatorInputsLabel("Inputs", &operatorDetails)
-,          operatorOutputsLabel("Outputs", &operatorDetails)
-,          operatorComplexityLabel("Complexity", &operatorDetails)
+,          operatorOptionsLabel(tr("Options"), &operatorDetails)
+,          operatorInputsLabel(tr("Inputs"), &operatorDetails)
+,          operatorOutputsLabel(tr("Outputs"), &operatorDetails)
+,          operatorComplexityLabel(tr("Complexity"), &operatorDetails)
 ,          operatorComplexityValue(&operatorDetails)
 ,        tensorDetails(&detailsStack)
-,      blankRhsLabel("Select some operator", &rhsWidget)
+,      blankRhsLabel(tr("Select some operator"), &rhsWidget)
 , menuBar(this)
 , statusBar(this)
 #if defined(USE_PERFTOOLS)
@@ -265,30 +265,30 @@ MainWindow::MainWindow()
 		w->setAlignment(Qt::AlignRight);
 
 	// tooltips
-	sourceImageFileName                 .setToolTip("File name of the input image");
-	sourceImageFileSize                 .setToolTip("File size of the input image");
-	sourceImageSize                     .setToolTip("Input image size");
-	sourceApplyEffectsWidget            .setToolTip("Apply effects to the image");
-	sourceEffectFlipHorizontallyLabel   .setToolTip("Flip the image horizontally");
-	sourceEffectFlipHorizontallyCheckBox.setToolTip("Flip the image horizontally");
-	sourceEffectFlipVerticallyLabel     .setToolTip("Flip the image vertically");
-	sourceEffectFlipVerticallyCheckBox  .setToolTip("Flip the image vertically");
-	sourceEffectMakeGrayscaleLabel      .setToolTip("Make the image grayscale");
-	sourceEffectMakeGrayscaleCheckBox   .setToolTip("Make the image grayscale");
-	sourceEffectConvolutionLabel        .setToolTip("Apply convolution to the image");
-	sourceEffectConvolutionTypeComboBox .setToolTip("Convolution type to apply to the image");
-	sourceEffectConvolutionCountComboBox.setToolTip("How many times to apply the convolution");
-	computeButton                       .setToolTip("Perform neural network computation for the currently selected image as input");
-	inputNormalizationLabel             .setToolTip("Specify how does this NN expect its input data be normalized");
-	inputNormalizationRangeComboBox     .setToolTip("Specify what value range does this NN expect its input data be normalized to");
-	inputNormalizationColorOrderComboBox.setToolTip("Specify what color order does this NN expect its input data be supplied in");
-	computationTimeLabel                .setToolTip("Show how long did the the NN computation take");
+	sourceImageFileName                 .setToolTip(tr("File name of the input image"));
+	sourceImageFileSize                 .setToolTip(tr("File size of the input image"));
+	sourceImageSize                     .setToolTip(tr("Input image size"));
+	sourceApplyEffectsWidget            .setToolTip(tr("Apply effects to the image"));
+	sourceEffectFlipHorizontallyLabel   .setToolTip(tr("Flip the image horizontally"));
+	sourceEffectFlipHorizontallyCheckBox.setToolTip(tr("Flip the image horizontally"));
+	sourceEffectFlipVerticallyLabel     .setToolTip(tr("Flip the image vertically"));
+	sourceEffectFlipVerticallyCheckBox  .setToolTip(tr("Flip the image vertically"));
+	sourceEffectMakeGrayscaleLabel      .setToolTip(tr("Make the image grayscale"));
+	sourceEffectMakeGrayscaleCheckBox   .setToolTip(tr("Make the image grayscale"));
+	sourceEffectConvolutionLabel        .setToolTip(tr("Apply convolution to the image"));
+	sourceEffectConvolutionTypeComboBox .setToolTip(tr("Convolution type to apply to the image"));
+	sourceEffectConvolutionCountComboBox.setToolTip(tr("How many times to apply the convolution"));
+	computeButton                       .setToolTip(tr("Perform neural network computation for the currently selected image as input"));
+	inputNormalizationLabel             .setToolTip(tr("Specify how does this NN expect its input data be normalized"));
+	inputNormalizationRangeComboBox     .setToolTip(tr("Specify what value range does this NN expect its input data be normalized to"));
+	inputNormalizationColorOrderComboBox.setToolTip(tr("Specify what color order does this NN expect its input data be supplied in"));
+	computationTimeLabel                .setToolTip(tr("Show how long did the the NN computation take"));
 	for (QWidget *w : {(QWidget*)&outputInterpretationLabel,(QWidget*)&outputInterpretationKindComboBox})
-		w->                          setToolTip("How to interpret the computation result?");
-	clearComputationResults             .setToolTip("Clear computation results");
-	sourceImage                         .setToolTip("Image currently used as a NN input");
-	operatorTypeLabel                   .setToolTip("Operator type: what kind of operation does it perform");
-	operatorComplexityValue             .setToolTip("Complexity of the currntly selected NN in FLOPS");
+		w->                          setToolTip(tr("How to interpret the computation result?"));
+	clearComputationResults             .setToolTip(tr("Clear computation results"));
+	sourceImage                         .setToolTip(tr("Image currently used as a NN input"));
+	operatorTypeLabel                   .setToolTip(tr("Operator type: what kind of operation does it perform"));
+	operatorComplexityValue             .setToolTip(tr("Complexity of the currntly selected NN in FLOPS"));
 
 	// size policies
 	svgScrollArea                        .setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
@@ -328,15 +328,15 @@ MainWindow::MainWindow()
 	sourceEffectConvolutionCountComboBox.setEnabled(false); // is only enabled when some convoulution is chosen
 
 	// widget states
-	updateResultInterpretationSummary(false/*enable*/, "n/a", "n/a");
+	updateResultInterpretationSummary(false/*enable*/, tr("n/a"), tr("n/a"));
 
 	// fill lists
-	sourceEffectConvolutionTypeComboBox.addItem("None",          ConvolutionEffect_None);
-	sourceEffectConvolutionTypeComboBox.addItem("Blur (3x3)",    ConvolutionEffect_Blur_3x3);
-	sourceEffectConvolutionTypeComboBox.addItem("Blur (5x5)",    ConvolutionEffect_Blur_5x5);
-	sourceEffectConvolutionTypeComboBox.addItem("Gauss (3x3)",   ConvolutionEffect_Gaussian_3x3);
-	sourceEffectConvolutionTypeComboBox.addItem("Motion (3x3)",  ConvolutionEffect_Motion_3x3);
-	sourceEffectConvolutionTypeComboBox.addItem("Sharpen (3x3)", ConvolutionEffect_Sharpen_3x3);
+	sourceEffectConvolutionTypeComboBox.addItem(tr("None"),          ConvolutionEffect_None);
+	sourceEffectConvolutionTypeComboBox.addItem(tr("Blur (3x3)"),    ConvolutionEffect_Blur_3x3);
+	sourceEffectConvolutionTypeComboBox.addItem(tr("Blur (5x5)"),    ConvolutionEffect_Blur_5x5);
+	sourceEffectConvolutionTypeComboBox.addItem(tr("Gauss (3x3)"),   ConvolutionEffect_Gaussian_3x3);
+	sourceEffectConvolutionTypeComboBox.addItem(tr("Motion (3x3)"),  ConvolutionEffect_Motion_3x3);
+	sourceEffectConvolutionTypeComboBox.addItem(tr("Sharpen (3x3)"), ConvolutionEffect_Sharpen_3x3);
 	for (unsigned c = 1; c <= 20; c++)
 		sourceEffectConvolutionCountComboBox.addItem(QString("x%1").arg(c), c);
 
@@ -401,7 +401,7 @@ MainWindow::MainWindow()
 		};
 
 		bool succ = Compute::compute(model, inputNormalization, sourceTensorDataAsUsed, sourceTensorShape, tensorData, [this](const std::string &msg) {
-			Util::warningOk(this, msg.c_str());
+			Util::warningOk(this, S2Q(msg));
 		}, [](PluginInterface::TensorId tid) {
 			PRINT("QAbstractButton::pressed: Tensor DONE tid=" << tid)
 		});
@@ -424,8 +424,8 @@ MainWindow::MainWindow()
 				ss << (i>0 ? "\n" : "") << "• " << Q2S(labels[std::get<0>(likelihoods[i])]) << " = " << std::get<1>(likelihoods[i]);
 			updateResultInterpretationSummary(
 				true/*enable*/,
-				STR(Q2S(labels[std::get<0>(likelihoods[0])]) << " = " << std::get<1>(likelihoods[0])),
-				ss.str()
+				QString("%1 = %2").arg(labels[std::get<0>(likelihoods[0])]).arg(std::get<1>(likelihoods[0])),
+				S2Q(ss.str())
 			);
 		} else
 			PRINT("WARNING computation didn't succeed")
@@ -447,28 +447,27 @@ MainWindow::MainWindow()
 	connect(&memoryUseTimer, &QTimer::timeout, [this]() {
 		size_t inuseBytes = 0;
 		(void)MallocExtension::instance()->GetNumericProperty("generic.current_allocated_bytes", &inuseBytes);
-		memoryUseLabel.setText(QString("Memory use: %1 bytes").arg(S2Q(Util::formatUIntHumanReadable(inuseBytes))));
+		memoryUseLabel.setText(QString(tr("Memory use: %1 bytes")).arg(S2Q(Util::formatUIntHumanReadable(inuseBytes))));
 	});
 	memoryUseTimer.start(1000);
 #endif
 
 	// add menus
 	auto fileMenu = menuBar.addMenu(tr("&File"));
-	fileMenu->addAction("Open Image", [this]() {
+	fileMenu->addAction(tr("Open Image"), [this]() {
 		QString fileName = QFileDialog::getOpenFileName(this,
-			"Open image file", "",
-			"Image (*.png);;All Files (*)"
+			tr("Open image file"), "",
+			tr("Image (*.png);;All Files (*)")
 		);
 		if (fileName != "")
 			openImageFile(fileName);
 	});
-	fileMenu->addAction("Open NN file", []() {
-		PRINT("Open NN")
+	fileMenu->addAction(tr("Open NN file"), []() {
 	});
-	fileMenu->addAction("Take screenshot as input", [this]() {
-		openImagePixmap(Util::getScreenshot(true/*hideOurWindows*/), "screenshot");
+	fileMenu->addAction(tr("Take screenshot as input"), [this]() {
+		openImagePixmap(Util::getScreenshot(true/*hideOurWindows*/), tr("screenshot"));
 	});
-	fileMenu->addAction("Close Image", [this]() {
+	fileMenu->addAction(tr("Close Image"), [this]() {
 		clearInputImageDisplay();
 		clearEffects();
 		clearComputedTensorData(); // closing image invalidates computation results
@@ -498,12 +497,12 @@ bool MainWindow::loadModelFile(const QString &filePath) {
 	// file name -> plugin name
 	auto pluginName = fileNameToPluginName(filePath);
 	if (pluginName == nullptr)
-		return Util::warningOk(this, CSTR("Couldn't find a plugin to open the file '" << Q2S(filePath) << "'"));
+		return Util::warningOk(this, QString("%1 '%2'").arg(tr("Couldn't find a plugin to open the file")).arg(filePath));
 
 	// load the plugin
 	plugin = PluginManager::loadPlugin(pluginName);
 	if (!plugin)
-		FAIL("failed to load the plugin '" << pluginName << "'")
+		FAIL(Q2S(QString("%1 '%2'").arg(tr("failed to load the plugin")).arg(pluginName)))
 	pluginInterface.reset(PluginManager::getInterface(plugin)());
 
 	// load the model
@@ -558,14 +557,14 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 		for (auto t : tensors) {
 			row++;
 			// tensor number
-			auto label = new QLabel(QString("tensor#%1:").arg(t), &operatorDetails);
-			label->setToolTip("Tensor number");
+			auto label = new QLabel(QString(tr("tensor#%1:")).arg(t), &operatorDetails);
+			label->setToolTip(tr("Tensor number"));
 			label->setAlignment(Qt::AlignRight);
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
 			operatorDetailsLayout.addWidget(label,         row,   0/*column*/);
 			// tensor name
 			label = new QLabel(S2Q(model->getTensorName(t)), &operatorDetails);
-			label->setToolTip("Tensor name");
+			label->setToolTip(tr("Tensor name"));
 			label->setAlignment(Qt::AlignLeft);
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
 			operatorDetailsLayout.addWidget(label,         row,   1/*column*/);
@@ -574,13 +573,13 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 				auto flatSize = tensorFlatSize(shape);
 				return STR(shape <<
 				         " (" <<
-				             Util::formatUIntHumanReadable(flatSize) << " floats, " <<
-				             Util::formatUIntHumanReadable(flatSize*sizeof(float)) << " bytes" <<
+				             Util::formatUIntHumanReadable(flatSize) << " " << Q2S(tr("floats")) << ", " <<
+				             Util::formatUIntHumanReadable(flatSize*sizeof(float)) << " " << Q2S(tr("bytes")) <<
 				          ")"
 				);
 			};
 			label = new QLabel(S2Q(describeShape(model->getTensorShape(t))), &operatorDetails);
-			label->setToolTip("Tensor shape and data size");
+			label->setToolTip(tr("Tensor shape and data size"));
 			label->setAlignment(Qt::AlignLeft);
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
 			operatorDetailsLayout.addWidget(label,         row,   2/*column*/);
@@ -590,12 +589,12 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 			auto hasStaticData = model->getTensorHasData(t);
 			auto isVariable = model->getTensorIsVariableFlag(t);
 			label = new QLabel(QString("<%1>").arg(
-				isInput ? "input"
-				: isOutput ? "output"
-				: hasStaticData ? "static tensor"
-				: isVariable ? "variable" : "computed"),
+				isInput ? tr("input")
+				: isOutput ? tr("output")
+				: hasStaticData ? tr("static tensor")
+				: isVariable ? tr("variable") : tr("computed")),
 				&operatorDetails);
-			label->setToolTip("Tensor type");
+			label->setToolTip(tr("Tensor type"));
 			label->setAlignment(Qt::AlignCenter);
 			label->setStyleSheet("font: italic");
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
@@ -608,7 +607,7 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 				button->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 				//button->setMaximumSize(QFontMetrics(button->font()).size(Qt::TextSingleLine, button->text()).grownBy(QMargins(4,0,4,0)));
 				button->setMaximumSize(QFontMetrics(button->font()).size(Qt::TextSingleLine, button->text())+QSize(8,0));
-				button->setToolTip("Show the tensor data as a table");
+				button->setToolTip(tr("Show the tensor data as a table"));
 				tempDetailWidgets.push_back(std::unique_ptr<QWidget>(button));
 				operatorDetailsLayout.addWidget(button,         row,   4/*column*/);
 				connect(button, &QAbstractButton::pressed, [this,t,hasStaticData]() {
@@ -657,14 +656,14 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 			operatorDetailsLayout.addWidget(label,               row,   0/*column*/);
 			// option type
 			label = new QLabel(S2Q(STR("<" << opt.value.type << ">")), &operatorDetails);
-			label->setToolTip("Option type");
+			label->setToolTip(tr("Option type"));
 			label->setAlignment(Qt::AlignLeft);
 			label->setStyleSheet("font: italic");
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
 			operatorDetailsLayout.addWidget(label,               row,   1/*column*/);
 			// option value
 			label = new QLabel(S2Q(STR(opt.value)), &operatorDetails);
-			label->setToolTip("Option value");
+			label->setToolTip(tr("Option value"));
 			label->setAlignment(Qt::AlignLeft);
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
 			operatorDetailsLayout.addWidget(label,               row,   2/*column*/);
@@ -723,7 +722,7 @@ void MainWindow::openImageFile(const QString &imageFileName) {
 	sourceImageSize.setText(QString("Image size: %1").arg(S2Q(STR(sourceTensorShape))));
 }
 
-void MainWindow::openImagePixmap(const QPixmap &imagePixmap, const char *sourceName) {
+void MainWindow::openImagePixmap(const QPixmap &imagePixmap, const QString &sourceName) {
 	// clear the previous image data if any
 	clearInputImageDisplay();
 	clearEffects();
@@ -736,7 +735,7 @@ void MainWindow::openImagePixmap(const QPixmap &imagePixmap, const char *sourceN
 		sourceTensorShape = sourceTensorShapeNew;
 	}
 	if (!sourceTensorDataAsLoaded) {
-		Util::warningOk(this, CSTR("Unable to take a screenshot"));
+		Util::warningOk(this, tr("Unable to take a screenshot"));
 		return;
 	}
 	sourceTensorDataAsUsed = sourceTensorDataAsLoaded;
@@ -744,9 +743,9 @@ void MainWindow::openImagePixmap(const QPixmap &imagePixmap, const char *sourceN
 	sourceWidget.show();
 	updateSourceImageOnScreen();
 	// set info on the screen
-	sourceImageFileName.setText(QString("File name: n/a: %1").arg(sourceName));
-	sourceImageFileSize.setText(QString("File size: n/a: %1").arg(sourceName));
-	sourceImageSize.setText(QString("Image size: %1").arg(S2Q(STR(sourceTensorShape))));
+	sourceImageFileName.setText(QString(tr("File name: n/a: %1")).arg(sourceName));
+	sourceImageFileSize.setText(QString(tr("File size: n/a: %1")).arg(sourceName));
+	sourceImageSize.setText(QString(tr("Image size: %1")).arg(S2Q(STR(sourceTensorShape))));
 }
 
 void MainWindow::clearInputImageDisplay() {
@@ -764,11 +763,10 @@ void MainWindow::clearComputedTensorData() {
 	// clear tensor data
 	tensorData.reset(nullptr);
 	// clear result interpretation
-	updateResultInterpretationSummary(false/*enable*/, "n/a", "n/a");
+	updateResultInterpretationSummary(false/*enable*/, tr("n/a"), tr("n/a"));
 }
 
 void MainWindow::effectsChanged() {
-	PRINT("MainWindow::effectsChanged")
 	clearComputedTensorData(); // effects change invalidates computation results
 
 	// all available effects that can be applied
@@ -881,10 +879,10 @@ void MainWindow::updateSourceImageOnScreen() {
 	}
 }
 
-void MainWindow::updateResultInterpretationSummary(bool enable, const std::string &oneLine, const std::string &details) {
+void MainWindow::updateResultInterpretationSummary(bool enable, const QString &oneLine, const QString &details) {
 	outputInterpretationSummaryLineEdit.setEnabled(enable);
-	outputInterpretationSummaryLineEdit.setText(S2Q(oneLine));
-	outputInterpretationSummaryLineEdit.setToolTip(QString("Result interpretation:\n%1").arg(S2Q(details)));
+	outputInterpretationSummaryLineEdit.setText(oneLine);
+	outputInterpretationSummaryLineEdit.setToolTip(QString(tr("Result interpretation:\n%1")).arg(details));
 	outputInterpretationSummaryLineEdit.setCursorPosition(0);
 }
 

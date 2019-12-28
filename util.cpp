@@ -26,7 +26,7 @@ std::string QStringToStlString(const QString &qs) {
 	return std::string(qs.toUtf8().constData());
 }
 
-bool warningOk(QWidget *parent, const char *msg) {
+bool warningOk(QWidget *parent, const QString &msg) {
   QMessageBox::warning(parent, "Warning", msg, QMessageBox::Ok);
   return false; // for convenience of callers
 }

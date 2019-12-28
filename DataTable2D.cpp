@@ -240,18 +240,18 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 , layout(this)
 , headerWidget(this)
 ,   headerLayout(&headerWidget)
-,   shapeLabel(S2Q(STR("Shape: " << shape)), &headerWidget)
+,   shapeLabel(QString(tr("Shape: %1")).arg(S2Q(STR(shape))), &headerWidget)
 ,   shapeDimensionsWidget(&headerWidget)
 ,     shapeDimensionsLayout(&shapeDimensionsWidget)
 ,   dataRangeLabel(&headerWidget)
-,   colorSchemaLabel("Color scheme:", &headerWidget)
+,   colorSchemaLabel(tr("Color scheme:"), &headerWidget)
 ,   colorSchemaComboBox(&headerWidget)
 , header1Widget(this)
 ,   header1Layout(&header1Widget)
 ,   filler1Widget(&header1Widget)
-,   scaleBwImageLabel("Scale image", &header1Widget)
+,   scaleBwImageLabel(tr("Scale image"), &header1Widget)
 ,   scaleBwImageSpinBox(&header1Widget)
-,   viewDataAsBwImageCheckBox("View Data as B/W Image", &header1Widget)
+,   viewDataAsBwImageCheckBox(tr("View Data as B/W Image"), &header1Widget)
 , dataViewStackWidget(this)
 ,   tableView(&dataViewStackWidget)
 ,   imageViewScrollArea(&dataViewStackWidget)
@@ -284,14 +284,14 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 			combobox->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum); // (H) The sizeHint() is a maximum (V) The sizeHint() is a maximum
 			shapeDimensionsLayout.addWidget(combobox);
 			if (d == 1) { // dimensions=1 are excluded from selection
-				combobox->addItem("single 1");
+				combobox->addItem(tr("single 1"));
 				combobox->setEnabled(false);
 			} else {
-				combobox->addItem("--X (columns)--");
-				combobox->addItem("--Y (rows)--");
+				combobox->addItem(tr("--X (columns)--"));
+				combobox->addItem(tr("--Y (rows)--"));
 				if (numMultiDims > 2) {
 					for (unsigned index = 0; index < d; index++)
-						combobox->addItem(QString("index: %1").arg(index+1));
+						combobox->addItem(QString(tr("index: %1")).arg(index+1));
 				}
 			}
 			connect(combobox, QOverload<int>::of(&QComboBox::activated), [this,dim](int index) {
@@ -349,7 +349,7 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 				}
 			});
 			shapeDimensionsComboBoxes.push_back(std::unique_ptr<QComboBox>(combobox));
-			combobox->setToolTip(S2Q(STR("Directions and indexes to choose for dimension number " << (dim+1) << " of the shape " << shape)));
+			combobox->setToolTip(QString(tr("Directions and indexes to choose for dimension number %1 of the shape %2")).arg(dim+1).arg(S2Q(STR(shape))));
 			dim++;
 		}
 
@@ -408,26 +408,26 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 
 	// data range
 	auto dataRange = Util::arrayMinMax(data, tensorFlatSize(shape));
-	dataRangeLabel.setText(QString("Data Range: %1..%2").arg(std::get<0>(dataRange)).arg(std::get<1>(dataRange)));
+	dataRangeLabel.setText(QString(tr("Data Range: %1..%2")).arg(std::get<0>(dataRange)).arg(std::get<1>(dataRange)));
 
 	// create the model
 	tableModel.reset(new DataModel(new TensorSliceDataSource(shape, dimVertical, dimHorizontal, mkIdxs(), data), nullptr, &tableView));
 	tableView.setModel(tableModel.get());
 
 	// combobox values
-	colorSchemaComboBox.addItem("None (default)",        COLORSCHEME_NONE);
-	colorSchemaComboBox.addItem("Blue-to-Red",           COLORSCHEME_BLUE_TO_RED);
-	colorSchemaComboBox.addItem("Red-to-Blue",           COLORSCHEME_RED_TO_BLUE);
-	colorSchemaComboBox.addItem("Grayscale Up",          COLORSCHEME_GRAYSCALE_UP);
-	colorSchemaComboBox.addItem("Grayscale Down",        COLORSCHEME_GRAYSCALE_DOWN);
-	colorSchemaComboBox.addItem("Grayscale Zero Up",     COLORSCHEME_GRAYSCALE_ZERO_UP);
-	colorSchemaComboBox.addItem("Grayscale Zero Down",   COLORSCHEME_GRAYSCALE_ZERO_DOWN);
-	colorSchemaComboBox.addItem("Grayscale Middle Up",   COLORSCHEME_GRAYSCALE_MIDDLE_UP);
-	colorSchemaComboBox.addItem("Grayscale Middle Down", COLORSCHEME_GRAYSCALE_MIDDLE_DOWN);
+	colorSchemaComboBox.addItem(tr("None (default)"),        COLORSCHEME_NONE);
+	colorSchemaComboBox.addItem(tr("Blue-to-Red"),           COLORSCHEME_BLUE_TO_RED);
+	colorSchemaComboBox.addItem(tr("Red-to-Blue"),           COLORSCHEME_RED_TO_BLUE);
+	colorSchemaComboBox.addItem(tr("Grayscale Up"),          COLORSCHEME_GRAYSCALE_UP);
+	colorSchemaComboBox.addItem(tr("Grayscale Down"),        COLORSCHEME_GRAYSCALE_DOWN);
+	colorSchemaComboBox.addItem(tr("Grayscale Zero Up"),     COLORSCHEME_GRAYSCALE_ZERO_UP);
+	colorSchemaComboBox.addItem(tr("Grayscale Zero Down"),   COLORSCHEME_GRAYSCALE_ZERO_DOWN);
+	colorSchemaComboBox.addItem(tr("Grayscale Middle Up"),   COLORSCHEME_GRAYSCALE_MIDDLE_UP);
+	colorSchemaComboBox.addItem(tr("Grayscale Middle Down"), COLORSCHEME_GRAYSCALE_MIDDLE_DOWN);
 
 	// set up the spin-box
 	scaleBwImageSpinBox.setRange(1,20);
-	scaleBwImageSpinBox.setSuffix(" times");
+	scaleBwImageSpinBox.setSuffix(tr(" times"));
 	//scaleBwImageSpinBox.lineEdit()->setReadOnly(true);
 
 	// visibility
@@ -478,7 +478,7 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 			// disable all other widgets so that the data view can't be changed
 			headerWidget.setEnabled(false);
 			// set tooltip with explanation custom to the data
-			imageView.setToolTip(QString("Tensor data as a B/W image normalized to the range of data in the currently viewed tensor slice: %1..%2")
+			imageView.setToolTip(QString(tr("Tensor data as a B/W image normalized to the range of data in the currently viewed tensor slice: %1..%2"))
 				.arg(std::get<0>(minMax))
 				.arg(std::get<1>(minMax)));
 		} else {
@@ -494,11 +494,11 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 	});
 
 	// tooltips
-	shapeLabel               .setToolTip("Shape of tensor data that this table represents");
-	dataRangeLabel           .setToolTip("Range of numeric values present in the table");
-	colorSchemaComboBox      .setToolTip("Change the color schema of data visualization");
-	viewDataAsBwImageCheckBox.setToolTip("View data as image");
-	tableView                .setToolTip("Tensor data values");
+	shapeLabel               .setToolTip(tr("Shape of tensor data that this table represents"));
+	dataRangeLabel           .setToolTip(tr("Range of numeric values present in the table"));
+	colorSchemaComboBox      .setToolTip(tr("Change the color schema of data visualization"));
+	viewDataAsBwImageCheckBox.setToolTip(tr("View data as image"));
+	tableView                .setToolTip(tr("Tensor data values"));
 }
 
 /// internals

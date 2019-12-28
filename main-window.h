@@ -132,7 +132,7 @@ private: // private methods
 	void showTensorDetails(PluginInterface::TensorId tensorId);
 	void removeTableIfAny();
 	void openImageFile(const QString &imageFileName);
-	void openImagePixmap(const QPixmap &imagePixmap, const char *sourceName);
+	void openImagePixmap(const QPixmap &imagePixmap, const QString &sourceName);
 	void clearInputImageDisplay();
 	void clearComputedTensorData();
 	void effectsChanged();
@@ -142,6 +142,6 @@ private: // private methods
 		const std::tuple<TensorShape,std::vector<float>> &convolution, unsigned convolutionCount) const;
 	void clearEffects();
 	void updateSourceImageOnScreen();
-	void updateResultInterpretationSummary(bool enable, const std::string &oneLine, const std::string &details);
+	void updateResultInterpretationSummary(bool enable, const QString &oneLine, const QString &details);
 };
 

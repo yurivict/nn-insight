@@ -18,7 +18,7 @@ class QWidget;
 namespace Util {
 
 std::string QStringToStlString(const QString &qs);
-bool warningOk(QWidget *parent, const char *msg);
+bool warningOk(QWidget *parent, const QString &msg);
 int getScreenDPI();
 QPoint getGlobalMousePos();
 std::string formatUIntHumanReadable(size_t u);

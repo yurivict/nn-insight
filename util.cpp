@@ -11,6 +11,7 @@
 #include <QPixmap>
 #include <QGuiApplication>
 #include <QWindow>
+#include <QStringList>
 
 #include <limits>
 #include <cstring>
@@ -136,6 +137,16 @@ unsigned char* convertArrayFloatToUInt8(const float *a, size_t size) { // ASSUME
 bool doesFileExist(const char *filePath) {
 	struct stat s;
 	return ::stat(filePath, &s)==0 && (s.st_mode&S_IFREG);
+}
+
+QStringList readListFromFile(const char *fileName) {
+	QString data;
+	QFile file(fileName);
+	if (!file.open(QIODevice::ReadOnly))
+		FAIL("failed to open the file " << fileName)
+	data = file.readAll();
+	file.close();
+	return data.split("\n", QString::SkipEmptyParts);
 }
 
 }

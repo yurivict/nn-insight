@@ -417,12 +417,14 @@ MainWindow::MainWindow()
 				likelihoods.push_back({i,result[i]});
 			std::sort(likelihoods.begin(), likelihoods.end(), [](const Likelihood &a, const Likelihood &b) {return std::get<1>(a) > std::get<1>(b);});
 			// report it to the user
+			auto labels = Util::readListFromFile(":/nn-labels/imagenet-labels.txt");
+			assert(labels.size() == 1001);
 			std::ostringstream ss;
 			for (unsigned i = 0; i<10; i++)
-				ss << (i>0 ? "\n" : "") << "• " << std::get<0>(likelihoods[i]) << " = " << std::get<1>(likelihoods[i]);
+				ss << (i>0 ? "\n" : "") << "• " << Q2S(labels[std::get<0>(likelihoods[i])]) << " = " << std::get<1>(likelihoods[i]);
 			updateResultInterpretationSummary(
 				true/*enable*/,
-				STR(std::get<0>(likelihoods[0]) << " = " << std::get<1>(likelihoods[0])),
+				STR(Q2S(labels[std::get<0>(likelihoods[0])]) << " = " << std::get<1>(likelihoods[0])),
 				ss.str()
 			);
 		} else

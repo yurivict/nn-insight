@@ -70,6 +70,7 @@ add_executable(nn-insight
 	image.cpp
 	compute.cpp
 	3rdparty/tensorflow/tflite-reference-implementation.cpp
+	resources.qrc
 )
 target_link_libraries(nn-insight
 	Qt5::Widgets Qt5::Svg

@@ -475,12 +475,15 @@ MainWindow::MainWindow()
 		);
 		if (fileName != "")
 			openImageFile(fileName);
-	});
+	})->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_O));
 	fileMenu->addAction(tr("Open Neural Network File"), []() {
-	});
+	})->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_N)); // non-standard because this is our custom operation
 	fileMenu->addAction(tr("Take Screenshot"), [this]() {
 		openImagePixmap(Util::getScreenshot(true/*hideOurWindows*/), tr("screenshot"));
-	});
+	})->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_S)); // non-standard
+	fileMenu->addAction(tr("Copy Image"), [this]() {
+		QApplication::clipboard()->setPixmap(Image::toQPixmap(sourceTensorDataAsUsed.get(), sourceTensorShape), QClipboard::Clipboard);
+	})->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_C));
 	fileMenu->addAction(tr("Paste Image"), [this]() {
 		const QClipboard *clipboard = QApplication::clipboard();
 		const QMimeData *mimeData = clipboard->mimeData();
@@ -494,15 +497,15 @@ MainWindow::MainWindow()
 		} else {
 			Util::warningOk(this, QString(tr("No image to paste, clipboard contains: %s")).arg(mimeData->formats().join(", ")));
 		}
-	});
-	fileMenu->addAction(tr("Copy Image"), [this]() {
-		QApplication::clipboard()->setPixmap(Image::toQPixmap(sourceTensorDataAsUsed.get(), sourceTensorShape), QClipboard::Clipboard);
-	});
+	})->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_V));
 	fileMenu->addAction(tr("Close Image"), [this]() {
 		clearInputImageDisplay();
 		clearEffects();
 		clearComputedTensorData(); // closing image invalidates computation results
-	});
+	})->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_W)); // like "close tab" in chrome
+	fileMenu->addAction(tr("Quit"), []() {
+		QApplication::quit();
+	})->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_Q));
 }
 
 MainWindow::~MainWindow() {

@@ -140,6 +140,7 @@ private: // private methods
 	float* applyEffects(const float *image, const TensorShape &shape,
 		bool flipHorizontally, bool flipVertically, bool makeGrayscale,
 		const std::tuple<TensorShape,std::vector<float>> &convolution, unsigned convolutionCount) const;
+	void clearEffects();
 	void updateSourceImageOnScreen();
 	void updateResultInterpretationSummary(bool enable, const std::string &oneLine, const std::string &details);
 };

@@ -470,6 +470,7 @@ MainWindow::MainWindow()
 	});
 	fileMenu->addAction("Close Image", [this]() {
 		clearInputImageDisplay();
+		clearEffects();
 		clearComputedTensorData(); // closing image invalidates computation results
 	});
 }
@@ -708,6 +709,7 @@ void MainWindow::removeTableIfAny() {
 void MainWindow::openImageFile(const QString &imageFileName) {
 	// clear the previous image data if any
 	clearInputImageDisplay();
+	clearEffects();
 	clearComputedTensorData(); // opening image invalidates computation results
 	// read the image as tensor
 	sourceTensorDataAsLoaded.reset(Image::readPngImageFile(Q2S(imageFileName), sourceTensorShape));
@@ -724,6 +726,7 @@ void MainWindow::openImageFile(const QString &imageFileName) {
 void MainWindow::openImagePixmap(const QPixmap &imagePixmap, const char *sourceName) {
 	// clear the previous image data if any
 	clearInputImageDisplay();
+	clearEffects();
 	clearComputedTensorData(); // opening image invalidates computation results
 	// read the image as tensor
 	sourceTensorDataAsLoaded.reset(Image::readPixmap(imagePixmap, sourceTensorShape));
@@ -765,6 +768,7 @@ void MainWindow::clearComputedTensorData() {
 }
 
 void MainWindow::effectsChanged() {
+	PRINT("MainWindow::effectsChanged")
 	clearComputedTensorData(); // effects change invalidates computation results
 
 	// all available effects that can be applied
@@ -854,6 +858,15 @@ float* MainWindow::applyEffects(const float *image, const TensorShape &shape,
 	}
 
 	return withEffects[idx-1].release();
+}
+
+void MainWindow::clearEffects() {
+	sourceEffectFlipHorizontallyCheckBox.setChecked(false);
+	sourceEffectFlipVerticallyCheckBox  .setChecked(false);
+	sourceEffectMakeGrayscaleCheckBox   .setChecked(false);
+	sourceEffectConvolutionTypeComboBox .setCurrentIndex(0);
+	sourceEffectConvolutionCountComboBox.setCurrentIndex(0);
+	sourceEffectConvolutionCountComboBox.setEnabled(false);
 }
 
 void MainWindow::updateSourceImageOnScreen() {

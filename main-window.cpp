@@ -160,16 +160,16 @@ MainWindow::MainWindow()
 ,          computeButton("Compute", &sourceDetails)
 ,          computeByWidget(&sourceDetails)
 ,            computeByLayout(&computeByWidget)
-,            inputNormalizationLabel("Input normalization", &computeByWidget)
+,            inputNormalizationLabel("Normalization", &computeByWidget)
 ,            inputNormalizationRangeComboBox(&computeByWidget)
 ,            spacer1Widget(&computeByWidget)
-,            computationTimeLabel(QString("Computation time: %1").arg("n/a"), &computeByWidget)
+,            computationTimeLabel(QString("Computed in %1").arg(": n/a"), &computeByWidget)
 ,            spacer2Widget(&computeByWidget)
-,            outputInterpretationLabel("Interpret as:", &computeByWidget)
+,            outputInterpretationLabel("Interpret as", &computeByWidget)
 ,            outputInterpretationKindComboBox(&computeByWidget)
 ,            outputInterpretationSummaryLineEdit(&computeByWidget)
 ,            spacer3Widget(&computeByWidget)
-,            clearComputationResults("Clear Results", &computeByWidget)
+,            clearComputationResults("Clear", &computeByWidget)
 ,        sourceImageScrollArea(&sourceWidget)
 ,          sourceImage(&sourceWidget)
 ,      detailsStack(&rhsWidget)
@@ -430,7 +430,7 @@ MainWindow::MainWindow()
 		} else
 			PRINT("WARNING computation didn't succeed")
 
-		computationTimeLabel.setText(QString("Computation time: %1 ms").arg(S2Q(Util::formatUIntHumanReadable(timer.elapsed()))));
+		computationTimeLabel.setText(QString("Computed in %1").arg(QString("%1 ms").arg(S2Q(Util::formatUIntHumanReadable(timer.elapsed())))));
 	});
 	connect(&inputNormalizationRangeComboBox, QOverload<int>::of(&QComboBox::activated), [this](int) {
 		inputNormalizationChanged();

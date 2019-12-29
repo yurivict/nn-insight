@@ -537,7 +537,7 @@ bool compute(
 			assert(inputs.size()==2 && outputs.size()==1);
 			assert(opts); // need to have options present
 			assert((*tensorData)[inputs[0]]); // need to have the input data present
-			assert((*tensorData)[inputs[1]]); // need to have the input data present
+			assert(model->getTensorShape(inputs[0]) == model->getTensorShape(outputs[0])); // produces the same shape as consumes
 
 			// operator options required to run this operator
 			PI::ActivationFunction activationFunction;
@@ -553,21 +553,62 @@ bool compute(
 			           " activationFunction=" << activationFunction)
 
 			// tensors
+			auto input1Shape = model->getTensorShape(inputs[0]);
+			auto input2Shape = model->getTensorShape(inputs[1]);
 			auto outputShape = model->getTensorShape(outputs[0]);
-			auto outputShapeSize = tensorFlatSize(outputShape);
+			auto input1ShapeSize = tensorFlatSize(input1Shape);
 
 			// create output data
-			std::unique_ptr<float> outputData(new float[tensorFlatSize(model->getTensorShape(outputs[0]))]);
+			std::unique_ptr<float> outputData(new float[input1ShapeSize]);
 
 			// compute
-			(operatorKind==PI::KindAdd ? NnOperators::Add : NnOperators::Mul)(
-				model->getTensorShape(inputs[0]), (*tensorData)[inputs[0]].get(), // input1
-				model->getTensorShape(inputs[1]), (*tensorData)[inputs[1]].get(), // input2
-				outputShape, outputData.get() // output
-			);
+			if (input1Shape==input2Shape) { // 2 streams added to each other
+				(operatorKind==PI::KindAdd ? NnOperators::Add : NnOperators::Mul)(
+					model->getTensorShape(inputs[0]), (*tensorData)[inputs[0]].get(), // input1
+					model->getTensorShape(inputs[1]), (*tensorData)[inputs[1]].get(), // input2
+					outputShape, outputData.get() // output
+				);
+			} else if (input2Shape.size()==1 && input2Shape[0]==1) { // operation with a constant from the model
+				auto input = (*tensorData)[inputs[0]].get();
+				auto output = outputData.get();
+				const float *inpute = input+input1ShapeSize;
+				auto Const = model->getTensorData(inputs[1])[0];
+				if (operatorKind==PI::KindAdd)
+					for (; input<inpute; input++, output++)
+						*output = (*input) + Const;
+				else
+					for (; input<inpute; input++, output++)
+						*output = (*input) * Const;
+			} else if (tensorIsSubset(input1Shape, input2Shape)) { // operation with a smaller computed vector (computed)
+				auto input1 = (*tensorData)[inputs[0]].get();
+				auto input2 = (*tensorData)[inputs[1]].get();
+				auto output = outputData.get();
+				auto input1e = input1+input1ShapeSize;
+				auto input2b = input2;
+				auto input2e = input2+tensorFlatSize(input2Shape);
+				if (operatorKind==PI::KindAdd)
+					for (; input1<input1e; input1++, output++) {
+						*output = (*input1) + (*input2);
+						if (++input2 >= input2e)
+							input2 = input2b;
+					}
+				else
+					for (; input1<input1e; input1++, output++) {
+						*output = (*input1) * (*input2);
+						if (++input2 >= input2e)
+							input2 = input2b;
+					}
+			} else if (input2Shape.size()==1 && *input1Shape.rbegin()==input2Shape[0]) {
+				cbWarningMessage(STR("Computation didn't succeed: operator #" << (oid+1) << ": " << operatorKind << " isn't yet implemented for large-to-small vector operations"));
+				return false; // failed to compute the model to the end
+			} else {
+				cbWarningMessage(STR("Computation didn't succeed: operator #" << (oid+1) <<
+				                     ": " << operatorKind << " isn't yet implemented for shapes " << input1Shape << " and " << input2Shape));
+				return false; // failed to compute the model to the end
+			}
 
 			// activation function
-			applyActivationFunction(outputShapeSize, outputData.get(), activationFunction);
+			applyActivationFunction(input1ShapeSize, outputData.get(), activationFunction);
 
 			// save the data
 			(*tensorData)[outputs[0]].reset(outputData.release());

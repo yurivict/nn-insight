@@ -38,6 +38,23 @@ float* readPngImageFile(const std::string &fileName, TensorShape &outShape) {
 	return data.release();
 }
 
+void writePngImageFile(const float *pixels, const TensorShape &shape, const std::string &fileName) { // ASSUME 0..255 normalization
+	assert(shape.size()==3);
+	auto width = shape[1];
+	auto height = shape[0];
+
+	png::image<png::rgb_pixel> image(width, height);
+	for (unsigned y = 0; y < height; y++)
+		for (unsigned x = 0; x < width; x++) {
+			png::rgb_pixel &color = image[y][x];
+			color.red   = *pixels++;
+			color.green = *pixels++;
+			color.blue  = *pixels++;
+		}
+
+	image.write(fileName);
+}
+
 float* readPixmap(const QPixmap &pixmap, TensorShape &outShape) {
 	const QImage image = pixmap.toImage();
 

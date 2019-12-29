@@ -27,6 +27,7 @@
 #include <QTime>
 #include <QClipboard>
 #include <QMimeData>
+#include <QScrollBar>
 
 #include <assert.h>
 
@@ -292,6 +293,7 @@ MainWindow::MainWindow()
 		w->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
 	for (auto w : {&inputNormalizationLabel, &computationTimeLabel})
 		w->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
+	sourceImage.setAlignment(Qt::AlignHCenter|Qt::AlignVCenter);
 
 	{ // double the font size in the summary
 		QFont font = outputInterpretationSummaryLineEdit.font();
@@ -1017,9 +1019,19 @@ void MainWindow::updateSourceImageOnScreen() {
 		pixmap = Image::toQPixmap(resizedImage.get(), resizedShape);
 	} else
 		pixmap = Image::toQPixmap(sourceTensorDataAsUsed.get(), sourceTensorShape);
+
+	// memorize the center of sourceImage
+	bool hadPixmap = sourceImage.pixmap()!=nullptr && sourceImage.pixmap()->width()>0;
+	QPoint ptCenterPrev = hadPixmap ? sourceImage.mapToGlobal(QPoint(sourceImage.width()/2,sourceImage.height()/2)) : QPoint(0,0);
+	// set new pixmap
 	sourceImage.setPixmap(pixmap);
 	sourceImage.resize(pixmap.width(), pixmap.height());
-	sourceImage.setAlignment(Qt::AlignHCenter|Qt::AlignVCenter);
+	// if it had a pixmap previously, keep the center still
+	if (hadPixmap) {
+		QPoint ptCenterCurr = hadPixmap ? sourceImage.mapToGlobal(QPoint(sourceImage.width()/2,sourceImage.height()/2)) : QPoint(0,0);
+		sourceImageScrollArea.horizontalScrollBar()->setValue(sourceImageScrollArea.horizontalScrollBar()->value() + (ptCenterCurr.x()-ptCenterPrev.x()));
+		sourceImageScrollArea.verticalScrollBar()  ->setValue(sourceImageScrollArea.verticalScrollBar()->value() + (ptCenterCurr.y()-ptCenterPrev.y()));
+	}
 }
 
 void MainWindow::updateResultInterpretationSummary(bool enable, const QString &oneLine, const QString &details) {

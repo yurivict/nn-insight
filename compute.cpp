@@ -493,7 +493,8 @@ bool compute(
 			cbTensorComputed(outputs[0]);
 
 			break;
-		} case PI::KindAdd: {
+		} case PI::KindAdd:
+		  case PI::KindMul: {
 			assert(inputs.size()==2 && outputs.size()==1);
 			assert(opts); // need to have options present
 			assert((*tensorData)[inputs[0]]); // need to have the input data present
@@ -509,7 +510,7 @@ bool compute(
 			assert(numParsed==opts->size()); // all options are parsed
 			UNUSED(numParsed)
 
-			PRINT_OPTS("Add: have " << opts->size() << " options:"
+			PRINT_OPTS(operatorKind << ": have " << opts->size() << " options:"
 			           " activationFunction=" << activationFunction)
 
 			// tensors
@@ -520,7 +521,7 @@ bool compute(
 			std::unique_ptr<float> outputData(new float[tensorFlatSize(model->getTensorShape(outputs[0]))]);
 
 			// compute
-			NnOperators::Add(
+			(operatorKind==PI::KindAdd ? NnOperators::Add : NnOperators::Mul)(
 				model->getTensorShape(inputs[0]), (*tensorData)[inputs[0]].get(), // input1
 				model->getTensorShape(inputs[1]), (*tensorData)[inputs[1]].get(), // input2
 				outputShape, outputData.get() // output

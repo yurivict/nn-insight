@@ -25,6 +25,7 @@ enum InputNormalizationRange {
 	InputNormalizationRange_0_16,
 	InputNormalizationRange_0_8,
 	InputNormalizationRange_M1_P1,
+	InputNormalizationRange_M05_P05,
 	InputNormalizationRange_ImageNet
 };
 

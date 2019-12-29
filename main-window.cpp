@@ -403,6 +403,7 @@ MainWindow::MainWindow()
 	inputNormalizationRangeComboBox.addItem("0..16",        InputNormalizationRange_0_16);
 	inputNormalizationRangeComboBox.addItem("0..8",         InputNormalizationRange_0_8);
 	inputNormalizationRangeComboBox.addItem("-1..1",        InputNormalizationRange_M1_P1);
+	inputNormalizationRangeComboBox.addItem("-½..½",        InputNormalizationRange_M05_P05);
 	inputNormalizationRangeComboBox.addItem("ImageNet",     InputNormalizationRange_ImageNet);
 	//
 	inputNormalizationColorOrderComboBox.addItem("RGB",     InputNormalizationColorOrder_RGB); // default

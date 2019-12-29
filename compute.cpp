@@ -189,6 +189,10 @@ bool compute(
 			normalizeRange(src, inputAllocated, inputTensorSize, -1, 1);
 			src = inputAllocated;
 			break;
+		case InputNormalizationRange_M05_P05:
+			normalizeRange(src, inputAllocated, inputTensorSize, -0.5, 0.5);
+			src = inputAllocated;
+			break;
 		case InputNormalizationRange_ImageNet:
 			assert(*inputTensorShape.rbegin()==3);
 			normalizeSub(src, inputAllocated, inputTensorSize, {123.68, 116.78, 103.94});

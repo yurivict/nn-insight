@@ -9,6 +9,7 @@
 
 #include <string>
 #include <vector>
+#include <array>
 #include <memory>
 #include <functional>
 #include <cmath>
@@ -49,12 +50,14 @@ public:
 
 bool compute(
 	const PI::Model *model,
+	std::array<unsigned,4> imageRegion,
 	std::tuple<InputNormalizationRange,InputNormalizationColorOrder> inputNormalization,
 	std::shared_ptr<float> &inputTensor, const TensorShape &inputShape,
 	std::unique_ptr<std::vector<std::shared_ptr<const float>>> &tensorData,
 	std::function<void(const std::string&)> cbWarningMessage,
 	std::function<void(PI::TensorId)> cbTensorComputed)
 {
+	assert(inputShape.size()==3);
 
 	/// allocate tensors array
 
@@ -71,11 +74,22 @@ bool compute(
 		return false;
 	}
 
+	// input tensor is either reused, or reallocated when alterations are needed
+	auto &sharedPtrInput = (*tensorData.get())[modelInputs[0]];
+	sharedPtrInput = inputTensor; // initially assign with inputShape, but replace later with a newly allocated one if any transformations are performed
+	float *inputAllocated = nullptr; // keep track if new allocations
+	TensorShape myInputShape = inputShape;
+
+	/// extract the region if required
+
+	if (imageRegion[0]!=0 || imageRegion[1]!=0 || imageRegion[2]+1!=myInputShape[1] || imageRegion[3]+1!=myInputShape[0]) {
+		sharedPtrInput.reset((inputAllocated = Image::regionOfImage(sharedPtrInput.get(), myInputShape, imageRegion)));
+		myInputShape = {imageRegion[3]-imageRegion[1]+1, imageRegion[2]-imageRegion[0]+1, myInputShape[2]};
+	}
+
 	/// resize the source image
 
-	float *inputAllocated = nullptr;
 	{
-		assert(inputShape.size()==3);
 		TensorShape requiredShape = model->getTensorShape(modelInputs[0]);
 
 		// adjust the required shape to the form [H,W,C]
@@ -103,12 +117,9 @@ bool compute(
 			return false;
 		}
 
-		// now we have requiredShape=[H,W,C], resize the image
-		auto &sharedPtrInput = (*tensorData.get())[modelInputs[0]];
-		if (inputShape != requiredShape)
-			sharedPtrInput.reset((inputAllocated = Image::resizeImage(inputTensor.get(), inputShape, requiredShape)));
-		else
-			sharedPtrInput = inputTensor; // reuse the original input image as an input tensor
+		// now we have requiredShape=[H,W,C], resize the image if needed
+		if (myInputShape != requiredShape)
+			sharedPtrInput.reset((inputAllocated = Image::resizeImage(sharedPtrInput.get(), myInputShape, requiredShape)));
 	}
 
 	/// normalize input
@@ -117,10 +128,9 @@ bool compute(
 		auto inputTensorShape = model->getTensorShape(modelInputs[0]);
 		auto inputTensorSize = tensorFlatSize(inputTensorShape);
 
-		auto &input = (*tensorData.get())[modelInputs[0]]; // input tensor has been set above eithor to a resized value, or to inputTensor
-		const float *src = input.get();
+		const float *src = sharedPtrInput.get();
 		if (!inputAllocated) // need to allocate because we change the data, otherwise use the allocated above one
-			input.reset((inputAllocated = new float[inputTensorSize]));
+			sharedPtrInput.reset((inputAllocated = new float[inputTensorSize]));
 
 		// helpers
 		auto normalizeRange = [](const float *src, float *dst, size_t sz, float min, float max) {

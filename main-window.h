@@ -28,6 +28,7 @@
 #include "nn-types.h"
 
 #include <vector>
+#include <array>
 #include <memory>
 
 class MainWindow : public QMainWindow {
@@ -80,7 +81,10 @@ private: // fields
 	QComboBox                                    sourceEffectConvolutionTypeComboBox;
 	QComboBox                                    sourceEffectConvolutionCountComboBox;
 	// Rhs/Source/Compute
-	QPushButton                              computeButton;
+	QWidget                                  computeWidget;
+	QHBoxLayout                                computeLayout;
+	QPushButton                                computeButton;
+	QComboBox                                  computeRegionComboBox;
 	QWidget                                  computeByWidget;
 	QHBoxLayout                                computeByLayout;
 	QLabel                                     inputNormalizationLabel;
@@ -161,5 +165,6 @@ private: // private methods
 	void clearEffects();
 	void updateSourceImageOnScreen();
 	void updateResultInterpretationSummary(bool enable, const QString &oneLine, const QString &details);
+	std::array<unsigned,4> getVisibleImageRegion() const;
 };
 

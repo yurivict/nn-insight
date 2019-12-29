@@ -167,7 +167,10 @@ MainWindow::MainWindow()
 ,              sourceEffectConvolutionParamsLayout(&sourceEffectConvolutionParamsWidget)
 ,              sourceEffectConvolutionTypeComboBox(&sourceEffectConvolutionParamsWidget)
 ,              sourceEffectConvolutionCountComboBox(&sourceEffectConvolutionParamsWidget)
-,          computeButton(tr("Compute"), &sourceDetails)
+,          computeWidget(&sourceDetails)
+,            computeLayout(&computeWidget)
+,            computeButton(tr("Compute"), &computeWidget)
+,            computeRegionComboBox(&computeWidget)
 ,          computeByWidget(&sourceDetails)
 ,            computeByLayout(&computeByWidget)
 ,            inputNormalizationLabel(tr("Normalization"), &computeByWidget)
@@ -241,7 +244,9 @@ MainWindow::MainWindow()
 	      sourceApplyEffectsLayout.addWidget(&sourceEffectConvolutionParamsWidget,  3/*row*/, 1/*column*/);
 	        sourceEffectConvolutionParamsLayout.addWidget(&sourceEffectConvolutionTypeComboBox);
 	        sourceEffectConvolutionParamsLayout.addWidget(&sourceEffectConvolutionCountComboBox);
-	    sourceDetailsLayout.addWidget(&computeButton,            4/*row*/, 0/*col*/, 1/*rowSpan*/, 4/*columnSpan*/);
+	    sourceDetailsLayout.addWidget(&computeWidget,            4/*row*/, 0/*col*/, 1/*rowSpan*/, 4/*columnSpan*/);
+	      computeLayout.addWidget(&computeButton);
+	      computeLayout.addWidget(&computeRegionComboBox);
 	    sourceDetailsLayout.addWidget(&computeByWidget,          5/*row*/, 0/*col*/, 1/*rowSpan*/, 4/*columnSpan*/);
 	      computeByLayout.addWidget(&inputNormalizationLabel);
 	      computeByLayout.addWidget(&inputNormalizationRangeComboBox);
@@ -314,6 +319,7 @@ MainWindow::MainWindow()
 	sourceEffectConvolutionTypeComboBox .setToolTip(tr("Convolution type to apply to the image"));
 	sourceEffectConvolutionCountComboBox.setToolTip(tr("How many times to apply the convolution"));
 	computeButton                       .setToolTip(tr("Perform neural network computation for the currently selected image as input"));
+	computeRegionComboBox               .setToolTip(tr("Choose what region of the image to compute on: the visible area or the whole image"));
 	inputNormalizationLabel             .setToolTip(tr("Specify how does this NN expect its input data be normalized"));
 	inputNormalizationRangeComboBox     .setToolTip(tr("Specify what value range does this NN expect its input data be normalized to"));
 	inputNormalizationColorOrderComboBox.setToolTip(tr("Specify what color order does this NN expect its input data be supplied in"));
@@ -341,6 +347,9 @@ MainWindow::MainWindow()
 	sourceApplyEffectsWidget             .setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Maximum);
 	for (QWidget *w : {&sourceEffectConvolutionParamsWidget, (QWidget*)&sourceEffectConvolutionTypeComboBox, (QWidget*)&sourceEffectConvolutionCountComboBox})
 		w->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+	computeWidget                        .setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum);
+	computeButton                        .setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum);
+	computeRegionComboBox                .setSizePolicy(QSizePolicy::Fixed,   QSizePolicy::Maximum);
 	inputNormalizationLabel              .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum); //The sizeHint() is a maximum
 	inputNormalizationRangeComboBox      .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
 	inputNormalizationColorOrderComboBox .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
@@ -379,6 +388,9 @@ MainWindow::MainWindow()
 	sourceEffectConvolutionTypeComboBox.addItem(tr("Sharpen (3x3)"), ConvolutionEffect_Sharpen_3x3);
 	for (unsigned c = 1; c <= 20; c++)
 		sourceEffectConvolutionCountComboBox.addItem(QString("x%1").arg(c), c);
+
+	computeRegionComboBox.addItem("on the visible region");
+	computeRegionComboBox.addItem("on the whole image");
 
 	inputNormalizationRangeComboBox.addItem("0..1",         InputNormalizationRange_0_1); // default
 	inputNormalizationRangeComboBox.addItem("0..255",       InputNormalizationRange_0_255);
@@ -445,12 +457,15 @@ MainWindow::MainWindow()
 		QTime timer;
 		timer.start();
 
+		// computation arguments
+		bool doVisibleRegion = computeRegionComboBox.currentIndex()==0;
+		std::array<unsigned,4> imageRegion = doVisibleRegion ? getVisibleImageRegion() : std::array<unsigned,4>{0,0, sourceTensorShape[1]-1,sourceTensorShape[0]-1};
 		InputNormalization inputNormalization = {
 			(InputNormalizationRange)inputNormalizationRangeComboBox.currentData().toUInt(),
 			(InputNormalizationColorOrder)inputNormalizationColorOrderComboBox.currentData().toUInt()
 		};
 
-		bool succ = Compute::compute(model, inputNormalization, sourceTensorDataAsUsed, sourceTensorShape, tensorData, [this](const std::string &msg) {
+		bool succ = Compute::compute(model, imageRegion,inputNormalization, sourceTensorDataAsUsed,sourceTensorShape, tensorData, [this](const std::string &msg) {
 			Util::warningOk(this, S2Q(msg));
 		}, [](PluginInterface::TensorId tid) {
 			//PRINT("Tensor DONE: tid=" << tid)
@@ -479,6 +494,9 @@ MainWindow::MainWindow()
 			PRINT("WARNING computation didn't succeed")
 
 		computationTimeLabel.setText(QString("Computed in %1").arg(QString("%1 ms").arg(S2Q(Util::formatUIntHumanReadable(timer.elapsed())))));
+	});
+	connect(&computeRegionComboBox, QOverload<int>::of(&QComboBox::activated), [this](int) {
+		clearComputedTensorData();
 	});
 	connect(&inputNormalizationRangeComboBox, QOverload<int>::of(&QComboBox::activated), [this](int) {
 		inputNormalizationChanged();
@@ -999,3 +1017,29 @@ void MainWindow::updateResultInterpretationSummary(bool enable, const QString &o
 	outputInterpretationSummaryLineEdit.setToolTip(QString(tr("Result interpretation:\n%1")).arg(details));
 }
 
+std::array<unsigned,4> MainWindow::getVisibleImageRegion() const {
+	auto visibleRegion = sourceImage.visibleRegion().boundingRect();
+	auto size = sourceImage.size();
+	assert(visibleRegion.left() >= 0);
+	assert(visibleRegion.right() <= size.width());
+	assert(visibleRegion.top() >= 0);
+	assert(visibleRegion.bottom() <= size.height());
+
+	// region relative to the resized image normalized to 0..1
+	float region[4] = {
+		(float)visibleRegion.left()/(float)size.width(),
+		(float)visibleRegion.top()/(float)size.height(),
+		(float)(visibleRegion.right()+1)/(float)size.width(),
+		(float)(visibleRegion.bottom()+1)/(float)size.height()
+	};
+
+	// scale it to the original image
+	auto sourceWidth = sourceTensorShape[1];
+	auto sourceHeight = sourceTensorShape[0];
+	return std::array<unsigned,4>{
+		(unsigned)(region[0]*sourceWidth),
+		(unsigned)(region[1]*sourceHeight),
+		(unsigned)(region[2]*sourceWidth-1),
+		(unsigned)(region[3]*sourceHeight-1)
+	};
+}

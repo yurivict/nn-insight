@@ -10,8 +10,12 @@
 #include <QPixmap>
 #include <QImage>
 
+#include <string>
+#include <array>
 #include <memory>
 #include <cstring>
+
+#include <assert.h>
 
 namespace Image {
 
@@ -88,6 +92,27 @@ float* resizeImage(const float *pixels, const TensorShape &shapeOld, const Tenso
 	}
 
 	return pixelsNew.release();
+}
+
+float* regionOfImage(const float *pixels, const TensorShape &shape, const std::array<unsigned,4> region) {
+	assert(shape.size()==3);
+	assert(region[0]<=region[2] && region[2]<shape[1]); // W
+	assert(region[1]<=region[3] && region[3]<shape[0]); // H
+
+	unsigned NC = shape[2];
+
+	unsigned regionWidth  = region[2]-region[0]+1;
+	unsigned regionHeight = region[3]-region[1]+1;
+	std::unique_ptr<float> result(new float[regionHeight*regionWidth*NC]);
+
+	unsigned skip = shape[1]*NC;
+	unsigned bpl = regionWidth*NC;
+	auto src = pixels+(region[1]*shape[1]+region[0])*NC;
+	auto dst = result.get();
+	for (auto dste = dst+regionWidth*regionHeight*NC; dst<dste; src+=skip, dst+=bpl)
+		std::memcpy(dst, src, bpl*sizeof(float));
+
+	return result.release();
 }
 
 QPixmap toQPixmap(const float *image, const TensorShape &shape) {

@@ -32,6 +32,7 @@ size_t computeOperatorFlops(const PluginInterface::Model *model, PluginInterface
 	  case PluginInterface::KindRelu6:
 	  case PluginInterface::KindLeakyRelu:
 	  case PluginInterface::KindTanh:
+	  case PluginInterface::KindHardSwish:
 	  case PluginInterface::KindSub:
 	  case PluginInterface::KindMul:
 	  case PluginInterface::KindDiv:

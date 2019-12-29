@@ -28,10 +28,13 @@ public:
 		KindMaxPool,
 		KindAveragePool,
 		KindAdd,
+		// activation functions
 		KindRelu,
 		KindRelu6,
 		KindLeakyRelu,
 		KindTanh,
+		KindHardSwish,
+		//
 		KindSub,
 		KindMul,
 		KindDiv,

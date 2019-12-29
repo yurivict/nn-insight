@@ -493,6 +493,45 @@ bool compute(
 			cbTensorComputed(outputs[0]);
 
 			break;
+		} case PI::KindHardSwish: {
+			assert(inputs.size()==1 && outputs.size()==1);
+			assert(!opts || opts->empty()); // h-swish has no options
+			assert((*tensorData)[inputs[0]]); // need to have the input data present
+
+			PRINT_OPTS("HardSwish: activation function")
+
+			// tensors
+			auto inputShape = model->getTensorShape(inputs[0]);
+			auto outputShape = model->getTensorShape(outputs[0]);
+			auto inputShapeSize = tensorFlatSize(inputShape);
+			assert(inputShape==outputShape);
+
+			// create output data
+			std::unique_ptr<float> outputData(new float[inputShapeSize]);
+
+			// compute
+			auto input = (*tensorData)[inputs[0]].get();
+			auto output = outputData.get();
+			auto hardSwish = [](float x) {
+				// defined in the "Searching for MobileNet3 paper" (https://arxiv.org/pdf/1905.02244.pdf)
+				// h-swish(x) = x*(ReLU6(x+3)/6)
+				if (x>=3)
+					return x;
+				else if (x<=-3)
+					return (float)0;
+				else
+					return x*(x+3)/6;
+			};
+			for (auto inpute = input+inputShapeSize; input<inpute; input++, output++)
+				*output = hardSwish(*input);
+
+			// save the data
+			(*tensorData)[outputs[0]].reset(outputData.release());
+
+			// notify the caller
+			cbTensorComputed(outputs[0]);
+
+			break;
 		} case PI::KindAdd:
 		  case PI::KindMul: {
 			assert(inputs.size()==2 && outputs.size()==1);

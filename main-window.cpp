@@ -282,6 +282,7 @@ MainWindow::MainWindow()
 #endif
 
 	// alignment
+	svgScrollArea.setAlignment(Qt::AlignHCenter|Qt::AlignVCenter);
 	for (auto w : {&sourceImageFileNameLabel, &sourceImageFileSizeLabel, &sourceImageSizeLabel, &scaleImageLabel})
 		w->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
 	for (auto w : {&sourceImageFileNameText, &sourceImageFileSizeText, &sourceImageSizeText})
@@ -1018,6 +1019,7 @@ void MainWindow::updateSourceImageOnScreen() {
 		pixmap = Image::toQPixmap(sourceTensorDataAsUsed.get(), sourceTensorShape);
 	sourceImage.setPixmap(pixmap);
 	sourceImage.resize(pixmap.width(), pixmap.height());
+	sourceImage.setAlignment(Qt::AlignHCenter|Qt::AlignVCenter);
 }
 
 void MainWindow::updateResultInterpretationSummary(bool enable, const QString &oneLine, const QString &details) {

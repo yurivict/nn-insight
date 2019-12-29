@@ -56,30 +56,25 @@ void writePngImageFile(const float *pixels, const TensorShape &shape, const std:
 }
 
 float* readPixmap(const QPixmap &pixmap, TensorShape &outShape) {
-	const QImage image = pixmap.toImage();
+	QImage image = pixmap.toImage();
+
+	// always convert image to RGB32 so we don't have to deal with any other formats
+	image.convertTo(QImage::Format_RGB32, Qt::ColorOnly); // CAVEAT: the alpha channel is converted to black, which isn't normally desirable
+	assert(image.format()==QImage::Format_RGB32);
+
+	// TODO for pixmaps with alpha-channel use QImage::Format_ARGB32 and convert alpha to white (or any other background color)
+	if (pixmap.hasAlpha())
+		WARNING("the image has alpha channel which is converted to black")
 
 	std::unique_ptr<float> data(new float[image.width()*image.height()*3]);
 	auto pi = image.bits();
 	auto pf = data.get();
-	switch (image.format()) {
-	case QImage::Format_RGB32: // 0xffRRGGBB
-	case QImage::Format_ARGB32: { // 0xAARRGGBB
-		for (float *pfe = pf+image.width()*image.height()*3; pf < pfe; pi+=4, pf+=3) {
-			pf[0] = pi[2];
-			pf[1] = pi[1];
-			pf[2] = pi[0];
-		}
-		break;
-	} case QImage::Format_RGB888: { // 24-bit RGB format (8-8-8)
-		for (float *pfe = pf+image.width()*image.height()*3; pf < pfe; )
-			*pf++ = *pi++;
-		break;
-	} default: {
-		// we could also easily handle QImage::Format_RGB666, QImage::Format_RGB555
-		WARNING("unable to handle the pixmap format=" << image.format() <<
-		        ": width=" << image.width() << " height=" << image.height() << " bpl=" << image.bytesPerLine())
-		return nullptr;
-	}}
+
+	for (float *pfe = pf+image.width()*image.height()*3; pf < pfe; pi+=4, pf+=3) {
+		pf[0] = pi[2];
+		pf[1] = pi[1];
+		pf[2] = pi[0];
+	}
 
 	outShape = {(unsigned)image.height(), (unsigned)image.width(), 3};
 	return data.release();

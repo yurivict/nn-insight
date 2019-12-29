@@ -844,10 +844,6 @@ void MainWindow::openImagePixmap(const QPixmap &imagePixmap, const QString &sour
 		sourceTensorDataAsLoaded.reset(Image::resizeImage(sourceTensorDataAsLoaded.get(), sourceTensorShape, sourceTensorShapeNew));
 		sourceTensorShape = sourceTensorShapeNew;
 	}
-	if (!sourceTensorDataAsLoaded) {
-		Util::warningOk(this, QString(tr("Unable to accept %1")).arg(sourceName));
-		return;
-	}
 	sourceTensorDataAsUsed = sourceTensorDataAsLoaded;
 	// enable widgets, show image
 	sourceWidget.show();

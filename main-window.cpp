@@ -367,9 +367,9 @@ MainWindow::MainWindow()
 		l->setContentsMargins(0,0,0,0);
 	for (QLayout *l : {&sourceEffectConvolutionParamsLayout, &computeByLayout})
 		l->setSpacing(0);
-
 	for (auto w : {&spacer1Widget, &spacer2Widget, &spacer3Widget})
 		w->setMinimumWidth(10);
+	nnOperatorDetailsLayout.setVerticalSpacing(0);
 
 	// widget options and flags
 	sourceWidget.hide(); // hidden by default

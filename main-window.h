@@ -143,6 +143,7 @@ private: // fields
 
 	unsigned                         scaleImageWidthPct;    // percentage to scale the image to show on the screen
 	unsigned                         scaleImageHeightPct;
+	int                              self; // to prevent signals from programmatically changed values
 
 private: // types
 	struct AnyObject {

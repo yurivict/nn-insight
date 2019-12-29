@@ -209,6 +209,7 @@ MainWindow::MainWindow()
 , plugin(nullptr)
 , scaleImageWidthPct(0)
 , scaleImageHeightPct(0)
+, self(0)
 {
 	// window size and position
 	if (true) { // set it to center on the screen until we will have persistent app options
@@ -440,6 +441,7 @@ MainWindow::MainWindow()
 	});
 	connect(&scaleImageSpinBoxes, &ScaleImageWidget::scalingFactorChanged, [this](unsigned widthFactor, unsigned heightFactor) {
 		assert(scaleImageWidthPct!=0 && scaleImageHeightPct!=0); // scaling percentages are initially set when the image is open/pasted/etc
+		self++;
 
 		// accept percentages set by the user
 		scaleImageWidthPct = widthFactor;
@@ -448,6 +450,8 @@ MainWindow::MainWindow()
 		// update the image on screen accordingly
 		updateSourceImageOnScreen();
 		updateCurrentRegionText();
+
+		self--;
 	});
 	connect(&sourceEffectFlipHorizontallyCheckBox, &QCheckBox::stateChanged, [this](int) {
 		effectsChanged();
@@ -521,10 +525,12 @@ MainWindow::MainWindow()
 		clearComputedTensorData();
 	});
 	connect(sourceImageScrollArea.horizontalScrollBar(), &QAbstractSlider::valueChanged, [this]() {
-		updateCurrentRegionText();
+		if (!self)
+			updateCurrentRegionText();
 	});
 	connect(sourceImageScrollArea.verticalScrollBar(), &QAbstractSlider::valueChanged, [this]() {
-		updateCurrentRegionText();
+		if (!self)
+			updateCurrentRegionText();
 	});
 
 	// monitor memory use

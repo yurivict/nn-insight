@@ -5,7 +5,7 @@
 #include <QScrollArea>
 #include <QStackedWidget>
 #include <QGroupBox>
-#include "ZoomableSvgWidget.h"
+#include "zoomable-svg-widget.h"
 #include "scale-image-widget.h"
 #include "DataTable2D.h"
 #include <QLabel>

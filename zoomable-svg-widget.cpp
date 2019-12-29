@@ -1,5 +1,5 @@
 
-#include "ZoomableSvgWidget.h"
+#include "zoomable-svg-widget.h"
 #include <QSvgRenderer>
 #include <QDebug>
 #include <QMouseEvent>

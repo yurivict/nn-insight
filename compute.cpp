@@ -489,6 +489,49 @@ bool compute(
 			cbTensorComputed(outputs[0]);
 
 			break;
+		} case PI::KindAdd: {
+			assert(inputs.size()==2 && outputs.size()==1);
+			assert(opts); // need to have options present
+			assert((*tensorData)[inputs[0]]); // need to have the input data present
+			assert((*tensorData)[inputs[1]]); // need to have the input data present
+
+			// operator options required to run this operator
+			PI::ActivationFunction activationFunction;
+
+			unsigned numParsed =
+				OperatorOptions::GetOption1<PI::OperatorOption_FUSED_ACTIVATION_FUNCTION,
+					PI::OperatorOption_TypeActivationFunction,PI::ActivationFunction>(*opts, &activationFunction);
+			assert(numParsed==1); // need to have 1 options
+			assert(numParsed==opts->size()); // all options are parsed
+			UNUSED(numParsed)
+
+			PRINT_OPTS("Add: have " << opts->size() << " options:"
+			           " activationFunction=" << activationFunction)
+
+			// tensors
+			auto outputShape = model->getTensorShape(outputs[0]);
+			auto outputShapeSize = tensorFlatSize(outputShape);
+
+			// create output data
+			std::unique_ptr<float> outputData(new float[tensorFlatSize(model->getTensorShape(outputs[0]))]);
+
+			// compute
+			NnOperators::Add(
+				model->getTensorShape(inputs[0]), (*tensorData)[inputs[0]].get(), // input1
+				model->getTensorShape(inputs[1]), (*tensorData)[inputs[1]].get(), // input2
+				outputShape, outputData.get() // output
+			);
+
+			// activation function
+			applyActivationFunction(outputShapeSize, outputData.get(), activationFunction);
+
+			// save the data
+			(*tensorData)[outputs[0]].reset(outputData.release());
+
+			// notify the caller
+			cbTensorComputed(outputs[0]);
+
+			break;
 		} case PI::KindSoftmax: {
 			assert(inputs.size()==1 && outputs.size()==1);
 			assert(opts); // need to have options present

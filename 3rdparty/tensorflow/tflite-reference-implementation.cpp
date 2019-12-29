@@ -213,6 +213,43 @@ struct PoolParams { // <= BuiltinOptions_Pool2DOptions = 5
   float float_activation_max;
 };
 
+// from: tensorflow/lite/kernels/internal/types.htensorflow/lite/kernels/internal/types.h
+// For Add, Sub, Mul ops.
+struct ArithmeticParams { // <= BuiltinOptions_AddOptions = 11 / <= BuiltinOptions_MulOptions = 21 / <= BuiltinOptions_SubOptions = 28 / <= BuiltinOptions_DivOptions = 29
+  // Shape dependent / common to data / op types.
+  //BroadcastableOpCategory broadcast_category; // unused
+  // uint8 inference params.
+  int32 input1_offset; // unused
+  int32 input2_offset; // unused
+  int32 output_offset; // unused
+  int32 output_multiplier; // unused
+  int output_shift; // unused
+  // Add / Sub, not Mul, uint8 inference params.
+  int left_shift; // unused
+  int32 input1_multiplier; // unused
+  int input1_shift; // unused
+  int32 input2_multiplier; // unused
+  int input2_shift; // unused
+  // uint8, etc, activation params.
+  int32 quantized_activation_min; // unused (ony used used in int-versions)
+  int32 quantized_activation_max; // unused
+  // float activation params.
+  float float_activation_min;
+  float float_activation_max;
+
+  // Processed output dimensions.
+  // Let input "a" be the one that broadcasts in the faster-changing dimension.
+  // Then, after coalescing, for shapes {a0, a1, a2, a3, a4} and
+  // {b0, b1, b2, b3, b4},
+  // broadcast_shape[4] = b0 = a0.
+  // broadcast_shape[3] = b1; a1 = 1.
+  // broadcast_shape[2] = b2 = a2.
+  // broadcast_shape[1] = a3; b3 = 1.
+  // broadcast_shape[0] = b4 = a4.
+  int broadcast_shape[5];
+};
+
+
 // from: tensorflow/lite/kernels/internal/types.h
 struct SoftmaxParams { // <= BuiltinOptions_SoftmaxOptions = 9
   // beta is not really used (not a Tensorflow parameter) and not implemented
@@ -499,6 +536,37 @@ inline void AveragePool(const PoolParams& params,
   }
 }
 
+// from: tensorflow/lite/kernels/internal/reference/reference_ops.h
+inline void Add(const ArithmeticParams& params,
+                const RuntimeShape& input1_shape, const float* input1_data,
+                const RuntimeShape& input2_shape, const float* input2_data,
+                const RuntimeShape& output_shape, float* output_data) {
+  const int size = MatchingFlatSize(input1_shape, input2_shape, output_shape);
+  for (int i = 0; i < size; i++) {
+    auto x = input1_data[i] + input2_data[i];
+    // DISABLE ActivationFunctionWithMinMax
+    //output_data[i] = ActivationFunctionWithMinMax(
+    //    x, params.float_activation_min, params.float_activation_max);
+
+    // INSTEAD
+    output_data[i] = x;
+  }
+}
+
+// self-written: couldn't find the code in the TF tree
+template <typename T>
+void Add(const RuntimeShape& input1_shape, const T* input1_data,
+             const T* input2_data, const RuntimeShape& output_shape,
+             T* output_data) {
+  const int flat_size = MatchingFlatSize(input1_shape, output_shape);
+
+  auto one_value = input2_data[0];
+  for (int i = 0; i < flat_size; i++) {
+    output_data[i] = input1_data[i] + one_value;
+  }
+}
+
+
 // from: tensorflow/lite/kernels/internal/reference/softmax.h
 inline void Softmax(const SoftmaxParams& params,
                     const RuntimeShape& input_shape, const float* input_data,
@@ -634,6 +702,20 @@ void AveragePool(
 
 	tflite::AveragePool(params,
 		tflite::RuntimeShape(inputShape),  inputData,
+		tflite::RuntimeShape(outputShape), outputData
+	);
+}
+
+void Add(
+	const TensorShape &input1Shape, const float *input1Data,
+	const TensorShape &input2Shape, const float *input2Data,
+	const TensorShape &outputShape, float *outputData
+) {
+	tflite::ArithmeticParams params; // not used by Add
+
+	tflite::Add(params,
+		tflite::RuntimeShape(input1Shape), input1Data,
+		tflite::RuntimeShape(input2Shape), input2Data,
 		tflite::RuntimeShape(outputShape), outputData
 	);
 }

@@ -60,6 +60,8 @@ private: // fields
 	QLabel                                   sourceImageFileSizeText;
 	QLabel                                   sourceImageSizeLabel;
 	QLabel                                   sourceImageSizeText;
+	QLabel                                   sourceImageCurrentRegionLabel;
+	QLabel                                   sourceImageCurrentRegionText;
 	QLabel                                   outputInterpretationSummaryLineEdit;
 	QWidget                                  scaleImageWidget;
 	QHBoxLayout                                scaleImageLayout;
@@ -149,6 +151,7 @@ private: // types
 	};
 
 private: // private methods
+	bool haveImageOpen() const;
 	AnyObject findObjectAtThePoint(const QPointF &pt);
 	void showOperatorDetails(PluginInterface::OperatorId operatorId);
 	void showTensorDetails(PluginInterface::TensorId tensorId);
@@ -164,6 +167,7 @@ private: // private methods
 		const std::tuple<TensorShape,std::vector<float>> &convolution, unsigned convolutionCount) const;
 	void clearEffects();
 	void updateSourceImageOnScreen();
+	void updateCurrentRegionText();
 	void updateResultInterpretationSummary(bool enable, const QString &oneLine, const QString &details);
 	std::array<unsigned,4> getVisibleImageRegion() const;
 };

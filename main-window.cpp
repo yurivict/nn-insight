@@ -149,6 +149,8 @@ MainWindow::MainWindow()
 ,          sourceImageFileSizeText(&sourceDetails)
 ,          sourceImageSizeLabel(tr("Image size:"), &sourceDetails)
 ,          sourceImageSizeText(&sourceDetails)
+,          sourceImageCurrentRegionLabel(tr("Current region:"), &sourceDetails)
+,          sourceImageCurrentRegionText(&sourceDetails)
 ,          outputInterpretationSummaryLineEdit(&sourceDetails)
 ,          scaleImageWidget(&sourceDetails)
 ,            scaleImageLayout(&scaleImageWidget)
@@ -229,12 +231,14 @@ MainWindow::MainWindow()
 	    sourceDetailsLayout.addWidget(&sourceImageFileSizeText,  1/*row*/, 1/*col*/, 1/*rowSpan*/, 1/*columnSpan*/);
 	    sourceDetailsLayout.addWidget(&sourceImageSizeLabel,     2/*row*/, 0/*col*/, 1/*rowSpan*/, 1/*columnSpan*/);
 	    sourceDetailsLayout.addWidget(&sourceImageSizeText,      2/*row*/, 1/*col*/, 1/*rowSpan*/, 1/*columnSpan*/);
+	    sourceDetailsLayout.addWidget(&sourceImageCurrentRegionLabel, 3/*row*/, 0/*col*/, 1/*rowSpan*/, 1/*columnSpan*/);
+	    sourceDetailsLayout.addWidget(&sourceImageCurrentRegionText,  3/*row*/, 1/*col*/, 1/*rowSpan*/, 1/*columnSpan*/);
 	    sourceDetailsLayout.addWidget(&outputInterpretationSummaryLineEdit, 0/*row*/, 2/*col*/, 2/*rowSpan*/, 2/*columnSpan*/);
-	    sourceDetailsLayout.addWidget(&scaleImageWidget,         2/*row*/, 2/*col*/, 1/*rowSpan*/, 2/*columnSpan*/);
+	    sourceDetailsLayout.addWidget(&scaleImageWidget,         4/*row*/, 2/*col*/, 1/*rowSpan*/, 2/*columnSpan*/);
 	      scaleImageLayout.addWidget(&spacerScaleWidget);
 	      scaleImageLayout.addWidget(&scaleImageLabel);
 	      scaleImageLayout.addWidget(&scaleImageSpinBoxes);
-	    sourceDetailsLayout.addWidget(&sourceApplyEffectsWidget, 3/*row*/, 0/*col*/, 1/*rowSpan*/, 4/*columnSpan*/);
+	    sourceDetailsLayout.addWidget(&sourceApplyEffectsWidget, 5/*row*/, 0/*col*/, 1/*rowSpan*/, 4/*columnSpan*/);
 	      sourceApplyEffectsLayout.addWidget(&sourceEffectFlipHorizontallyLabel,    0/*row*/, 0/*column*/);
 	      sourceApplyEffectsLayout.addWidget(&sourceEffectFlipHorizontallyCheckBox, 0/*row*/, 1/*column*/);
 	      sourceApplyEffectsLayout.addWidget(&sourceEffectFlipVerticallyLabel,      1/*row*/, 0/*column*/);
@@ -245,10 +249,10 @@ MainWindow::MainWindow()
 	      sourceApplyEffectsLayout.addWidget(&sourceEffectConvolutionParamsWidget,  3/*row*/, 1/*column*/);
 	        sourceEffectConvolutionParamsLayout.addWidget(&sourceEffectConvolutionTypeComboBox);
 	        sourceEffectConvolutionParamsLayout.addWidget(&sourceEffectConvolutionCountComboBox);
-	    sourceDetailsLayout.addWidget(&computeWidget,            4/*row*/, 0/*col*/, 1/*rowSpan*/, 4/*columnSpan*/);
+	    sourceDetailsLayout.addWidget(&computeWidget,            6/*row*/, 0/*col*/, 1/*rowSpan*/, 4/*columnSpan*/);
 	      computeLayout.addWidget(&computeButton);
 	      computeLayout.addWidget(&computeRegionComboBox);
-	    sourceDetailsLayout.addWidget(&computeByWidget,          5/*row*/, 0/*col*/, 1/*rowSpan*/, 4/*columnSpan*/);
+	    sourceDetailsLayout.addWidget(&computeByWidget,          7/*row*/, 0/*col*/, 1/*rowSpan*/, 4/*columnSpan*/);
 	      computeByLayout.addWidget(&inputNormalizationLabel);
 	      computeByLayout.addWidget(&inputNormalizationRangeComboBox);
 	      computeByLayout.addWidget(&inputNormalizationColorOrderComboBox);
@@ -284,7 +288,7 @@ MainWindow::MainWindow()
 
 	// alignment
 	svgScrollArea.setAlignment(Qt::AlignHCenter|Qt::AlignVCenter);
-	for (auto w : {&sourceImageFileNameLabel, &sourceImageFileSizeLabel, &sourceImageSizeLabel, &scaleImageLabel})
+	for (auto w : {&sourceImageFileNameLabel, &sourceImageFileSizeLabel, &sourceImageSizeLabel, &sourceImageCurrentRegionLabel, &scaleImageLabel})
 		w->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
 	for (auto w : {&sourceImageFileNameText, &sourceImageFileSizeText, &sourceImageSizeText})
 		w->setAlignment(Qt::AlignLeft|Qt::AlignVCenter);
@@ -309,6 +313,8 @@ MainWindow::MainWindow()
 	sourceImageFileSizeText             .setToolTip(tr("File size of the input image"));
 	sourceImageSizeLabel                .setToolTip(tr("Input image size"));
 	sourceImageSizeText                 .setToolTip(tr("Input image size"));
+	sourceImageCurrentRegionLabel       .setToolTip(tr("Currently selected region of the image"));
+	sourceImageCurrentRegionText        .setToolTip(tr("Currently selected region of the image"));
 	for (QWidget *w : {(QWidget*)&scaleImageLabel,(QWidget*)&scaleImageSpinBoxes})
 		w->                          setToolTip(tr("Scale the image to fit the screen, or to select its area for NN computation"));
 	sourceApplyEffectsWidget            .setToolTip(tr("Apply effects to the image"));
@@ -343,6 +349,8 @@ MainWindow::MainWindow()
 	sourceImageFileSizeText              .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
 	sourceImageSizeLabel                 .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
 	sourceImageSizeText                  .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+	sourceImageCurrentRegionLabel        .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+	sourceImageCurrentRegionText         .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
 	scaleImageWidget                     .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
 	spacerScaleWidget                    .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
 	scaleImageLabel                      .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
@@ -439,6 +447,7 @@ MainWindow::MainWindow()
 
 		// update the image on screen accordingly
 		updateSourceImageOnScreen();
+		updateCurrentRegionText();
 	});
 	connect(&sourceEffectFlipHorizontallyCheckBox, &QCheckBox::stateChanged, [this](int) {
 		effectsChanged();
@@ -510,6 +519,12 @@ MainWindow::MainWindow()
 	});
 	connect(&clearComputationResults, &QAbstractButton::pressed, [this]() {
 		clearComputedTensorData();
+	});
+	connect(sourceImageScrollArea.horizontalScrollBar(), &QAbstractSlider::valueChanged, [this]() {
+		updateCurrentRegionText();
+	});
+	connect(sourceImageScrollArea.verticalScrollBar(), &QAbstractSlider::valueChanged, [this]() {
+		updateCurrentRegionText();
 	});
 
 	// monitor memory use
@@ -636,6 +651,10 @@ bool MainWindow::loadModelFile(const QString &filePath) {
 }
 
 /// private methods
+
+bool MainWindow::haveImageOpen() const {
+	return (bool)sourceTensorDataAsLoaded;
+}
 
 MainWindow::AnyObject MainWindow::findObjectAtThePoint(const QPointF &pt) {
 	// XXX ad hoc algorithm until we find some good geoindexing implementation
@@ -832,6 +851,7 @@ void MainWindow::openImageFile(const QString &imageFileName) {
 	sourceImageFileNameText.setText(imageFileName);
 	sourceImageFileSizeText.setText(QString("%1 bytes").arg(S2Q(Util::formatUIntHumanReadable(Util::getFileSize(imageFileName)))));
 	sourceImageSizeText.setText(S2Q(STR(sourceTensorShape)));
+	updateCurrentRegionText();
 	// focus
 	computeButton.setFocus();
 }
@@ -856,6 +876,7 @@ void MainWindow::openImagePixmap(const QPixmap &imagePixmap, const QString &sour
 	sourceImageFileNameText.setText(QString("{%1}").arg(sourceName));
 	sourceImageFileSizeText.setText(QString("{%1}").arg(sourceName));
 	sourceImageSizeText.setText(S2Q(STR(sourceTensorShape)));
+	updateCurrentRegionText();
 	// focus
 	computeButton.setFocus();
 }
@@ -1035,6 +1056,19 @@ void MainWindow::updateSourceImageOnScreen() {
 	}
 }
 
+void MainWindow::updateCurrentRegionText() {
+	auto region = getVisibleImageRegion();
+	if (region[0]!=0 || region[1]!=0 || region[2]+1!=sourceTensorShape[1] || region[3]+1!=sourceTensorShape[0])
+		sourceImageCurrentRegionText.setText(QString("[%1x%2,%3x%4]")
+			.arg(region[0])
+			.arg(region[1])
+			.arg(region[2]-region[0]+1)
+			.arg(region[3]-region[1]+1)
+		);
+	else
+		sourceImageCurrentRegionText.setText("<whole image>");
+}
+
 void MainWindow::updateResultInterpretationSummary(bool enable, const QString &oneLine, const QString &details) {
 	outputInterpretationSummaryLineEdit.setVisible(enable);
 	outputInterpretationSummaryLineEdit.setText(oneLine);
@@ -1042,6 +1076,7 @@ void MainWindow::updateResultInterpretationSummary(bool enable, const QString &o
 }
 
 std::array<unsigned,4> MainWindow::getVisibleImageRegion() const {
+	assert(haveImageOpen());
 	auto visibleRegion = sourceImage.visibleRegion().boundingRect();
 	auto size = sourceImage.size();
 	assert(visibleRegion.left() >= 0);

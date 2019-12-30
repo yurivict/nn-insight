@@ -17,7 +17,7 @@
 #include <cstring>
 #include <memory>
 
-#include <unistd.h> // sleep
+#include <unistd.h> // sleep,readlink
 #include <sys/stat.h>
 
 namespace Util {
@@ -147,6 +147,26 @@ QStringList readListFromFile(const char *fileName) {
 	data = file.readAll();
 	file.close();
 	return data.split("\n", QString::SkipEmptyParts);
+}
+
+std::string getMyOwnExecutablePath() {
+#if defined(__FreeBSD__) || defined(__DragonFly__) || defined(__OpenBSD__) || defined(__NetBSD__)
+	const char* selfExeLink = "/proc/curproc/file";
+#elif defined(__linux__)
+	const char* selfExeLink = "/proc/self/exe";
+#else
+#  error "Your OS is not yet supported"
+#endif
+
+	char buf[PATH_MAX+1];
+	auto res = ::readlink(selfExeLink, buf, sizeof(buf) - 1);
+	if (res == -1)
+		FAIL("Failed to read the link " << selfExeLink << " to determine our executable path")
+	buf[res] = 0;
+
+	PRINT("getMyOwnExecutablePath: " << buf)
+
+	return buf;
 }
 
 }

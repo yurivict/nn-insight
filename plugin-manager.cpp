@@ -51,7 +51,14 @@ static std::string pluginNameToPluginLibraryPath(const std::string &pluginName) 
 		return pathLocalDevDir;
 
 	// try globally installed situation
-	auto pathGlobalInstallDir = STR("../libexec/nn-insight/" << pluginName << "-plugin.so");
+	auto getMyExecutionPath = []() {
+		auto myExe = Util::getMyOwnExecutablePath();
+		auto sep = myExe.find_last_of('/');
+		if (sep==std::string::npos)
+			FAIL("bad executable path: it doesn't contain a separator '/': " << myExe)
+		return myExe.substr(0,sep);
+	};
+	auto pathGlobalInstallDir = STR(getMyExecutionPath() << "/../libexec/nn-insight/" << pluginName << "-plugin.so");
 	if (Util::doesFileExist(pathGlobalInstallDir.c_str()))
 		return pathGlobalInstallDir;
 

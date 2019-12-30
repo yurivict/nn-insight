@@ -60,7 +60,9 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 	// helpers
 	auto toDOT = [&](const PluginInterface::Model *model, std::ostream &os) {
 		os << "digraph D {" << std::endl;
-		os << "  graph [ dpi = " << Util::getScreenDPI() << " ]; " << std::endl;
+		os << "  graph [ dpi = " << Util::getScreenDPI() << "; ordering=\"in\" ]; " << std::endl; // preserve edge order as they are consumed as inputs.
+		                                                                                          // ideally we need to have both "in" and "out" ordering
+													  // see https://gitlab.com/graphviz/graphviz/issues/1645
 		for (PluginInterface::OperatorId oid = 0, oide = model->numOperators(); oid < oide; oid++) {
 			auto szBox = operatorBoxFn(oid);
 			os << "Op_" << oid << " [shape=box"

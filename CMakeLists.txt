@@ -66,6 +66,7 @@ add_executable(nn-insight
 	image.cpp
 	compute.cpp
 	graphviz-cgraph.cpp
+	constant-values.cpp
 	3rdparty/tensorflow/tflite-reference-implementation.cpp
 	resources.qrc
 )

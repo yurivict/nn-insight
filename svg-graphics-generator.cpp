@@ -22,6 +22,7 @@
 #include "misc.h"
 #include "util.h"
 #include "fonts.h"
+#include "constant-values.h"
 
 namespace SvgGraphics {
 
@@ -30,12 +31,12 @@ public:
 	QByteArray ba;
 	QBuffer    buff;
 
-	SvgGenerator(unsigned width, unsigned height, const char *title)
+	SvgGenerator(unsigned width, unsigned height, unsigned marginPixelsX, unsigned marginPixelsY, const char *title)
 	: buff(&ba)
 	{
 		setOutputDevice(&buff);
 		setResolution(Util::getScreenDPI());
-		setViewBox(QRect(0, 0, width, height));
+		setViewBox(QRect(-marginPixelsX, -marginPixelsY, width+2*marginPixelsX, height+2*marginPixelsY));
 		setTitle(title);
 		//setDescription("");
 	}
@@ -144,7 +145,10 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::arra
 
 	// generate the SVG file
 
-	SvgGenerator generator(bbox[1][0]/*width*/, bbox[1][1]/*height*/, "NN Model");
+	float marginPixelsX = ConstantValues::nnDisplayMarginInchesX*Util::getScreenDPI();
+	float marginPixelsY = ConstantValues::nnDisplayMarginInchesY*Util::getScreenDPI();
+
+	SvgGenerator generator(bbox[1][0]/*width*/, bbox[1][1]/*height*/, (unsigned)marginPixelsX, (unsigned)marginPixelsY, "NN Model");
 
 	QPainter painter;
 	//painter.setRenderHint(QPainter::Antialiasing);
@@ -296,6 +300,11 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::arra
 	}
 
 	painter.end();
+
+	// shift indexes by margins
+	for (auto &outIndex : outIndexes)
+		for (auto &rect : *outIndex)
+			rect.adjust(marginPixelsX,marginPixelsY, marginPixelsX,marginPixelsY);
 
 	return generator.ba;
 }

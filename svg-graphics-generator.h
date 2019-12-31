@@ -4,12 +4,12 @@
 
 #include "plugin-interface.h"
 
-#include <tuple>
+#include <array>
 
 namespace SvgGraphics {
 
 QByteArray generateModelSvg(const PluginInterface::Model *model,
-	const std::tuple<std::vector<QRectF>&,std::vector<QRectF>&> outIndexes // indexes: allOperatorBoxes,allTensorLabelBoxes
+	const std::array<std::vector<QRectF>*,4> outIndexes // indexes: allOperatorBoxes,allTensorLabelBoxes,allInputBoxes,allOutputBoxes
 );
 
 }

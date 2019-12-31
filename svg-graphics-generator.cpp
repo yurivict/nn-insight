@@ -13,6 +13,7 @@
 #include <QPointF>
 
 #include <vector>
+#include <array>
 #include <map>
 
 #include <assert.h>
@@ -40,7 +41,7 @@ public:
 	}
 };
 
-QByteArray generateModelSvg(const PluginInterface::Model *model, const std::tuple<std::vector<QRectF>&,std::vector<QRectF>&> outIndexes) {
+QByteArray generateModelSvg(const PluginInterface::Model *model, const std::array<std::vector<QRectF>*,4> outIndexes) {
 	// options
 	qreal  operatorBoxRadius          = 5;
 	qreal  operatorBoxBorderWidth     = 2;
@@ -221,14 +222,16 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::tupl
 	};
 
 	// resize indexes
-	std::get<0>(outIndexes).resize(model->numOperators());
-	std::get<1>(outIndexes).resize(model->numTensors());
+	outIndexes[0]->resize(model->numOperators());
+	outIndexes[1]->resize(model->numTensors());
+	outIndexes[2]->resize(model->numInputs());
+	outIndexes[3]->resize(model->numOutputs());
 
 	{ // draw operator boxes
 		PluginInterface::OperatorId oid = 0;
 		for (auto &dotBox : operatorBoxes) {
 			drawBox(painter,
-				std::get<0>(outIndexes)[oid] = boxToQRectF(dotBoxToQtBox(dotBox)),
+				(*outIndexes[0])[oid] = boxToQRectF(dotBoxToQtBox(dotBox)),
 				STR(model->getOperatorKind(oid)),
 				clrOperatorTitleBackground(model->getOperatorKind(oid)),
 				{},
@@ -239,23 +242,30 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::tupl
 	}
 
 	// draw input boxes
-	for (auto it : inputBoxes)
+	for (auto it : inputBoxes) {
+		auto box = boxToQRectF(dotBoxToQtBox(it.second));
+		outIndexes[2]->push_back(box);
 		drawBox(painter,
-			boxToQRectF(dotBoxToQtBox(it.second)),
-			STR("Input#" << it.first),
+			box,
+			STR("Input#" << it.first/*tid*/),
 			Qt::gray,
 			{},
 			""
 		);
+	}
+
 	// draw output boxes
-	for (auto it : outputBoxes)
+	for (auto it : outputBoxes) {
+		auto box = boxToQRectF(dotBoxToQtBox(it.second));
+		outIndexes[3]->push_back(box);
 		drawBox(painter,
-			boxToQRectF(dotBoxToQtBox(it.second)),
-			STR("Output#" << it.first),
+			box,
+			STR("Output#" << it.first/*tid*/),
 			Qt::gray,
 			{},
 			""
 		);
+	}
 
 	{ // draw tensor splines
 		painter.setPen(clrTensorLine);
@@ -279,7 +289,7 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::tupl
 					outTextRect
 				);
 				// add to the index
-				std::get<1>(outIndexes)[tid] = outTextRect;
+				(*outIndexes[1])[tid] = outTextRect;
 			}
 			tid++;
 		}

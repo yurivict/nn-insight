@@ -136,8 +136,10 @@ private: // fields
 	std::unique_ptr<std::vector<std::shared_ptr<const float>>>   tensorData; // tensors corresponding to the currently used image, shared because reshape/input often shared
 
 	struct {
-		std::vector<QRectF> allOperatorBoxes; // indexed based on OperatorId
+		std::vector<QRectF> allOperatorBoxes;    // indexed based on OperatorId
 		std::vector<QRectF> allTensorLabelBoxes; // indexed based on TensorId
+		std::vector<QRectF> allInputBoxes;       // indexed based on input id
+		std::vector<QRectF> allOutputBoxes;      // indexed based on output id
 	} modelIndexes;
 	std::vector<std::unique_ptr<QWidget>>   tempDetailWidgets;
 
@@ -149,6 +151,8 @@ private: // types
 	struct AnyObject {
 		int operatorId;
 		int tensorId;
+		int inputIdx;
+		int outputIdx;
 	};
 
 private: // private methods

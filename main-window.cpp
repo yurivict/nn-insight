@@ -434,9 +434,12 @@ MainWindow::MainWindow()
 				showOperatorDetails((PluginInterface::OperatorId)searchResult.operatorId);
 			else if (searchResult.tensorId != -1)
 				showTensorDetails((PluginInterface::TensorId)searchResult.tensorId);
-			else {
-				// no object was found: ignore the signal
-			}
+			else if (searchResult.inputIdx != -1)
+				PRINT("click on the input box idx=" << searchResult.inputIdx << " tid=" << model->getInputs()[searchResult.inputIdx])
+			else if (searchResult.outputIdx != -1)
+				PRINT("click on the output box idx=" << searchResult.outputIdx << " tid=" << model->getOutputs()[searchResult.outputIdx])
+			else
+				PRINT("click on the blank area is ignored")
 		}
 	});
 	connect(&scaleImageSpinBoxes, &ScaleImageWidget::scalingFactorChanged, [this](unsigned widthFactor, unsigned heightFactor) {
@@ -648,7 +651,8 @@ bool MainWindow::loadModelFile(const QString &filePath) {
 	model = pluginInterface->getModel(0);
 
 	// render the model as an SVG image
-	svgWidget.load(SvgGraphics::generateModelSvg(model, {modelIndexes.allOperatorBoxes, modelIndexes.allTensorLabelBoxes}));
+	svgWidget.load(SvgGraphics::generateModelSvg(model,
+		{&modelIndexes.allOperatorBoxes, &modelIndexes.allTensorLabelBoxes, &modelIndexes.allInputBoxes, &modelIndexes.allOutputBoxes}));
 
 	// set window title
 	setWindowTitle(QString("NN Insight: %1 (%2)").arg(filePath).arg(S2Q(Util::formatFlops(ModelFunctions::computeModelFlops(model)))));
@@ -668,14 +672,24 @@ MainWindow::AnyObject MainWindow::findObjectAtThePoint(const QPointF &pt) {
 	// operator?
 	for (PluginInterface::OperatorId oid = 0, oide = modelIndexes.allOperatorBoxes.size(); oid < oide; oid++)
 		if (modelIndexes.allOperatorBoxes[oid].contains(pt))
-			return {(int)oid,-1};
+			return {(int)oid,-1,-1,-1};
 
 	// tensor label?
 	for (PluginInterface::TensorId tid = 0, tide = modelIndexes.allTensorLabelBoxes.size(); tid < tide; tid++)
 		if (modelIndexes.allTensorLabelBoxes[tid].contains(pt))
-			return {-1,(int)tid};
+			return {-1,(int)tid,-1,-1};
 
-	return {-1,-1}; // not found
+	// input label?
+	for (unsigned idx = 0, idxe = modelIndexes.allInputBoxes.size(); idx < idxe; idx++)
+		if (modelIndexes.allInputBoxes[idx].contains(pt))
+			return {-1,-1,(int)model->getInputs()[idx],-1};
+
+	// output label?
+	for (unsigned idx = 0, idxe = modelIndexes.allOutputBoxes.size(); idx < idxe; idx++)
+		if (modelIndexes.allOutputBoxes[idx].contains(pt))
+			return {-1,-1,-1,(int)model->getOutputs()[idx]};
+
+	return {-1,-1,-1,-1}; // not found
 }
 
 void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {

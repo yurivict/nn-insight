@@ -172,6 +172,10 @@ public: // interface implementation
 		return modelFileName;
 	}
 
+	std::string modelDescription() const override {
+		return model->description()->c_str();
+	}
+
 	virtual bool open(const std::string &modelFileName_) override {
 		// open the file
 		fd = ::open(modelFileName_.c_str(), O_RDONLY); // since TF Lite models aren't officially writable we open it in RO mode

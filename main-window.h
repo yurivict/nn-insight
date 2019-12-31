@@ -105,6 +105,16 @@ private: // fields
 	QStackedWidget                       nnDetailsStack;
 	QGroupBox                              noDetails;       // page#0
 	QGroupBox                              nnNetworkDetails;   // page#1
+	QGridLayout                              nnNetworkDetailsLayout;
+	QLabel                                   nnNetworkDescriptionLabel;
+	QLabel                                   nnNetworkDescriptionText;
+	QLabel                                   nnNetworkComplexityLabel;
+	QLabel                                   nnNetworkComplexityText;
+	QLabel                                   nnNetworkNumberInsOutsLabel;
+	QLabel                                   nnNetworkNumberInsOutsText;
+	QLabel                                   nnNetworkNumberOperatorsLabel;
+	QLabel                                   nnNetworkNumberOperatorsText;
+	QWidget                                  nnNetworkDetailsSpacer;
 	QGroupBox                              nnOperatorDetails; // page#2
 	QGridLayout                              nnOperatorDetailsLayout;
 	QLabel                                   nnOperatorTypeLabel;
@@ -161,6 +171,7 @@ private: // private methods
 		bool flipHorizontally, bool flipVertically, bool makeGrayscale,
 		const std::tuple<TensorShape,std::vector<float>> &convolution, unsigned convolutionCount) const;
 	void clearEffects();
+	void updateNetworkDetailsPage();
 	void updateSourceImageOnScreen();
 	void updateCurrentRegionText();
 	void updateResultInterpretationSummary(bool enable, const QString &oneLine, const QString &details);

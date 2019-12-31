@@ -187,6 +187,16 @@ MainWindow::MainWindow()
 ,      nnDetailsStack(&rhsWidget)
 ,        noDetails(tr("--blank (no details)--"), &nnDetailsStack)
 ,        nnNetworkDetails(tr("Neural Network Details"), &nnDetailsStack)
+,          nnNetworkDetailsLayout(&nnNetworkDetails)
+,          nnNetworkDescriptionLabel(tr("Description"), &nnNetworkDetails)
+,          nnNetworkDescriptionText(&nnNetworkDetails)
+,          nnNetworkComplexityLabel(tr("Complexity"), &nnNetworkDetails)
+,          nnNetworkComplexityText(&nnNetworkDetails)
+,          nnNetworkNumberInsOutsLabel(tr("Number of inputs/outputs"), &nnNetworkDetails)
+,          nnNetworkNumberInsOutsText(&nnNetworkDetails)
+,          nnNetworkNumberOperatorsLabel(tr("Number of operators"), &nnNetworkDetails)
+,          nnNetworkNumberOperatorsText(&nnNetworkDetails)
+,          nnNetworkDetailsSpacer(&nnNetworkDetails)
 ,        nnOperatorDetails(&nnDetailsStack)
 ,          nnOperatorDetailsLayout(&nnOperatorDetails)
 ,          nnOperatorTypeLabel(tr("Operator Type"), &nnOperatorDetails)
@@ -268,8 +278,16 @@ MainWindow::MainWindow()
 	rhsLayout.addWidget(&blankRhsLabel);
 	nnDetailsStack.addWidget(&noDetails);
 	nnDetailsStack.addWidget(&nnNetworkDetails);
+		nnNetworkDetailsLayout.addWidget(&nnNetworkDescriptionLabel,      0/*row*/, 0/*col*/);
+		nnNetworkDetailsLayout.addWidget(&nnNetworkDescriptionText,       0/*row*/, 1/*col*/);
+		nnNetworkDetailsLayout.addWidget(&nnNetworkComplexityLabel,       1/*row*/, 0/*col*/);
+		nnNetworkDetailsLayout.addWidget(&nnNetworkComplexityText,        1/*row*/, 1/*col*/);
+		nnNetworkDetailsLayout.addWidget(&nnNetworkNumberInsOutsLabel,    2/*row*/, 0/*col*/);
+		nnNetworkDetailsLayout.addWidget(&nnNetworkNumberInsOutsText,     2/*row*/, 1/*col*/);
+		nnNetworkDetailsLayout.addWidget(&nnNetworkNumberOperatorsLabel,  3/*row*/, 0/*col*/);
+		nnNetworkDetailsLayout.addWidget(&nnNetworkNumberOperatorsText,   3/*row*/, 1/*col*/);
+		nnNetworkDetailsLayout.addWidget(&nnNetworkDetailsSpacer,         4/*row*/, 0/*col*/,  1/*rowSpan*/, 2/*columnSpan*/);
 	nnDetailsStack.addWidget(&nnOperatorDetails);
-		nnOperatorDetails.setLayout(&nnOperatorDetailsLayout);
 	nnDetailsStack.addWidget(&nnTensorDetails);
 
 	svgScrollArea.setWidgetResizable(true);
@@ -337,6 +355,14 @@ MainWindow::MainWindow()
 		w->                          setToolTip(tr("How to interpret the computation result?"));
 	clearComputationResults             .setToolTip(tr("Clear computation results"));
 	sourceImage                         .setToolTip(tr("Image currently used as NN input"));
+	for (auto l : {&nnNetworkDescriptionLabel,&nnNetworkDescriptionText})
+		l->                          setToolTip(tr("Network description as specified in the NN file, if any"));
+	for (auto l : {&nnNetworkComplexityLabel,&nnNetworkComplexityText})
+		l->                          setToolTip(tr("Network complexity, i.e. how many operations between simple numbers are required to compute this network"));
+	for (auto l : {&nnNetworkNumberInsOutsLabel,&nnNetworkNumberInsOutsText})
+		l->                          setToolTip(tr("Number of inputs and outputs in this network"));
+	for (auto l : {&nnNetworkNumberOperatorsLabel,&nnNetworkNumberOperatorsText})
+		l->                          setToolTip(tr("Number of operators in this network"));
 	nnOperatorTypeLabel                 .setToolTip(tr("Operator type: what kind of operation does it perform"));
 	nnOperatorComplexityValue           .setToolTip(tr("Complexity of the currntly selected NN in FLOPS"));
 
@@ -372,6 +398,10 @@ MainWindow::MainWindow()
 	spacer3Widget                        .setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum);
 	sourceImageScrollArea                .setSizePolicy(QSizePolicy::Fixed,   QSizePolicy::Fixed);
 	nnDetailsStack                       .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+	for (auto *w : {&nnNetworkDescriptionLabel,&nnNetworkDescriptionText,&nnNetworkComplexityLabel,&nnNetworkComplexityText,
+	                &nnNetworkNumberInsOutsLabel,&nnNetworkNumberInsOutsText,&nnNetworkNumberOperatorsLabel,&nnNetworkNumberOperatorsText})
+		w->                           setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+	nnNetworkDetailsSpacer               .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
 
 	// margins and spacing
 	for (QLayout *l : {&scaleImageLayout, &sourceEffectConvolutionParamsLayout, &computeByLayout})
@@ -380,6 +410,7 @@ MainWindow::MainWindow()
 		l->setSpacing(0);
 	for (auto w : {&spacer1Widget, &spacer2Widget, &spacer3Widget})
 		w->setMinimumWidth(10);
+	nnNetworkDetailsLayout .setVerticalSpacing(0);
 	nnOperatorDetailsLayout.setVerticalSpacing(0);
 
 	// widget options and flags
@@ -422,7 +453,8 @@ MainWindow::MainWindow()
 	outputInterpretationKindComboBox.addItem("No/Yes",          ConvolutionEffect_None);
 
 	// fonts
-	for (auto widget : {&nnOperatorTypeLabel, &nnOperatorOptionsLabel, &nnOperatorInputsLabel, &nnOperatorOutputsLabel, &nnOperatorComplexityLabel})
+	for (auto widget : {&nnNetworkDescriptionLabel, &nnNetworkComplexityLabel, &nnNetworkNumberInsOutsLabel, &nnNetworkNumberOperatorsLabel,
+	                    &nnOperatorTypeLabel, &nnOperatorOptionsLabel, &nnOperatorInputsLabel, &nnOperatorOutputsLabel, &nnOperatorComplexityLabel})
 		widget->setStyleSheet("font-weight: bold;");
 
 	// connect signals
@@ -653,6 +685,7 @@ bool MainWindow::loadModelFile(const QString &filePath) {
 	nnWidget.open(model);
 
 	// switch NN details to show the whole network info page
+	updateNetworkDetailsPage();
 	nnDetailsStack.setCurrentIndex(/*page#*/1);
 
 	// set window title
@@ -1012,6 +1045,21 @@ void MainWindow::clearEffects() {
 	sourceEffectConvolutionTypeComboBox .setCurrentIndex(0);
 	sourceEffectConvolutionCountComboBox.setCurrentIndex(0);
 	sourceEffectConvolutionCountComboBox.setEnabled(false);
+}
+
+void MainWindow::updateNetworkDetailsPage() {
+	nnNetworkDescriptionText   .setText(S2Q(pluginInterface->modelDescription()));
+	nnNetworkComplexityText    .setText(S2Q(Util::formatFlops(ModelFunctions::computeModelFlops(model))));
+	nnNetworkNumberInsOutsText .setText(QString("%1 %2, %3 %4")
+		.arg(model->numInputs())
+		.arg(model->numInputs()%10==1 ? tr("input") : tr("inputs"))
+		.arg(model->numOutputs())
+		.arg(model->numOutputs()%10==1 ? tr("output") : tr("outputs"))
+	);
+	nnNetworkNumberOperatorsText .setText(QString("%1 %2")
+		.arg(model->numOperators())
+		.arg(model->numOperators()%10==1 ? tr("operator") : tr("operators"))
+	);
 }
 
 void MainWindow::updateSourceImageOnScreen() {

@@ -104,7 +104,8 @@ private: // fields
 	// Rhs/NN details
 	QStackedWidget                       nnDetailsStack;
 	QGroupBox                              noDetails;       // page#0
-	QGroupBox                              nnOperatorDetails; // page#1
+	QGroupBox                              nnNetworkDetails;   // page#1
+	QGroupBox                              nnOperatorDetails; // page#2
 	QGridLayout                              nnOperatorDetailsLayout;
 	QLabel                                   nnOperatorTypeLabel;
 	QLabel                                   nnOperatorTypeValue;
@@ -113,7 +114,7 @@ private: // fields
 	QLabel                                   nnOperatorOutputsLabel;
 	QLabel                                   nnOperatorComplexityLabel;
 	QLabel                                   nnOperatorComplexityValue;
-	QGroupBox                              nnTensorDetails;   // page#2
+	QGroupBox                              nnTensorDetails;   // page#3
 	// Rhs/NN tables
 	QLabel                               blankRhsLabel; // leftover label
 	std::unique_ptr<DataTable2D>         nnDataTable;
@@ -143,8 +144,12 @@ private: // fields
 
 private: // private methods
 	bool haveImageOpen() const;
+	void showNetworkDetails();
 	void showOperatorDetails(PluginInterface::OperatorId operatorId);
 	void showTensorDetails(PluginInterface::TensorId tensorId);
+	void showTensorDetails(PluginInterface::TensorId tensorId, const char *label);
+	void showInputDetails(PluginInterface::TensorId tensorId);
+	void showOutputDetails(PluginInterface::TensorId tensorId);
 	void removeTableIfAny();
 	void openImageFile(const QString &imageFileName);
 	void openImagePixmap(const QPixmap &imagePixmap, const QString &sourceName);

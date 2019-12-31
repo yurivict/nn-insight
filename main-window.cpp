@@ -185,7 +185,8 @@ MainWindow::MainWindow()
 ,        sourceImageScrollArea(&sourceWidget)
 ,          sourceImage(&sourceWidget)
 ,      nnDetailsStack(&rhsWidget)
-,        noDetails(tr("Neural Network Details"), &nnDetailsStack)
+,        noDetails(tr("--blank (no details)--"), &nnDetailsStack)
+,        nnNetworkDetails(tr("Neural Network Details"), &nnDetailsStack)
 ,        nnOperatorDetails(&nnDetailsStack)
 ,          nnOperatorDetailsLayout(&nnOperatorDetails)
 ,          nnOperatorTypeLabel(tr("Operator Type"), &nnOperatorDetails)
@@ -266,6 +267,7 @@ MainWindow::MainWindow()
 	rhsLayout.addWidget(&nnDetailsStack);
 	rhsLayout.addWidget(&blankRhsLabel);
 	nnDetailsStack.addWidget(&noDetails);
+	nnDetailsStack.addWidget(&nnNetworkDetails);
 	nnDetailsStack.addWidget(&nnOperatorDetails);
 		nnOperatorDetails.setLayout(&nnOperatorDetailsLayout);
 	nnDetailsStack.addWidget(&nnTensorDetails);
@@ -424,20 +426,20 @@ MainWindow::MainWindow()
 		widget->setStyleSheet("font-weight: bold;");
 
 	// connect signals
-	connect(&nnWidget, &NnWidget::clickedOnOperator, [this](PluginInterface::OperatorId oid) {
-		showOperatorDetails(oid);
+	connect(&nnWidget, &NnWidget::clickedOnOperator, [this](PluginInterface::OperatorId operatorId) {
+		showOperatorDetails(operatorId);
 	});
-	connect(&nnWidget, &NnWidget::clickedOnTensorEdge, [this](PluginInterface::TensorId tid) {
-		showTensorDetails(tid);
+	connect(&nnWidget, &NnWidget::clickedOnTensorEdge, [this](PluginInterface::TensorId tensorId) {
+		showTensorDetails(tensorId);
 	});
-	connect(&nnWidget, &NnWidget::clickedOnInput, [this](unsigned inputIdx, PluginInterface::TensorId tid) {
-		PRINT("click on the input box idx=" << inputIdx << " tid=" << tid)
+	connect(&nnWidget, &NnWidget::clickedOnInput, [this](unsigned inputIdx, PluginInterface::TensorId tensorId) {
+		showInputDetails(tensorId);
 	});
-	connect(&nnWidget, &NnWidget::clickedOnOutput, [this](unsigned outputIdx, PluginInterface::TensorId tid) {
-		PRINT("click on the output box idx=" << outputIdx << " tid=" << tid)
+	connect(&nnWidget, &NnWidget::clickedOnOutput, [this](unsigned outputIdx, PluginInterface::TensorId tensorId) {
+		showOutputDetails(tensorId);
 	});
 	connect(&nnWidget, &NnWidget::clickedOnBlankSpace, [this]() {
-		PRINT("click on the blank area is ignored")
+		showNetworkDetails();
 	});
 	connect(&scaleImageSpinBoxes, &ScaleImageWidget::scalingFactorChanged, [this](unsigned widthFactor, unsigned heightFactor) {
 		assert(scaleImageWidthPct!=0 && scaleImageHeightPct!=0); // scaling percentages are initially set when the image is open/pasted/etc
@@ -650,6 +652,9 @@ bool MainWindow::loadModelFile(const QString &filePath) {
 	// render the model as SVG image
 	nnWidget.open(model);
 
+	// switch NN details to show the whole network info page
+	nnDetailsStack.setCurrentIndex(/*page#*/1);
+
 	// set window title
 	setWindowTitle(QString("NN Insight: %1 (%2)").arg(filePath).arg(S2Q(Util::formatFlops(ModelFunctions::computeModelFlops(model)))));
 
@@ -662,10 +667,15 @@ bool MainWindow::haveImageOpen() const {
 	return (bool)sourceTensorDataAsLoaded;
 }
 
+void MainWindow::showNetworkDetails() {
+	removeTableIfAny();
+	nnDetailsStack.setCurrentIndex(/*page#*/1);
+}
+
 void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 	removeTableIfAny();
 	// switch to the details page, set title
-	nnDetailsStack.setCurrentIndex(/*page#1*/1);
+	nnDetailsStack.setCurrentIndex(/*page#1*/2);
 	nnOperatorDetails.setTitle(QString("Operator#%1").arg(operatorId));
 
 	// clear items
@@ -813,9 +823,21 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 }
 
 void MainWindow::showTensorDetails(PluginInterface::TensorId tensorId) {
+	showTensorDetails(tensorId, ""/*no label*/);
+}
+
+void MainWindow::showTensorDetails(PluginInterface::TensorId tensorId, const char *label) {
 	removeTableIfAny();
-	nnDetailsStack.setCurrentIndex(/*page#*/2);
-	nnTensorDetails.setTitle(QString("Tensor#%1: %2").arg(tensorId).arg(S2Q(model->getTensorName(tensorId))));
+	nnDetailsStack.setCurrentIndex(/*page#*/3);
+	nnTensorDetails.setTitle(QString("%1Tensor#%2: %3").arg(label).arg(tensorId).arg(S2Q(model->getTensorName(tensorId))));
+}
+
+void MainWindow::showInputDetails(PluginInterface::TensorId tensorId) {
+	showTensorDetails(tensorId, "Input "/*label*/);
+}
+
+void MainWindow::showOutputDetails(PluginInterface::TensorId tensorId) {
+	showTensorDetails(tensorId, "Output "/*label*/);
 }
 
 void MainWindow::removeTableIfAny() {

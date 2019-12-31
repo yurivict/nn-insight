@@ -185,7 +185,6 @@ MainWindow::MainWindow()
 ,        sourceImageScrollArea(&sourceWidget)
 ,          sourceImage(&sourceWidget)
 ,      nnDetailsStack(&rhsWidget)
-,        noDetails(tr("--blank (no details)--"), &nnDetailsStack)
 ,        nnNetworkDetails(tr("Neural Network Details"), &nnDetailsStack)
 ,          nnNetworkDetailsLayout(&nnNetworkDetails)
 ,          nnNetworkDescriptionLabel(tr("Description"), &nnNetworkDetails)
@@ -209,7 +208,9 @@ MainWindow::MainWindow()
 ,          nnOperatorComplexityLabel(tr("Complexity"), &nnOperatorDetails)
 ,          nnOperatorComplexityValue(&nnOperatorDetails)
 ,        nnTensorDetails(&nnDetailsStack)
-,      blankRhsLabel(tr("Select some operator"), &rhsWidget)
+,     noNnIsOpenGroupBox(tr("No Neural Network File is Open"), &rhsWidget)
+,       noNnIsOpenLayout(&noNnIsOpenGroupBox)
+,       noNnIsOpenWidget(&noNnIsOpenGroupBox)
 , menuBar(this)
 , statusBar(this)
 #if defined(USE_PERFTOOLS)
@@ -277,8 +278,8 @@ MainWindow::MainWindow()
 	  sourceLayout.addWidget(&sourceImageScrollArea);
 	    sourceImageScrollArea.setWidget(&sourceImage);
 	rhsLayout.addWidget(&nnDetailsStack);
-	rhsLayout.addWidget(&blankRhsLabel);
-	nnDetailsStack.addWidget(&noDetails);
+	rhsLayout.addWidget(&noNnIsOpenGroupBox);
+	  noNnIsOpenLayout.addWidget(&noNnIsOpenWidget);
 	nnDetailsStack.addWidget(&nnNetworkDetails);
 		nnNetworkDetailsLayout.addWidget(&nnNetworkDescriptionLabel,      0/*row*/, 0/*col*/);
 		nnNetworkDetailsLayout.addWidget(&nnNetworkDescriptionText,       0/*row*/, 1/*col*/);
@@ -403,7 +404,6 @@ MainWindow::MainWindow()
 	outputInterpretationKindComboBox     .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
 	spacer3Widget                        .setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum);
 	sourceImageScrollArea                .setSizePolicy(QSizePolicy::Fixed,   QSizePolicy::Fixed);
-	nnDetailsStack                       .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 	for (auto *w : {&nnNetworkDescriptionLabel, &nnNetworkDescriptionText, &nnNetworkComplexityLabel, &nnNetworkComplexityText,
 	                &nnNetworkFileSizeLabel, &nnNetworkFileSizeText, &nnNetworkNumberInsOutsLabel, &nnNetworkNumberInsOutsText,
 	                &nnNetworkNumberOperatorsLabel, &nnNetworkNumberOperatorsText})
@@ -421,8 +421,7 @@ MainWindow::MainWindow()
 	nnOperatorDetailsLayout.setVerticalSpacing(0);
 
 	// widget options and flags
-	sourceWidget.hide(); // hidden by default
-	noDetails.setEnabled(false); // always grayed out
+	updateSectionWidgetsVisibility();
 	sourceEffectConvolutionCountComboBox.setEnabled(false); // is only enabled when some convoulution is chosen
 
 	// widget states
@@ -573,6 +572,9 @@ MainWindow::MainWindow()
 		if (!self)
 			updateCurrentRegionText();
 	});
+	connect(&noNnIsOpenWidget, &NoNnIsOpenWidget::openNeuralNetworkFilePressed, [this]() {
+		onOpenNeuralNetworkFileUserIntent();
+	});
 
 	// monitor memory use
 #if defined(USE_PERFTOOLS)
@@ -594,7 +596,8 @@ MainWindow::MainWindow()
 		if (!fileName.isEmpty())
 			openImageFile(fileName);
 	})->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_O));
-	fileMenu->addAction(tr("Open Neural Network File"), []() {
+	fileMenu->addAction(tr("Open Neural Network File"), [this]() {
+		onOpenNeuralNetworkFileUserIntent();
 	})->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_N)); // non-standard because this is our custom operation
 	fileMenu->addAction(tr("Take Screenshot"), [this]() {
 		openImagePixmap(Util::getScreenshot(true/*hideOurWindows*/), tr("screenshot"));
@@ -690,10 +693,11 @@ bool MainWindow::loadModelFile(const QString &filePath) {
 
 	// render the model as SVG image
 	nnWidget.open(model);
+	updateSectionWidgetsVisibility();
 
 	// switch NN details to show the whole network info page
 	updateNetworkDetailsPage();
-	nnDetailsStack.setCurrentIndex(/*page#*/1);
+	nnDetailsStack.setCurrentIndex(/*page#*/0);
 
 	// set window title
 	setWindowTitle(QString("NN Insight: %1 (%2)").arg(filePath).arg(S2Q(Util::formatFlops(ModelFunctions::computeModelFlops(model)))));
@@ -709,14 +713,14 @@ bool MainWindow::haveImageOpen() const {
 
 void MainWindow::showNetworkDetails() {
 	removeTableIfAny();
-	nnDetailsStack.setCurrentIndex(/*page#*/1);
+	nnDetailsStack.setCurrentIndex(/*page#*/0);
 }
 
 void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 	removeTableIfAny();
 	// switch to the details page, set title
-	nnDetailsStack.setCurrentIndex(/*page#1*/2);
-	nnOperatorDetails.setTitle(QString("Operator#%1").arg(operatorId));
+	nnDetailsStack.setCurrentIndex(/*page#1*/1);
+	nnOperatorDetails.setTitle(QString(tr("NN Operator#%1")).arg(operatorId));
 
 	// clear items
 	while (nnOperatorDetailsLayout.count() > 0)
@@ -797,7 +801,6 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 							hasStaticData ? model->getTensorData(t) : (*tensorData.get())[t].get(),
 							&rhsWidget));
 						rhsLayout.addWidget(nnDataTable.get());
-						blankRhsLabel.hide();
 						break;
 					}}
 				});
@@ -868,7 +871,7 @@ void MainWindow::showTensorDetails(PluginInterface::TensorId tensorId) {
 
 void MainWindow::showTensorDetails(PluginInterface::TensorId tensorId, const char *label) {
 	removeTableIfAny();
-	nnDetailsStack.setCurrentIndex(/*page#*/3);
+	nnDetailsStack.setCurrentIndex(/*page#*/2);
 	nnTensorDetails.setTitle(QString("%1Tensor#%2: %3").arg(label).arg(tensorId).arg(S2Q(model->getTensorName(tensorId))));
 }
 
@@ -884,7 +887,6 @@ void MainWindow::removeTableIfAny() {
 	if (nnDataTable.get()) {
 		rhsLayout.removeWidget(nnDataTable.get());
 		nnDataTable.reset(nullptr);
-		blankRhsLabel.show();
 	}
 }
 
@@ -897,7 +899,7 @@ void MainWindow::openImageFile(const QString &imageFileName) {
 	sourceTensorDataAsLoaded.reset(Image::readPngImageFile(Q2S(imageFileName), sourceTensorShape));
 	sourceTensorDataAsUsed = sourceTensorDataAsLoaded;
 	// enable widgets, show image
-	sourceWidget.show();
+	updateSectionWidgetsVisibility();
 	updateSourceImageOnScreen();
 	// set info on the screen
 	sourceImageFileNameText.setText(imageFileName);
@@ -922,7 +924,7 @@ void MainWindow::openImagePixmap(const QPixmap &imagePixmap, const QString &sour
 	}
 	sourceTensorDataAsUsed = sourceTensorDataAsLoaded;
 	// enable widgets, show image
-	sourceWidget.show();
+	updateSectionWidgetsVisibility();
 	updateSourceImageOnScreen();
 	// set info on the screen
 	sourceImageFileNameText.setText(QString("{%1}").arg(sourceName));
@@ -934,7 +936,7 @@ void MainWindow::openImagePixmap(const QPixmap &imagePixmap, const QString &sour
 }
 
 void MainWindow::clearInputImageDisplay() {
-	sourceWidget.hide();
+	updateSectionWidgetsVisibility();
 	sourceImage.setPixmap(QPixmap());
 	sourceTensorDataAsLoaded = nullptr;
 	sourceTensorDataAsUsed = nullptr;
@@ -1169,4 +1171,18 @@ std::array<unsigned,4> MainWindow::getVisibleImageRegion() const {
 		(unsigned)(region[2]*sourceWidth-1),
 		(unsigned)(region[3]*sourceHeight-1)
 	};
+}
+
+void MainWindow::updateSectionWidgetsVisibility() {
+	bool haveImage = (bool)sourceTensorDataAsLoaded;
+	bool haveNn    = model!=nullptr;
+
+	sourceWidget      .setVisible(haveImage);
+	noNnIsOpenGroupBox.setVisible(!haveNn);
+
+	nnDetailsStack.setSizePolicy(QSizePolicy::Preferred, haveImage ? QSizePolicy::Fixed : QSizePolicy::Minimum);
+}
+
+void MainWindow::onOpenNeuralNetworkFileUserIntent() {
+	PRINT("MainWindow::onOpenNeuralNetworkFileUserIntent")
 }

@@ -61,6 +61,7 @@ add_executable(nn-insight
 	render-model-to-coordinates.cpp
 	svg-graphics-generator.cpp
 	nn-widget.cpp
+	no-nn-is-open-widget.cpp
 	zoomable-svg-widget.cpp
 	DataTable2D.cpp
 	scale-image-widget.cpp

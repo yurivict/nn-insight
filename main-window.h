@@ -6,6 +6,7 @@
 #include <QStackedWidget>
 #include <QGroupBox>
 #include "nn-widget.h"
+#include "no-nn-is-open-widget.h"
 #include "scale-image-widget.h"
 #include "DataTable2D.h"
 #include <QLabel>
@@ -103,8 +104,7 @@ private: // fields
 	QLabel                                   sourceImage;
 	// Rhs/NN details
 	QStackedWidget                       nnDetailsStack;
-	QGroupBox                              noDetails;       // page#0
-	QGroupBox                              nnNetworkDetails;   // page#1
+	QGroupBox                              nnNetworkDetails;   // page#0
 	QGridLayout                              nnNetworkDetailsLayout;
 	QLabel                                   nnNetworkDescriptionLabel;
 	QLabel                                   nnNetworkDescriptionText;
@@ -117,7 +117,7 @@ private: // fields
 	QLabel                                   nnNetworkNumberOperatorsLabel;
 	QLabel                                   nnNetworkNumberOperatorsText;
 	QWidget                                  nnNetworkDetailsSpacer;
-	QGroupBox                              nnOperatorDetails; // page#2
+	QGroupBox                              nnOperatorDetails; // page#1
 	QGridLayout                              nnOperatorDetailsLayout;
 	QLabel                                   nnOperatorTypeLabel;
 	QLabel                                   nnOperatorTypeValue;
@@ -126,9 +126,11 @@ private: // fields
 	QLabel                                   nnOperatorOutputsLabel;
 	QLabel                                   nnOperatorComplexityLabel;
 	QLabel                                   nnOperatorComplexityValue;
-	QGroupBox                              nnTensorDetails;   // page#3
+	QGroupBox                              nnTensorDetails;   // page#2
+	QGroupBox                            noNnIsOpenGroupBox; // optionally visible
+	QVBoxLayout                            noNnIsOpenLayout;
+	NoNnIsOpenWidget                       noNnIsOpenWidget;
 	// Rhs/NN tables
-	QLabel                               blankRhsLabel; // leftover label
 	std::unique_ptr<DataTable2D>         nnDataTable;
 
 	QMenuBar                         menuBar;
@@ -178,5 +180,7 @@ private: // private methods
 	void updateCurrentRegionText();
 	void updateResultInterpretationSummary(bool enable, const QString &oneLine, const QString &details);
 	std::array<unsigned,4> getVisibleImageRegion() const;
+	void updateSectionWidgetsVisibility();
+	void onOpenNeuralNetworkFileUserIntent();
 };
 

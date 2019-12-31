@@ -109,7 +109,7 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::tupl
 
 	// render the model to the coordinates
 	ModelFunctions::Box2 bbox;
-	std::vector<ModelFunctions::Box4> operatorBoxes;
+	std::vector<ModelFunctions::Box2> operatorBoxes;
 	std::vector<std::vector<std::vector<QPointF>>> tensorLineCubicSplines;
 	std::vector<std::vector<QPointF>> tensorLabelPositions;
 	{
@@ -148,15 +148,13 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::tupl
 			res.push_back(dotQPointToQtQPoint(p));
 		return res;
 	};
-	auto dotBoxToQtBox = [&](const ModelFunctions::Box4 &box4) {
-		assert(box4[0][0]==box4[3][0]);
-		assert(box4[0][1]==box4[1][1]);
-		assert(box4[1][0]==box4[2][0]);
-		assert(box4[2][1]==box4[3][1]);
-		return ModelFunctions::Box2({{
-			{box4[1][0], dotYToQtY(box4[0][1])}, // coord
-			{box4[0][0]-box4[1][0], box4[1][1]-box4[2][1]}
-		}});
+	auto dotBoxToQtBox = [&](const ModelFunctions::Box2 &box2) {
+		auto center = box2[0];
+		auto size = box2[1];
+		return ModelFunctions::Box2{{
+			{center[0]-size[0]/2, dotYToQtY(center[1]+size[1]/2)}, // coord
+			{size[0], size[1]}
+		}};
 	};
 	auto boxToQRectF = [](const ModelFunctions::Box2 &box) {
 		return QRectF(box[0][0], box[0][1], box[1][0], box[1][1]);

@@ -6,14 +6,13 @@
 #include <set>
 #include <sstream>
 
-#include <nlohmann/json.hpp>
-
 #include <stdio.h>
 #include <errno.h>
 #include <assert.h>
 
 #include "model-functions.h"
 #include "plugin-interface.h"
+#include "graphviz-cgraph.h"
 #include "misc.h"
 #include "util.h"
 
@@ -34,7 +33,7 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 	const QMarginsF &operatorBoxMargins,
 	std::function<QSizeF(PluginInterface::OperatorId)> operatorBoxFn, // operator boxes in inches
 	Box2 &bbox,
-	std::vector<Box4> &operatorBoxes,
+	std::vector<Box2> &operatorBoxes,
 	std::vector<std::vector<std::vector<QPointF>>> &tensorLineCubicSplines,
 	std::vector<std::vector<QPointF>> &tensorLabelPositions
 ) {
@@ -57,87 +56,44 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 		}
 	}
 
+	// build the graphviz graph
+
+	Graphviz_CGraph graph("NnModel");
+	graph.setGraphDpi(Util::getScreenDPI());
+	graph.setGraphOrdering(true/*orderingIn*/, false/*orderingOut*/); // preserve edge order as they are consumed as inputs.
+	                                                                  // ideally we need to have both "in" and "out" ordering
+	                                                                  // see https://gitlab.com/graphviz/graphviz/issues/1645
+	graph.setDefaultNodeShape("box");
+	graph.setDefaultNodeSize(0,0);
+
+	std::vector<Graphviz_CGraph::Node> operatorNodes;
+	for (PluginInterface::OperatorId oid = 0, oide = model->numOperators(); oid < oide; oid++) {
+		auto node = graph.addNode(CSTR("Op_" << oid));
+		auto szBox = operatorBoxFn(oid);
+		graph.setNodeSize(node,
+			operatorBoxMargins.left() + szBox.width() + operatorBoxMargins.right(),
+			operatorBoxMargins.top() + szBox.height() + operatorBoxMargins.bottom()
+		);
+		operatorNodes.push_back(node);
+	}
+
+	std::vector<std::vector<Graphviz_CGraph::Node>> tensorEdges;
+	tensorEdges.resize(model->numTensors());
+	for (PluginInterface::TensorId tid = 0, tide = model->numTensors(); tid < tide; tid++)
+		if (tensorProducers[tid] != -1 && !tensorConsumers[tid].empty())
+			for (auto oidConsumer : tensorConsumers[tid]) {
+				auto edge = graph.addEdge(operatorNodes[tensorProducers[tid]], operatorNodes[oidConsumer], ""/*name(key)*/);
+				graph.setEdgeLabel(edge, CSTR(model->getTensorShape(tid)));
+				tensorEdges[tid].push_back(edge);
+			}
+
+	// render the graph
+
+	graph.render();
+
 	// helpers
-	auto toDOT = [&](const PluginInterface::Model *model, std::ostream &os) {
-		os << "digraph D {" << std::endl;
-		os << "  graph [ dpi = " << Util::getScreenDPI() << "; ordering=\"in\" ]; " << std::endl; // preserve edge order as they are consumed as inputs.
-		                                                                                          // ideally we need to have both "in" and "out" ordering
-													  // see https://gitlab.com/graphviz/graphviz/issues/1645
-		for (PluginInterface::OperatorId oid = 0, oide = model->numOperators(); oid < oide; oid++) {
-			auto szBox = operatorBoxFn(oid);
-			os << "Op_" << oid << " [shape=box"
-			   << ",width=" << (operatorBoxMargins.left() + szBox.width() + operatorBoxMargins.right())
-			   << ",height=" << (operatorBoxMargins.top() + szBox.height() + operatorBoxMargins.bottom()) <<  "];"
-			   << std::endl;
-		}
-		for (PluginInterface::TensorId tid = 0, tide = model->numTensors(); tid < tide; tid++)
-			if (tensorProducers[tid] != -1 && !tensorConsumers[tid].empty())
-				for (auto oidConsumer : tensorConsumers[tid])
-					os << "Op_" << tensorProducers[tid] << " -> Op_" << oidConsumer << " ["
-					   << "id=" << tid
-					   << ";label=\"" << STR(model->getTensorShape(tid)) << "\""
-					   << "];" << std::endl;
-		os << "}" << std::endl;
-	};
-	auto renderDotAsJson = [](const std::string &dot) {
-		// XXX research using the C API /usr/local/include/graphviz/gvc.h: gvRenderData (?)
-		// open the pipe
-		errno = 0; // popen(3) only sets errno optionally, in some cases
-		FILE *pipe = ::popen("dot -Tjson", "r+"); // "r+" only works on FreeBSD, XXX need to solve this on linux
-		if (pipe == nullptr)
-			FAIL("unable to start the 'dot' process to render the model as a graph: " << (errno ? strerror(errno) : "errno not set by popen"))
-
-		// write into the pipe
-		if (::fwrite(dot.c_str(), 1, dot.size(), pipe) != dot.size())
-			FAIL("failed to write the graph to 'dot' process")
-		::fflush(pipe);
-
-		// read from the pipe
-		std::ostringstream ss;
-		char buf[1025];
-		size_t sz;
-		while (true) {
-			sz = ::fread(buf, 1, sizeof(buf)-1, pipe);
-			if (sz > 0) {
-				buf[sz] = 0;
-				ss << buf;
-			} else
-				break;
-		}
-
-		// close the pipe
-		if (::pclose(pipe) == -1)
-			FAIL("failed to close the pipe to the 'dot' process")
-
-		return ss.str();
-	};
-
-	// print graph's dot
-	std::ostringstream ssDot;
-	toDOT(model, ssDot);
-	ssDot << "\n@\n"; // EOF signal for DOT
-
-	//PRINT("dot: " << ssDot.str())
-	auto graphJson = renderDotAsJson(ssDot.str());
-	//PRINT("json: " << graphJson)
-
-	// parse it as json
-	using json = nlohmann::json;
-	json j = json::parse(graphJson);
-
-	auto floatsToArray1x2 = [](auto &boxFloats, auto &box) {
-		auto it = boxFloats.begin();
-		for (auto &a1 : box)
-			for (auto &a2 : a1)
-				a2 = *it++;
-	};
-	auto floatsToArray2x2 = [](auto &src, auto &dst) {
-		for (unsigned i1 = 0, i1e = src.size(); i1 < i1e; i1++) {
-			auto &src1 = src[i1];
-			auto &dst1 = dst[i1];
-			for (unsigned i2 = 0, i2e = src1.size(); i2 < i2e; i2++)
-				dst1[i2] = src1[i2];
-		}
+	auto posToQPointF = [](const std::array<float,2> &pos) {
+		return QPointF(pos[0], pos[1]);
 	};
 	auto parseSplines = [](const std::string &splines) {
 		std::vector<std::string> strpts;
@@ -164,42 +120,23 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 	};
 
 	// bbox
-	std::vector<float> boxFloats;
-	Util::splitString<std::vector<float>, ConvStrToFloat>(j["bb"].get<std::string>(), boxFloats, ',');
-	if (boxFloats.size() != 4)
-		FAIL("The 'bb' array in JSON printed by the dot utility is expected to have 4 elements, but has " << boxFloats.size() << " elements")
-	floatsToArray1x2(boxFloats, bbox);
+	bbox = graph.getBBox();
 
-	// objects
-	operatorBoxes.resize(model->numOperators());
-	for (auto obj : j["objects"]) {
-		auto name = obj["name"].get<std::string>();
-		if (name.size() < 4 || (name[0]!='O' || name[1]!='p' || name[2]!='_'))
-			FAIL("got returned the object name that we don't recognize: " << name)
-		auto opId = (unsigned)std::stoi(name.substr(3));
-		if (opId >= operatorBoxes.size())
-			FAIL("dot returned an invalid name " << name)
+	// operators (nodes)
+	operatorBoxes.clear();
+	for (auto node : operatorNodes)
+		operatorBoxes.push_back(Box2{{graph.getNodePos(node), graph.getNodeSize(node)}});
 
-		for (auto d : obj["_draw_"])
-			if (d["op"] == "p")
-				floatsToArray2x2(d["points"], operatorBoxes[opId]);
-	}
-
-	// edges
-	tensorLabelPositions.resize(model->numTensors());
-	tensorLineCubicSplines.resize(model->numTensors());
-	for (auto edge : j["edges"]) {
-		// tid
-		PluginInterface::TensorId tid = std::stoi(edge["id"].get<std::string>());
-		assert(tid < tensorLabelPositions.size());
-		// splines
-		tensorLineCubicSplines[tid].push_back(parseSplines(edge["pos"].get<std::string>()));
-		// label position
-		std::vector<float> posFloats;
-		Util::splitString<std::vector<float>, ConvStrToFloat>(edge["lp"].get<std::string>(), posFloats, ',');
-		assert(posFloats.size() == 2);
-		tensorLabelPositions[tid].push_back(QPointF(posFloats[0], posFloats[1]));
-	}
+	// tensors (edges)
+	tensorLabelPositions.resize(tensorEdges.size());
+	tensorLineCubicSplines.resize(tensorEdges.size());
+	for (PluginInterface::TensorId tid = 0, tide = tensorEdges.size(); tid<tide; tid++)
+		for (auto edge : tensorEdges[tid]) {
+			// splines
+			tensorLineCubicSplines[tid].push_back(parseSplines(graph.getEdgeSplines(edge)));
+			// label position
+			tensorLabelPositions[tid].push_back(posToQPointF(graph.getEdgeLabelPosition(edge)));
+		}
 }
 
 }

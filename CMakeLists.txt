@@ -31,18 +31,13 @@ option(USE_PERFTOOLS "Use Google perftools to monitor/improve memory use" ON)
 ##
 ## Find the required dependencies
 ##
+find_package(PkgConfig REQUIRED) # needed for graphviz and libtcmalloc
 find_package(Qt5 COMPONENTS Core Gui Widgets Svg REQUIRED)
 find_package(nlohmann_json 3.2.0 REQUIRED)
 find_package(png++ REQUIRED)
 find_package(PNG REQUIRED)
-find_program(DOT_PROGRAM NAMES dot)
-if (NOT DOT_PROGRAM)
-	message(FATAL_ERROR "Failed to find dot")
-else()
-	message(STATUS "Found the dot program: ${DOT_PROGRAM}")
-endif()
+pkg_check_modules(libcgraph libgvc REQUIRED IMPORTED_TARGET libcgraph)
 if (USE_PERFTOOLS)
-	find_package(PkgConfig REQUIRED)
 	pkg_check_modules(libtcmalloc REQUIRED IMPORTED_TARGET libtcmalloc)
 add_definitions(-DUSE_PERFTOOLS)
 endif()
@@ -70,6 +65,7 @@ add_executable(nn-insight
 	scale-image-widget.cpp
 	image.cpp
 	compute.cpp
+	graphviz-cgraph.cpp
 	3rdparty/tensorflow/tflite-reference-implementation.cpp
 	resources.qrc
 )
@@ -77,6 +73,7 @@ target_link_libraries(nn-insight
 	Qt5::Widgets Qt5::Svg
 	nlohmann_json::nlohmann_json
 	${png++_LIBRARIES}
+	PkgConfig::libcgraph ${CMAKE_INSTALL_PREFIX}/lib/graphviz/libgvplugin_dot_layout.so
 	${CMAKE_DL_LIBS}
 )
 if (USE_PERFTOOLS)

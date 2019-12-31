@@ -1,6 +1,5 @@
 
 #include "main-window.h"
-#include "nn-model-viewer.h"
 #include "plugin-interface.h"
 #include "plugin-manager.h"
 #include "model-functions.h"

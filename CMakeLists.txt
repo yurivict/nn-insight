@@ -51,7 +51,7 @@ include_directories(${PROJECT_SOURCE_DIR}/3rdparty) # for avir/avir.h to be foun
 ## Targets
 ##
 add_executable(nn-insight
-	main.cpp main-window.cpp nn-model-viewer.cpp
+	main.cpp main-window.cpp
 	plugin-manager.cpp
 	plugin-interface.cpp
 	util.cpp

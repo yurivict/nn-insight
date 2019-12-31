@@ -110,6 +110,8 @@ private: // fields
 	QLabel                                   nnNetworkDescriptionText;
 	QLabel                                   nnNetworkComplexityLabel;
 	QLabel                                   nnNetworkComplexityText;
+	QLabel                                   nnNetworkFileSizeLabel;
+	QLabel                                   nnNetworkFileSizeText;
 	QLabel                                   nnNetworkNumberInsOutsLabel;
 	QLabel                                   nnNetworkNumberInsOutsText;
 	QLabel                                   nnNetworkNumberOperatorsLabel;

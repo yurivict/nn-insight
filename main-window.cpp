@@ -192,6 +192,8 @@ MainWindow::MainWindow()
 ,          nnNetworkDescriptionText(&nnNetworkDetails)
 ,          nnNetworkComplexityLabel(tr("Complexity"), &nnNetworkDetails)
 ,          nnNetworkComplexityText(&nnNetworkDetails)
+,          nnNetworkFileSizeLabel(tr("File size"), &nnNetworkDetails)
+,          nnNetworkFileSizeText(&nnNetworkDetails)
 ,          nnNetworkNumberInsOutsLabel(tr("Number of inputs/outputs"), &nnNetworkDetails)
 ,          nnNetworkNumberInsOutsText(&nnNetworkDetails)
 ,          nnNetworkNumberOperatorsLabel(tr("Number of operators"), &nnNetworkDetails)
@@ -282,11 +284,13 @@ MainWindow::MainWindow()
 		nnNetworkDetailsLayout.addWidget(&nnNetworkDescriptionText,       0/*row*/, 1/*col*/);
 		nnNetworkDetailsLayout.addWidget(&nnNetworkComplexityLabel,       1/*row*/, 0/*col*/);
 		nnNetworkDetailsLayout.addWidget(&nnNetworkComplexityText,        1/*row*/, 1/*col*/);
-		nnNetworkDetailsLayout.addWidget(&nnNetworkNumberInsOutsLabel,    2/*row*/, 0/*col*/);
-		nnNetworkDetailsLayout.addWidget(&nnNetworkNumberInsOutsText,     2/*row*/, 1/*col*/);
-		nnNetworkDetailsLayout.addWidget(&nnNetworkNumberOperatorsLabel,  3/*row*/, 0/*col*/);
-		nnNetworkDetailsLayout.addWidget(&nnNetworkNumberOperatorsText,   3/*row*/, 1/*col*/);
-		nnNetworkDetailsLayout.addWidget(&nnNetworkDetailsSpacer,         4/*row*/, 0/*col*/,  1/*rowSpan*/, 2/*columnSpan*/);
+		nnNetworkDetailsLayout.addWidget(&nnNetworkFileSizeLabel,         2/*row*/, 0/*col*/);
+		nnNetworkDetailsLayout.addWidget(&nnNetworkFileSizeText,          2/*row*/, 1/*col*/);
+		nnNetworkDetailsLayout.addWidget(&nnNetworkNumberInsOutsLabel,    3/*row*/, 0/*col*/);
+		nnNetworkDetailsLayout.addWidget(&nnNetworkNumberInsOutsText,     3/*row*/, 1/*col*/);
+		nnNetworkDetailsLayout.addWidget(&nnNetworkNumberOperatorsLabel,  4/*row*/, 0/*col*/);
+		nnNetworkDetailsLayout.addWidget(&nnNetworkNumberOperatorsText,   4/*row*/, 1/*col*/);
+		nnNetworkDetailsLayout.addWidget(&nnNetworkDetailsSpacer,         5/*row*/, 0/*col*/,  1/*rowSpan*/, 2/*columnSpan*/);
 	nnDetailsStack.addWidget(&nnOperatorDetails);
 	nnDetailsStack.addWidget(&nnTensorDetails);
 
@@ -359,6 +363,8 @@ MainWindow::MainWindow()
 		l->                          setToolTip(tr("Network description as specified in the NN file, if any"));
 	for (auto l : {&nnNetworkComplexityLabel,&nnNetworkComplexityText})
 		l->                          setToolTip(tr("Network complexity, i.e. how many operations between simple numbers are required to compute this network"));
+	for (auto l : {&nnNetworkFileSizeLabel,&nnNetworkFileSizeText})
+		l->                          setToolTip(tr("Network complexity, i.e. how many operations between simple numbers are required to compute this network"));
 	for (auto l : {&nnNetworkNumberInsOutsLabel,&nnNetworkNumberInsOutsText})
 		l->                          setToolTip(tr("Number of inputs and outputs in this network"));
 	for (auto l : {&nnNetworkNumberOperatorsLabel,&nnNetworkNumberOperatorsText})
@@ -398,8 +404,9 @@ MainWindow::MainWindow()
 	spacer3Widget                        .setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum);
 	sourceImageScrollArea                .setSizePolicy(QSizePolicy::Fixed,   QSizePolicy::Fixed);
 	nnDetailsStack                       .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
-	for (auto *w : {&nnNetworkDescriptionLabel,&nnNetworkDescriptionText,&nnNetworkComplexityLabel,&nnNetworkComplexityText,
-	                &nnNetworkNumberInsOutsLabel,&nnNetworkNumberInsOutsText,&nnNetworkNumberOperatorsLabel,&nnNetworkNumberOperatorsText})
+	for (auto *w : {&nnNetworkDescriptionLabel, &nnNetworkDescriptionText, &nnNetworkComplexityLabel, &nnNetworkComplexityText,
+	                &nnNetworkFileSizeLabel, &nnNetworkFileSizeText, &nnNetworkNumberInsOutsLabel, &nnNetworkNumberInsOutsText,
+	                &nnNetworkNumberOperatorsLabel, &nnNetworkNumberOperatorsText})
 		w->                           setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
 	nnNetworkDetailsSpacer               .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
 
@@ -453,7 +460,7 @@ MainWindow::MainWindow()
 	outputInterpretationKindComboBox.addItem("No/Yes",          ConvolutionEffect_None);
 
 	// fonts
-	for (auto widget : {&nnNetworkDescriptionLabel, &nnNetworkComplexityLabel, &nnNetworkNumberInsOutsLabel, &nnNetworkNumberOperatorsLabel,
+	for (auto widget : {&nnNetworkDescriptionLabel, &nnNetworkComplexityLabel, &nnNetworkFileSizeLabel, &nnNetworkNumberInsOutsLabel, &nnNetworkNumberOperatorsLabel,
 	                    &nnOperatorTypeLabel, &nnOperatorOptionsLabel, &nnOperatorInputsLabel, &nnOperatorOutputsLabel, &nnOperatorComplexityLabel})
 		widget->setStyleSheet("font-weight: bold;");
 
@@ -1050,6 +1057,7 @@ void MainWindow::clearEffects() {
 void MainWindow::updateNetworkDetailsPage() {
 	nnNetworkDescriptionText   .setText(S2Q(pluginInterface->modelDescription()));
 	nnNetworkComplexityText    .setText(S2Q(Util::formatFlops(ModelFunctions::computeModelFlops(model))));
+	nnNetworkFileSizeText      .setText(QString("%1 bytes").arg(S2Q(Util::formatUIntHumanReadable(Util::getFileSize(S2Q(pluginInterface->filePath()))))));
 	nnNetworkNumberInsOutsText .setText(QString("%1 %2, %3 %4")
 		.arg(model->numInputs())
 		.arg(model->numInputs()%10==1 ? tr("input") : tr("inputs"))

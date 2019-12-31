@@ -13,6 +13,7 @@
 #include <QPointF>
 
 #include <vector>
+#include <map>
 
 #include <assert.h>
 
@@ -110,6 +111,8 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::tupl
 	// render the model to the coordinates
 	ModelFunctions::Box2 bbox;
 	std::vector<ModelFunctions::Box2> operatorBoxes;
+	std::map<PluginInterface::TensorId, ModelFunctions::Box2> inputBoxes;
+	std::map<PluginInterface::TensorId, ModelFunctions::Box2> outputBoxes;
 	std::vector<std::vector<std::vector<QPointF>>> tensorLineCubicSplines;
 	std::vector<std::vector<QPointF>> tensorLabelPositions;
 	{
@@ -121,8 +124,18 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::tupl
 				auto szPixels = fm.size(Qt::TextSingleLine, S2Q(STR(model->getOperatorKind(oid))));
 				return QSizeF(qreal(szPixels.width())/dpi, qreal(szPixels.height())/dpi);
 			},
+			[&fm,dpi](PluginInterface::TensorId tid) {
+				auto szPixels = fm.size(Qt::TextSingleLine, S2Q(STR("Input#" << tid)));
+				return QSizeF(qreal(szPixels.width())/dpi, qreal(szPixels.height())/dpi);
+			},
+			[&fm,dpi](PluginInterface::TensorId tid) {
+				auto szPixels = fm.size(Qt::TextSingleLine, S2Q(STR("Output#" << tid)));
+				return QSizeF(qreal(szPixels.width())/dpi, qreal(szPixels.height())/dpi);
+			},
 			bbox,
 			operatorBoxes,
+			inputBoxes,
+			outputBoxes,
 			tensorLineCubicSplines,
 			tensorLabelPositions
 		);
@@ -159,10 +172,10 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::tupl
 	auto boxToQRectF = [](const ModelFunctions::Box2 &box) {
 		return QRectF(box[0][0], box[0][1], box[1][0], box[1][1]);
 	};
-	auto drawOperator = [&](QPainter &painter,
+	auto drawBox = [&](QPainter &painter,
 	                        const QRectF &bbox,
 	                        const std::string &title,
-				QColor clrOperatorBackground,
+				QColor clrBackground,
 	                        const std::vector<std::string> &inputDescriptions,
 	                        const std::string &fusedDescription)
 	{
@@ -171,7 +184,7 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::tupl
 		path.addRoundedRect(bbox, operatorBoxRadius, operatorBoxRadius);
 		QPen pen(clrOperatorBorder, operatorBoxBorderWidth);
 		painter.setPen(pen);
-		painter.fillPath(path, clrOperatorBackground);
+		painter.fillPath(path, clrBackground);
 		painter.drawPath(path);
 		// texts
 		painter.setPen(clrOperatorTitleText);
@@ -214,8 +227,7 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::tupl
 	{ // draw operator boxes
 		PluginInterface::OperatorId oid = 0;
 		for (auto &dotBox : operatorBoxes) {
-			// draw and add to the index
-			drawOperator(painter,
+			drawBox(painter,
 				std::get<0>(outIndexes)[oid] = boxToQRectF(dotBoxToQtBox(dotBox)),
 				STR(model->getOperatorKind(oid)),
 				clrOperatorTitleBackground(model->getOperatorKind(oid)),
@@ -225,6 +237,25 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::tupl
 			oid++;
 		}
 	}
+
+	// draw input boxes
+	for (auto it : inputBoxes)
+		drawBox(painter,
+			boxToQRectF(dotBoxToQtBox(it.second)),
+			STR("Input#" << it.first),
+			Qt::gray,
+			{},
+			""
+		);
+	// draw output boxes
+	for (auto it : outputBoxes)
+		drawBox(painter,
+			boxToQRectF(dotBoxToQtBox(it.second)),
+			STR("Output#" << it.first),
+			Qt::gray,
+			{},
+			""
+		);
 
 	{ // draw tensor splines
 		painter.setPen(clrTensorLine);

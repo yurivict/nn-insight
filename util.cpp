@@ -31,8 +31,9 @@ bool warningOk(QWidget *parent, const QString &msg) {
   return false; // for convenience of callers
 }
 
-int getScreenDPI() {
-	return QApplication::screens().at(0)->logicalDotsPerInch();
+float getScreenDPI() {
+	static float dpi = QApplication::screens().at(0)->logicalDotsPerInch();
+	return dpi;
 }
 
 QPoint getGlobalMousePos() {

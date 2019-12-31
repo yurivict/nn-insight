@@ -19,7 +19,7 @@ namespace Util {
 
 std::string QStringToStlString(const QString &qs);
 bool warningOk(QWidget *parent, const QString &msg);
-int getScreenDPI();
+float getScreenDPI();
 QPoint getGlobalMousePos();
 std::string formatUIntHumanReadable(size_t u);
 std::string formatUIntHumanReadableSuffixed(size_t u);

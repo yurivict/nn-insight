@@ -5,7 +5,7 @@
 #include <QScrollArea>
 #include <QStackedWidget>
 #include <QGroupBox>
-#include "zoomable-svg-widget.h"
+#include "nn-widget.h"
 #include "scale-image-widget.h"
 #include "DataTable2D.h"
 #include <QLabel>
@@ -45,7 +45,7 @@ private: // fields
 	QSplitter                        mainSplitter;
 	// Lhs
 	QScrollArea                        svgScrollArea;
-	ZoomableSvgWidget                  svgWidget;
+	NnWidget                           nnWidget;
 	// Rhs
 	QWidget                            rhsWidget;
 	QVBoxLayout                          rhsLayout;
@@ -135,29 +135,14 @@ private: // fields
 	std::shared_ptr<float>           sourceTensorDataAsUsed;   // image that is used as an input of NN, might be different if effects are applied
 	std::unique_ptr<std::vector<std::shared_ptr<const float>>>   tensorData; // tensors corresponding to the currently used image, shared because reshape/input often shared
 
-	struct {
-		std::vector<QRectF> allOperatorBoxes;    // indexed based on OperatorId
-		std::vector<QRectF> allTensorLabelBoxes; // indexed based on TensorId
-		std::vector<QRectF> allInputBoxes;       // indexed based on input id
-		std::vector<QRectF> allOutputBoxes;      // indexed based on output id
-	} modelIndexes;
 	std::vector<std::unique_ptr<QWidget>>   tempDetailWidgets;
 
 	unsigned                         scaleImageWidthPct;    // percentage to scale the image to show on the screen
 	unsigned                         scaleImageHeightPct;
 	int                              self; // to prevent signals from programmatically changed values
 
-private: // types
-	struct AnyObject {
-		int operatorId;
-		int tensorId;
-		int inputIdx;
-		int outputIdx;
-	};
-
 private: // private methods
 	bool haveImageOpen() const;
-	AnyObject findObjectAtThePoint(const QPointF &pt);
 	void showOperatorDetails(PluginInterface::OperatorId operatorId);
 	void showTensorDetails(PluginInterface::TensorId tensorId);
 	void removeTableIfAny();

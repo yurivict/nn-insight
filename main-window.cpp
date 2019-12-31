@@ -4,7 +4,6 @@
 #include "plugin-manager.h"
 #include "model-functions.h"
 
-#include "svg-graphics-generator.h"
 #include "util.h"
 #include "misc.h"
 #include "nn-types.h"
@@ -15,7 +14,6 @@
 #include <QEvent>
 #include <QWheelEvent>
 #include <QDebug>
-#include <QSvgRenderer>
 #include <QPushButton>
 #include <QFontMetrics>
 //#include <QMargins>
@@ -135,7 +133,7 @@ static const std::map<ConvolutionEffect, std::tuple<TensorShape,std::vector<floa
 MainWindow::MainWindow()
 : mainSplitter(this)
 ,   svgScrollArea(&mainSplitter)
-,     svgWidget(&mainSplitter)
+,     nnWidget(&mainSplitter)
 ,   rhsWidget(&mainSplitter)
 ,      rhsLayout(&rhsWidget)
 ,      sourceWidget(tr("Source Data"), &rhsWidget)
@@ -220,7 +218,7 @@ MainWindow::MainWindow()
 	// set up widgets
 	setCentralWidget(&mainSplitter);
 	mainSplitter.addWidget(&svgScrollArea);
-	  svgScrollArea.setWidget(&svgWidget);
+	  svgScrollArea.setWidget(&nnWidget);
 	mainSplitter.addWidget(&rhsWidget);
 
 	rhsLayout.addWidget(&sourceWidget);
@@ -426,20 +424,20 @@ MainWindow::MainWindow()
 		widget->setStyleSheet("font-weight: bold;");
 
 	// connect signals
-	connect(&svgWidget, &ZoomableSvgWidget::mousePressOccurred, [this](QPointF pt) {
-		if (model) {
-			auto searchResult = findObjectAtThePoint(pt);
-			if (searchResult.operatorId != -1)
-				showOperatorDetails((PluginInterface::OperatorId)searchResult.operatorId);
-			else if (searchResult.tensorId != -1)
-				showTensorDetails((PluginInterface::TensorId)searchResult.tensorId);
-			else if (searchResult.inputIdx != -1)
-				PRINT("click on the input box idx=" << searchResult.inputIdx << " tid=" << model->getInputs()[searchResult.inputIdx])
-			else if (searchResult.outputIdx != -1)
-				PRINT("click on the output box idx=" << searchResult.outputIdx << " tid=" << model->getOutputs()[searchResult.outputIdx])
-			else
-				PRINT("click on the blank area is ignored")
-		}
+	connect(&nnWidget, &NnWidget::clickedOnOperator, [this](PluginInterface::OperatorId oid) {
+		showOperatorDetails(oid);
+	});
+	connect(&nnWidget, &NnWidget::clickedOnTensorEdge, [this](PluginInterface::TensorId tid) {
+		showTensorDetails(tid);
+	});
+	connect(&nnWidget, &NnWidget::clickedOnInput, [this](unsigned inputIdx, PluginInterface::TensorId tid) {
+		PRINT("click on the input box idx=" << inputIdx << " tid=" << tid)
+	});
+	connect(&nnWidget, &NnWidget::clickedOnOutput, [this](unsigned outputIdx, PluginInterface::TensorId tid) {
+		PRINT("click on the output box idx=" << outputIdx << " tid=" << tid)
+	});
+	connect(&nnWidget, &NnWidget::clickedOnBlankSpace, [this]() {
+		PRINT("click on the blank area is ignored")
 	});
 	connect(&scaleImageSpinBoxes, &ScaleImageWidget::scalingFactorChanged, [this](unsigned widthFactor, unsigned heightFactor) {
 		assert(scaleImageWidthPct!=0 && scaleImageHeightPct!=0); // scaling percentages are initially set when the image is open/pasted/etc
@@ -649,9 +647,8 @@ bool MainWindow::loadModelFile(const QString &filePath) {
 		FAIL("multi-model files aren't supported yet")
 	model = pluginInterface->getModel(0);
 
-	// render the model as an SVG image
-	svgWidget.load(SvgGraphics::generateModelSvg(model,
-		{&modelIndexes.allOperatorBoxes, &modelIndexes.allTensorLabelBoxes, &modelIndexes.allInputBoxes, &modelIndexes.allOutputBoxes}));
+	// render the model as SVG image
+	nnWidget.open(model);
 
 	// set window title
 	setWindowTitle(QString("NN Insight: %1 (%2)").arg(filePath).arg(S2Q(Util::formatFlops(ModelFunctions::computeModelFlops(model)))));
@@ -663,32 +660,6 @@ bool MainWindow::loadModelFile(const QString &filePath) {
 
 bool MainWindow::haveImageOpen() const {
 	return (bool)sourceTensorDataAsLoaded;
-}
-
-MainWindow::AnyObject MainWindow::findObjectAtThePoint(const QPointF &pt) {
-	// XXX ad hoc algorithm until we find some good geoindexing implementation
-
-	// operator?
-	for (PluginInterface::OperatorId oid = 0, oide = modelIndexes.allOperatorBoxes.size(); oid < oide; oid++)
-		if (modelIndexes.allOperatorBoxes[oid].contains(pt))
-			return {(int)oid,-1,-1,-1};
-
-	// tensor label?
-	for (PluginInterface::TensorId tid = 0, tide = modelIndexes.allTensorLabelBoxes.size(); tid < tide; tid++)
-		if (modelIndexes.allTensorLabelBoxes[tid].contains(pt))
-			return {-1,(int)tid,-1,-1};
-
-	// input label?
-	for (unsigned idx = 0, idxe = modelIndexes.allInputBoxes.size(); idx < idxe; idx++)
-		if (modelIndexes.allInputBoxes[idx].contains(pt))
-			return {-1,-1,(int)model->getInputs()[idx],-1};
-
-	// output label?
-	for (unsigned idx = 0, idxe = modelIndexes.allOutputBoxes.size(); idx < idxe; idx++)
-		if (modelIndexes.allOutputBoxes[idx].contains(pt))
-			return {-1,-1,-1,(int)model->getOutputs()[idx]};
-
-	return {-1,-1,-1,-1}; // not found
 }
 
 void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {

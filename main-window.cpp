@@ -602,28 +602,10 @@ MainWindow::MainWindow()
 	fileMenu->addAction(tr("Open Neural Network File"), [this]() {
 		onOpenNeuralNetworkFileUserIntent();
 	})->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_N)); // non-standard because this is our custom operation
+	fileMenu->addSeparator();
 	fileMenu->addAction(tr("Take Screenshot"), [this]() {
 		openImagePixmap(Util::getScreenshot(true/*hideOurWindows*/), tr("screenshot"));
 	})->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_R)); // non-standard
-	fileMenu->addAction(tr("Copy Image"), [this]() {
-		if (sourceTensorDataAsUsed)
-			QApplication::clipboard()->setPixmap(Image::toQPixmap(sourceTensorDataAsUsed.get(), sourceTensorShape), QClipboard::Clipboard);
-		else
-			Util::warningOk(this, QString(tr("Can't copy the image: no image in currently open")));
-	})->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_C));
-	fileMenu->addAction(tr("Save Image As"), [this]() {
-		QString fileName = QFileDialog::getSaveFileName(this,
-			tr("Save image as file"), ""
-		);
-		if (!fileName.isEmpty()) { // save the visible region, same as NN computation normally sees
-			std::array<unsigned,4> imageRegion = getVisibleImageRegion();
-			Image::writePngImageFile( // for simplicity - extract the region whether this is needed or not
-				std::unique_ptr<float>(Image::regionOfImage(sourceTensorDataAsUsed.get(), sourceTensorShape, imageRegion)).get(),
-				{imageRegion[3]-imageRegion[1]+1, imageRegion[2]-imageRegion[0]+1, sourceTensorShape[2]},
-				Q2S(fileName.endsWith(".png") ? fileName : fileName+".png")
-			);
-		}
-	})->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_S));
 	fileMenu->addAction(tr("Paste Image"), [this]() {
 		const QClipboard *clipboard = QApplication::clipboard();
 		const QMimeData *mimeData = clipboard->mimeData();
@@ -644,19 +626,48 @@ MainWindow::MainWindow()
 				Util::warningOk(this, QString(tr("No image to paste, clipboard s empty")));
 		}
 	})->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_V));
+	fileMenu->addSeparator();
+	fileMenu->addAction(tr("Copy Image"), [this]() {
+		if (sourceTensorDataAsUsed)
+			QApplication::clipboard()->setPixmap(Image::toQPixmap(sourceTensorDataAsUsed.get(), sourceTensorShape), QClipboard::Clipboard);
+		else
+			Util::warningOk(this, QString(tr("Can't copy the image: no image in currently open")));
+	})->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_C));
+	fileMenu->addAction(tr("Save Image As"), [this]() {
+		QString fileName = QFileDialog::getSaveFileName(this,
+			tr("Save image as file"), ""
+		);
+		if (!fileName.isEmpty()) { // save the visible region, same as NN computation normally sees
+			std::array<unsigned,4> imageRegion = getVisibleImageRegion();
+			Image::writePngImageFile( // for simplicity - extract the region whether this is needed or not
+				std::unique_ptr<float>(Image::regionOfImage(sourceTensorDataAsUsed.get(), sourceTensorShape, imageRegion)).get(),
+				{imageRegion[3]-imageRegion[1]+1, imageRegion[2]-imageRegion[0]+1, sourceTensorShape[2]},
+				Q2S(fileName.endsWith(".png") ? fileName : fileName+".png")
+			);
+		}
+	})->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_S));
+	fileMenu->addSeparator();
 	fileMenu->addAction(tr("Close Image"), [this]() {
 		clearInputImageDisplay();
 		clearEffects();
 		clearComputedTensorData(); // closing image invalidates computation results
+		updateSectionWidgetsVisibility();
 	})->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_W)); // like "close tab" in chrome
+	fileMenu->addAction(tr("Close Neural Network"), [this]() {
+		if (model)
+			closeNeuralNetwork();
+	})->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_Z));
+	fileMenu->addSeparator();
 	fileMenu->addAction(tr("Quit"), []() {
 		QApplication::quit();
 	})->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_Q));
 }
 
 MainWindow::~MainWindow() {
-	if (plugin)
+	if (model) {
+		pluginInterface.reset(nullptr);
 		PluginManager::unloadPlugin(plugin);
+	}
 }
 
 bool MainWindow::loadModelFile(const QString &filePath) {
@@ -1183,11 +1194,31 @@ void MainWindow::updateSectionWidgetsVisibility() {
 	bool haveNn    = model!=nullptr;
 
 	sourceWidget      .setVisible(haveImage);
+	nnDetailsStack    .setVisible(haveNn);
 	noNnIsOpenGroupBox.setVisible(!haveNn);
 
 	nnDetailsStack.setSizePolicy(QSizePolicy::Preferred, haveImage ? QSizePolicy::Fixed : QSizePolicy::Minimum);
 }
 
 void MainWindow::onOpenNeuralNetworkFileUserIntent() {
-	PRINT("MainWindow::onOpenNeuralNetworkFileUserIntent")
+	QString fileName = QFileDialog::getOpenFileName(this,
+		tr("Open neural network file"), "",
+		tr("Neural Network (*.tflite);;All Files (*)")
+	);
+	if (!fileName.isEmpty()) {
+		if (model)
+			closeNeuralNetwork();
+		loadModelFile(fileName);
+		updateSectionWidgetsVisibility();
+	}
+}
+
+void MainWindow::closeNeuralNetwork() {
+	nnWidget.close();
+	pluginInterface.reset(nullptr);
+	PluginManager::unloadPlugin(plugin);
+	model = nullptr;
+	plugin = nullptr;
+	// update screen
+	updateSectionWidgetsVisibility();
 }

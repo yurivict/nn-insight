@@ -3,6 +3,7 @@
 #include "svg-graphics-generator.h"
 
 #include <QMouseEvent>
+#include <QByteArray>
 
 
 NnWidget::NnWidget(QWidget *parent)
@@ -22,6 +23,8 @@ void NnWidget::open(const PluginInterface::Model *model_) {
 void NnWidget::close() {
 	clearIndices();
 	model = nullptr;
+	load(QByteArray());
+	resize(0,0);
 }
 
 /// overridden

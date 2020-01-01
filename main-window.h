@@ -184,5 +184,6 @@ private: // private methods
 	std::array<unsigned,4> getVisibleImageRegion() const;
 	void updateSectionWidgetsVisibility();
 	void onOpenNeuralNetworkFileUserIntent();
+	void closeNeuralNetwork();
 };
 

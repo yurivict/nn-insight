@@ -198,7 +198,7 @@ if (false) {
 	// inner-classes
 	class Model { // Model represents one of potentially many models contained in the file
 	protected:
-		virtual ~Model() { } // has to be inlined for plugins to contain it too
+		virtual ~Model() { } // has to be inlined for plugins to contain it too // not to be called by users, hence 'protected'
 	public: // interface
 		virtual unsigned                numInputs() const = 0;                                                          // how many inputs does this model have
 		virtual std::vector<TensorId>   getInputs() const = 0;                                                          // input indexes

@@ -75,7 +75,23 @@ private: // QAbstractTableModel interface implementation
 				return QString("%1 bytes").arg(S2Q(Util::formatUIntHumanReadable(
 					ModelFunctions::sizeOfOperatorStaticData(model, (PluginInterface::OperatorId)index.row(), unused))));
 			} case OperatorsListColumns_DataRatio: {
-				return S2Q(ModelFunctions::dataRatioOfOperatorStr(model, (PluginInterface::OperatorId)index.row()));
+				float dataRateIncreaseOboveInput, modelInputToOut;
+				return S2Q(ModelFunctions::dataRatioOfOperatorStr(model, (PluginInterface::OperatorId)index.row(),
+					dataRateIncreaseOboveInput, modelInputToOut));
+			} default:
+				return QVariant();
+			}
+		case Qt::BackgroundRole: // background color
+			switch ((OperatorsListColumns)index.column()) {
+			case OperatorsListColumns_DataRatio: {
+				float dataRateIncreaseOboveInput, modelInputToOut;
+				(void)ModelFunctions::dataRatioOfOperatorStr(model, (PluginInterface::OperatorId)index.row(),
+					dataRateIncreaseOboveInput, modelInputToOut);
+				return dataRateIncreaseOboveInput<=1
+					? QVariant()
+					: modelInputToOut<2
+						? QVariant(QColor(255,105,180)) // pink color
+						: QVariant(QColor(Qt::red));
 			} default:
 				return QVariant();
 			}

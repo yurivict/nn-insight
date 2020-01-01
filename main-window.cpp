@@ -912,7 +912,9 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 	unsigned unused;
 	nnOperatorStaticDataValue.setText(QString("%1 bytes")
 		.arg(S2Q(Util::formatUIntHumanReadable(ModelFunctions::sizeOfOperatorStaticData(model, operatorId, unused)))));
-	nnOperatorDataRatioValue.setText(S2Q(ModelFunctions::dataRatioOfOperatorStr(model, operatorId)));
+	float dataRateIncreaseOboveInput, modelInputToOut;
+	nnOperatorDataRatioValue.setText(S2Q(ModelFunctions::dataRatioOfOperatorStr(model, operatorId, dataRateIncreaseOboveInput, modelInputToOut)));
+	nnOperatorDataRatioValue.setStyleSheet(dataRateIncreaseOboveInput>1 ? "QLabel{color: red;}" : "QLabel{color: black;}");
 }
 
 void MainWindow::showTensorDetails(PluginInterface::TensorId tensorId) {

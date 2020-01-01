@@ -40,6 +40,7 @@ float dataRatioOfOperatorModelInputToOuts(const PluginInterface::Model *model, P
 void computeTensors(const PluginInterface::Model *model, std::vector<std::unique_ptr<float>> *tensorData);
 
 // string-returting aggretgate versions
-std::string dataRatioOfOperatorStr(const PluginInterface::Model *model, PluginInterface::OperatorId operatorId);
+std::string dataRatioOfOperatorStr(const PluginInterface::Model *model, PluginInterface::OperatorId operatorId,
+	float &outIncreaseOboveInput, float &outModelInputToOut);
 
 }

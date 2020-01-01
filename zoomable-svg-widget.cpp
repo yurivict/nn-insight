@@ -17,14 +17,25 @@ ZoomableSvgWidget::ZoomableSvgWidget(QWidget *parent)
 , mousePressed(false)
 { }
 
-/// overridables
+/// mirroring 'load' functions
 
-void ZoomableSvgWidget::showEvent(QShowEvent *event) {
-	defaultSvgSize = renderer()->defaultSize();
-	fixWindowSize(defaultSvgSize);
+void ZoomableSvgWidget::load(const QString &file) {
 	// pass
-	QSvgWidget::showEvent(event);
+	QSvgWidget::load(file);
+
+	// fix widget size
+	fixWindowSize(renderer()->defaultSize());
 }
+
+void ZoomableSvgWidget::load(const QByteArray &contents) {
+	// pass
+	QSvgWidget::load(contents);
+
+	// fix widget size
+	fixWindowSize(renderer()->defaultSize());
+}
+
+/// overridables
 
 void ZoomableSvgWidget::mousePressEvent(QMouseEvent* event) {
 	// emit the mousePressOccurred signal
@@ -57,7 +68,7 @@ void ZoomableSvgWidget::wheelEvent(QWheelEvent* event) {
 		double angle = event->angleDelta().y();
 		scalingFactor *= 1 + (angle/360*0.1);
 		auto posOld = mapFromGlobal(QCursor::pos(QApplication::screens().at(0)));
-		fixWindowSize(defaultSvgSize*scalingFactor);
+		fixWindowSize(renderer()->defaultSize()*scalingFactor);
 		auto posNew = mapFromGlobal(QCursor::pos(QApplication::screens().at(0)));
 		qDebug() << "posMove=" << (posNew-posOld);
 		event->accept();
@@ -67,7 +78,7 @@ void ZoomableSvgWidget::wheelEvent(QWheelEvent* event) {
 	}
 }
 
-/// private methods
+/// internals
 
 void ZoomableSvgWidget::fixWindowSize(QSize sz) {
 	setMinimumSize(sz);

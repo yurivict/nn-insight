@@ -211,6 +211,8 @@ MainWindow::MainWindow()
 ,          nnOperatorComplexityValue(&nnOperatorDetails)
 ,          nnOperatorStaticDataLabel(tr("Static data"), &nnOperatorDetails)
 ,          nnOperatorStaticDataValue(&nnOperatorDetails)
+,          nnOperatorDataRatioLabel(tr("Data ratio"), &nnOperatorDetails)
+,          nnOperatorDataRatioValue(&nnOperatorDetails)
 ,          nnOperatorDetailsSpacer(&nnOperatorDetails)
 ,        nnTensorDetails(&nnDetailsStack)
 ,          nnTensorDetailsLayout(&nnTensorDetails)
@@ -476,7 +478,7 @@ MainWindow::MainWindow()
 	for (auto widget : {&nnNetworkDescriptionLabel, &nnNetworkComplexityLabel, &nnNetworkFileSizeLabel, &nnNetworkNumberInsOutsLabel, &nnNetworkNumberOperatorsLabel,
 	                    &nnNetworkStaticDataLabel,
 	                    &nnOperatorTypeLabel, &nnOperatorOptionsLabel, &nnOperatorInputsLabel, &nnOperatorOutputsLabel, &nnOperatorComplexityLabel,
-	                    &nnOperatorStaticDataLabel})
+	                    &nnOperatorStaticDataLabel, &nnOperatorDataRatioLabel})
 		widget->setStyleSheet("font-weight: bold;");
 
 	// connect signals
@@ -890,6 +892,9 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 	nnOperatorDetailsLayout.addWidget(&nnOperatorStaticDataLabel,    row,   0/*column*/);
 	nnOperatorDetailsLayout.addWidget(&nnOperatorStaticDataValue,    row,   1/*column*/);
 	row++;
+	nnOperatorDetailsLayout.addWidget(&nnOperatorDataRatioLabel,     row,   0/*column*/);
+	nnOperatorDetailsLayout.addWidget(&nnOperatorDataRatioValue,     row,   1/*column*/);
+	row++;
 	nnOperatorDetailsLayout.addWidget(&nnOperatorDetailsSpacer,      row,   0/*column*/,  1/*rowSpan*/, 4/*columnSpan*/);
 
 	// set texts
@@ -898,6 +903,10 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 	unsigned unused;
 	nnOperatorStaticDataValue.setText(QString("%1 bytes")
 		.arg(S2Q(Util::formatUIntHumanReadable(ModelFunctions::sizeOfOperatorStaticData(model, operatorId, unused)))));
+	nnOperatorDataRatioValue.setText(QString("ins-to-outs: %1, model-input-to-ins: %2, model-input-to-outs: %3")
+		.arg(ModelFunctions::dataRatioOfOperator(model, operatorId))
+		.arg(ModelFunctions::dataRatioOfOperatorModelInputToIns(model, operatorId))
+		.arg(ModelFunctions::dataRatioOfOperatorModelInputToOuts(model, operatorId)));
 }
 
 void MainWindow::showTensorDetails(PluginInterface::TensorId tensorId) {

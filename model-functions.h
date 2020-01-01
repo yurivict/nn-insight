@@ -29,10 +29,14 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 	std::vector<std::vector<QPointF>> &tensorLabelPositions // return: tensor label positions in pixels
 );
 
+bool isTensorComputed(PluginInterface::TensorId tensorId);
 size_t computeModelFlops(const PluginInterface::Model *model);
 size_t computeOperatorFlops(const PluginInterface::Model *model, PluginInterface::OperatorId operatorId);
 size_t sizeOfModelStaticData(const PluginInterface::Model *model, unsigned &outObjectCount, size_t &outMaxStaticDataPerOperator);
 size_t sizeOfOperatorStaticData(const PluginInterface::Model *model, PluginInterface::OperatorId operatorId, unsigned &outObjectCount);
+float dataRatioOfOperator(const PluginInterface::Model *model, PluginInterface::OperatorId operatorId);
+float dataRatioOfOperatorModelInputToIns(const PluginInterface::Model *model, PluginInterface::OperatorId operatorId);
+float dataRatioOfOperatorModelInputToOuts(const PluginInterface::Model *model, PluginInterface::OperatorId operatorId);
 void computeTensors(const PluginInterface::Model *model, std::vector<std::unique_ptr<float>> *tensorData);
 
 }

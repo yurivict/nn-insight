@@ -1,6 +1,7 @@
 
 #include "model-functions.h"
 #include "plugin-interface.h"
+#include "nn-types.h"
 
 #include <assert.h>
 
@@ -42,6 +43,25 @@ size_t computeOperatorFlops(const PluginInterface::Model *model, PluginInterface
 	  default:
 		return 0; // TODO
 	}
+}
+
+size_t sizeOfModelStaticData(const PluginInterface::Model *model, unsigned &outObjectCount) {
+	size_t size = 0;
+	for (PluginInterface::OperatorId oid = 0, oide = model->numOperators(); oid < oide; oid++)
+		size += sizeOfOperatorStaticData(model, oid, outObjectCount);
+	return size;
+}
+
+size_t sizeOfOperatorStaticData(const PluginInterface::Model *model, PluginInterface::OperatorId operatorId, unsigned &outObjectCount) {
+	size_t size = 0;
+	std::vector<PluginInterface::TensorId> inputs, outputs;
+	model->getOperatorIo(operatorId, inputs, outputs);
+	for (PluginInterface::TensorId tensorId : inputs)
+		if (model->getTensorHasData(tensorId)) {
+			size += tensorFlatSize(model->getTensorShape(tensorId))*sizeof(float); // TODO handle other types
+			outObjectCount++;
+		}
+	return size;
 }
 
 void computeTensors(const PluginInterface::Model *model, std::vector<std::unique_ptr<float>> *tensorData) {

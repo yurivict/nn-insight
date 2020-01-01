@@ -197,6 +197,8 @@ MainWindow::MainWindow()
 ,          nnNetworkNumberInsOutsText(&nnNetworkDetails)
 ,          nnNetworkNumberOperatorsLabel(tr("Number of operators"), &nnNetworkDetails)
 ,          nnNetworkNumberOperatorsText(&nnNetworkDetails)
+,          nnNetworkStaticDataLabel(tr("Amount of static data"), &nnNetworkDetails)
+,          nnNetworkStaticDataText(&nnNetworkDetails)
 ,          nnNetworkDetailsSpacer(&nnNetworkDetails)
 ,        nnOperatorDetails(&nnDetailsStack)
 ,          nnOperatorDetailsLayout(&nnOperatorDetails)
@@ -293,7 +295,9 @@ MainWindow::MainWindow()
 		nnNetworkDetailsLayout.addWidget(&nnNetworkNumberInsOutsText,     3/*row*/, 1/*col*/);
 		nnNetworkDetailsLayout.addWidget(&nnNetworkNumberOperatorsLabel,  4/*row*/, 0/*col*/);
 		nnNetworkDetailsLayout.addWidget(&nnNetworkNumberOperatorsText,   4/*row*/, 1/*col*/);
-		nnNetworkDetailsLayout.addWidget(&nnNetworkDetailsSpacer,         5/*row*/, 0/*col*/,  1/*rowSpan*/, 2/*columnSpan*/);
+		nnNetworkDetailsLayout.addWidget(&nnNetworkStaticDataLabel,       5/*row*/, 0/*col*/);
+		nnNetworkDetailsLayout.addWidget(&nnNetworkStaticDataText,        5/*row*/, 1/*col*/);
+		nnNetworkDetailsLayout.addWidget(&nnNetworkDetailsSpacer,         6/*row*/, 0/*col*/,  1/*rowSpan*/, 2/*columnSpan*/);
 	nnDetailsStack.addWidget(&nnOperatorDetails);
 	nnDetailsStack.addWidget(&nnTensorDetails);
 
@@ -372,6 +376,8 @@ MainWindow::MainWindow()
 		l->                          setToolTip(tr("Number of inputs and outputs in this network"));
 	for (auto l : {&nnNetworkNumberOperatorsLabel,&nnNetworkNumberOperatorsText})
 		l->                          setToolTip(tr("Number of operators in this network"));
+	for (auto l : {&nnNetworkStaticDataLabel,&nnNetworkStaticDataText})
+		l->                          setToolTip(tr("Amount of static data supplied for operators in the network"));
 	nnOperatorTypeLabel                 .setToolTip(tr("Operator type: what kind of operation does it perform"));
 	nnOperatorComplexityValue           .setToolTip(tr("Complexity of the currntly selected NN in FLOPS"));
 
@@ -408,7 +414,7 @@ MainWindow::MainWindow()
 	sourceImageScrollArea                .setSizePolicy(QSizePolicy::Fixed,   QSizePolicy::Fixed);
 	for (auto *w : {&nnNetworkDescriptionLabel, &nnNetworkDescriptionText, &nnNetworkComplexityLabel, &nnNetworkComplexityText,
 	                &nnNetworkFileSizeLabel, &nnNetworkFileSizeText, &nnNetworkNumberInsOutsLabel, &nnNetworkNumberInsOutsText,
-	                &nnNetworkNumberOperatorsLabel, &nnNetworkNumberOperatorsText})
+	                &nnNetworkNumberOperatorsLabel, &nnNetworkNumberOperatorsText, &nnNetworkStaticDataLabel, &nnNetworkStaticDataText})
 		w->                           setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
 	nnNetworkDetailsSpacer               .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
 	nnOperatorDetailsSpacer              .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
@@ -464,6 +470,7 @@ MainWindow::MainWindow()
 
 	// fonts
 	for (auto widget : {&nnNetworkDescriptionLabel, &nnNetworkComplexityLabel, &nnNetworkFileSizeLabel, &nnNetworkNumberInsOutsLabel, &nnNetworkNumberOperatorsLabel,
+	                    &nnNetworkStaticDataLabel,
 	                    &nnOperatorTypeLabel, &nnOperatorOptionsLabel, &nnOperatorInputsLabel, &nnOperatorOutputsLabel, &nnOperatorComplexityLabel})
 		widget->setStyleSheet("font-weight: bold;");
 
@@ -1074,18 +1081,29 @@ void MainWindow::clearEffects() {
 }
 
 void MainWindow::updateNetworkDetailsPage() {
+	auto numInPlural = [](unsigned num, const QString &strSingle, const QString &strPlural) {
+		return (num%10==1) ? strSingle : strPlural;
+	};
+
 	nnNetworkDescriptionText   .setText(S2Q(pluginInterface->modelDescription()));
 	nnNetworkComplexityText    .setText(S2Q(Util::formatFlops(ModelFunctions::computeModelFlops(model))));
 	nnNetworkFileSizeText      .setText(QString("%1 bytes").arg(S2Q(Util::formatUIntHumanReadable(Util::getFileSize(S2Q(pluginInterface->filePath()))))));
 	nnNetworkNumberInsOutsText .setText(QString("%1 %2, %3 %4")
 		.arg(model->numInputs())
-		.arg(model->numInputs()%10==1 ? tr("input") : tr("inputs"))
+		.arg(numInPlural(model->numInputs(), tr("input"), tr("inputs")))
 		.arg(model->numOutputs())
-		.arg(model->numOutputs()%10==1 ? tr("output") : tr("outputs"))
+		.arg(numInPlural(model->numOutputs(), tr("output"), tr("outputs")))
 	);
 	nnNetworkNumberOperatorsText .setText(QString("%1 %2")
 		.arg(model->numOperators())
-		.arg(model->numOperators()%10==1 ? tr("operator") : tr("operators"))
+		.arg(numInPlural(model->numOperators(), tr("operator"), tr("operators")))
+	);
+	unsigned staticDataTensors = 0;
+	auto sizeOfStaticData = ModelFunctions::sizeOfModelStaticData(model, staticDataTensors);
+	nnNetworkStaticDataText.setText(QString("%1 bytes in %2 %3")
+		.arg(S2Q(Util::formatUIntHumanReadable(sizeOfStaticData)))
+		.arg(staticDataTensors)
+		.arg(numInPlural(staticDataTensors, tr("tensor"), tr("tensors")))
 	);
 }
 

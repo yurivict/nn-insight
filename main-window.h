@@ -116,6 +116,8 @@ private: // fields
 	QLabel                                   nnNetworkNumberInsOutsText;
 	QLabel                                   nnNetworkNumberOperatorsLabel;
 	QLabel                                   nnNetworkNumberOperatorsText;
+	QLabel                                   nnNetworkStaticDataLabel;
+	QLabel                                   nnNetworkStaticDataText;
 	QWidget                                  nnNetworkDetailsSpacer;
 	QGroupBox                              nnOperatorDetails; // page#1
 	QGridLayout                              nnOperatorDetailsLayout;

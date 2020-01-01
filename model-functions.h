@@ -31,6 +31,8 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 
 size_t computeModelFlops(const PluginInterface::Model *model);
 size_t computeOperatorFlops(const PluginInterface::Model *model, PluginInterface::OperatorId operatorId);
+size_t sizeOfModelStaticData(const PluginInterface::Model *model, unsigned &outObjectCount);
+size_t sizeOfOperatorStaticData(const PluginInterface::Model *model, PluginInterface::OperatorId operatorId, unsigned &outObjectCount);
 void computeTensors(const PluginInterface::Model *model, std::vector<std::unique_ptr<float>> *tensorData);
 
 }

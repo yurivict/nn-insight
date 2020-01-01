@@ -4,6 +4,8 @@
 #include "misc.h"
 #include "util.h"
 
+#include <QHeaderView>
+
 /// local types
 
 enum OperatorsListColumns {
@@ -26,7 +28,7 @@ public:
 	{
 	}
 
-public: // QAbstractTableModel interface implementation
+private: // QAbstractTableModel interface implementation
 	int rowCount(const QModelIndex &parent = QModelIndex()) const override {
 		return model->numOperators();
 	}
@@ -87,20 +89,46 @@ public: // QAbstractTableModel interface implementation
 
 OperatorsListWidget::OperatorsListWidget(QWidget *parent)
 : QTableView(parent)
+, self(false)
 {
+	// selection behavior
 	setSelectionBehavior(QAbstractItemView::SelectRows);
-	//setWordWrap(true);
+	setSelectionMode(QAbstractItemView::SingleSelection);
+
+	//setWordWrap(true); // not sure
+}
+
+/// overridden
+void OperatorsListWidget::selectionChanged(const QItemSelection &selected, const QItemSelection &deselected) {
+	assert(selected.indexes().size()==0 || selected.indexes().size()==OperatorsListColumns_Count_);
+
+	// emit signal
+	if (!self && selected.indexes().size() == OperatorsListColumns_Count_)
+		emit operatorSelected((PluginInterface::OperatorId)selected.indexes()[0].row());
+
+	// pass
+	QTableView::selectionChanged(selected, deselected);
 }
 
 /// interface
 
 void OperatorsListWidget::setNnModel(const PluginInterface::Model *model) {
-	PRINT("OperatorsListWidget::setNnModel " << model)
 	tableModel.reset(new OperatorsListModel(model, this));
 	setModel(tableModel.get());
+
+	// set width/stretching behavior
+	for (unsigned s = OperatorsListColumns_No; s < OperatorsListColumns_DataRatio; s++)
+		horizontalHeader()->setSectionResizeMode(s,        QHeaderView::ResizeToContents);
+	horizontalHeader()->setSectionResizeMode(OperatorsListColumns_DataRatio, QHeaderView::Stretch);
 }
 
 void OperatorsListWidget::clearNnModel() {
 	tableModel.reset(nullptr);
 	setModel(nullptr);
+}
+
+void OperatorsListWidget::selectOperator(PluginInterface::OperatorId operatorId) {
+	self = true;
+	selectRow((int)operatorId);
+	self = false;
 }

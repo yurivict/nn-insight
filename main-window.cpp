@@ -488,6 +488,7 @@ MainWindow::MainWindow()
 	// connect signals
 	connect(&nnWidget, &NnWidget::clickedOnOperator, [this](PluginInterface::OperatorId operatorId) {
 		showOperatorDetails(operatorId);
+		nnNetworkOperatorsListWidget.selectOperator(operatorId);
 	});
 	connect(&nnWidget, &NnWidget::clickedOnTensorEdge, [this](PluginInterface::TensorId tensorId) {
 		showTensorDetails(tensorId);
@@ -500,6 +501,9 @@ MainWindow::MainWindow()
 	});
 	connect(&nnWidget, &NnWidget::clickedOnBlankSpace, [this]() {
 		showNetworkDetails();
+	});
+	connect(&nnNetworkOperatorsListWidget, &OperatorsListWidget::operatorSelected, [](PluginInterface::OperatorId operatorId) {
+		PRINT("TODO OperatorsListWidget::operatorSelected oid=" << operatorId)
 	});
 	connect(&scaleImageSpinBoxes, &ScaleImageWidget::scalingFactorChanged, [this](unsigned widthFactor, unsigned heightFactor) {
 		assert(scaleImageWidthPct!=0 && scaleImageHeightPct!=0); // scaling percentages are initially set when the image is open/pasted/etc

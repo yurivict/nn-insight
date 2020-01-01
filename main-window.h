@@ -7,6 +7,7 @@
 #include <QGroupBox>
 #include "nn-widget.h"
 #include "no-nn-is-open-widget.h"
+#include "operators-list-widget.h"
 #include "scale-image-widget.h"
 #include "DataTable2D.h"
 #include <QLabel>
@@ -118,7 +119,8 @@ private: // fields
 	QLabel                                   nnNetworkNumberOperatorsText;
 	QLabel                                   nnNetworkStaticDataLabel;
 	QLabel                                   nnNetworkStaticDataText;
-	QWidget                                  nnNetworkDetailsSpacer;
+	QLabel                                   nnNetworkOperatorsListLabel;
+	OperatorsListWidget                      nnNetworkOperatorsListWidget;
 	QGroupBox                              nnOperatorDetails; // page#1
 	QGridLayout                              nnOperatorDetailsLayout;
 	QLabel                                   nnOperatorTypeLabel;

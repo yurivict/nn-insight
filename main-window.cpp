@@ -199,7 +199,8 @@ MainWindow::MainWindow()
 ,          nnNetworkNumberOperatorsText(&nnNetworkDetails)
 ,          nnNetworkStaticDataLabel(tr("Amount of static data"), &nnNetworkDetails)
 ,          nnNetworkStaticDataText(&nnNetworkDetails)
-,          nnNetworkDetailsSpacer(&nnNetworkDetails)
+,          nnNetworkOperatorsListLabel(tr("Operators"), &nnNetworkDetails)
+,          nnNetworkOperatorsListWidget(&nnNetworkDetails)
 ,        nnOperatorDetails(&nnDetailsStack)
 ,          nnOperatorDetailsLayout(&nnOperatorDetails)
 ,          nnOperatorTypeLabel(tr("Operator Type"), &nnOperatorDetails)
@@ -301,7 +302,8 @@ MainWindow::MainWindow()
 		nnNetworkDetailsLayout.addWidget(&nnNetworkNumberOperatorsText,   4/*row*/, 1/*col*/);
 		nnNetworkDetailsLayout.addWidget(&nnNetworkStaticDataLabel,       5/*row*/, 0/*col*/);
 		nnNetworkDetailsLayout.addWidget(&nnNetworkStaticDataText,        5/*row*/, 1/*col*/);
-		nnNetworkDetailsLayout.addWidget(&nnNetworkDetailsSpacer,         6/*row*/, 0/*col*/,  1/*rowSpan*/, 2/*columnSpan*/);
+		nnNetworkDetailsLayout.addWidget(&nnNetworkOperatorsListLabel,    6/*row*/, 0/*col*/);
+		nnNetworkDetailsLayout.addWidget(&nnNetworkOperatorsListWidget,   7/*row*/, 0/*col*/,  1/*rowSpan*/, 2/*columnSpan*/);
 	nnDetailsStack.addWidget(&nnOperatorDetails);
 	nnDetailsStack.addWidget(&nnTensorDetails);
 
@@ -382,6 +384,8 @@ MainWindow::MainWindow()
 		l->                          setToolTip(tr("Number of operators in this network"));
 	for (auto l : {&nnNetworkStaticDataLabel,&nnNetworkStaticDataText})
 		l->                          setToolTip(tr("Amount of static data supplied for operators in the network"));
+	for (auto w : {(QWidget*)&nnNetworkOperatorsListLabel,(QWidget*)&nnNetworkOperatorsListWidget})
+		w->                          setToolTip(tr("List of operators in the model with details about them"));
 	nnOperatorTypeLabel                 .setToolTip(tr("Operator type: what kind of operation does it perform"));
 	nnOperatorComplexityValue           .setToolTip(tr("Complexity of the currntly selected NN in FLOPS"));
 
@@ -418,9 +422,9 @@ MainWindow::MainWindow()
 	sourceImageScrollArea                .setSizePolicy(QSizePolicy::Fixed,   QSizePolicy::Fixed);
 	for (auto *w : {&nnNetworkDescriptionLabel, &nnNetworkDescriptionText, &nnNetworkComplexityLabel, &nnNetworkComplexityText,
 	                &nnNetworkFileSizeLabel, &nnNetworkFileSizeText, &nnNetworkNumberInsOutsLabel, &nnNetworkNumberInsOutsText,
-	                &nnNetworkNumberOperatorsLabel, &nnNetworkNumberOperatorsText, &nnNetworkStaticDataLabel, &nnNetworkStaticDataText})
+	                &nnNetworkNumberOperatorsLabel, &nnNetworkNumberOperatorsText, &nnNetworkStaticDataLabel, &nnNetworkStaticDataText, &nnNetworkOperatorsListLabel})
 		w->                           setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
-	nnNetworkDetailsSpacer               .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
+	nnNetworkOperatorsListWidget         .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
 	nnOperatorDetailsSpacer              .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
 
 	// margins and spacing
@@ -476,7 +480,7 @@ MainWindow::MainWindow()
 
 	// fonts
 	for (auto widget : {&nnNetworkDescriptionLabel, &nnNetworkComplexityLabel, &nnNetworkFileSizeLabel, &nnNetworkNumberInsOutsLabel, &nnNetworkNumberOperatorsLabel,
-	                    &nnNetworkStaticDataLabel,
+	                    &nnNetworkStaticDataLabel, &nnNetworkOperatorsListLabel,
 	                    &nnOperatorTypeLabel, &nnOperatorOptionsLabel, &nnOperatorInputsLabel, &nnOperatorOutputsLabel, &nnOperatorComplexityLabel,
 	                    &nnOperatorStaticDataLabel, &nnOperatorDataRatioLabel})
 		widget->setStyleSheet("font-weight: bold;");
@@ -722,6 +726,7 @@ bool MainWindow::loadModelFile(const QString &filePath) {
 
 	// render the model as SVG image
 	nnWidget.open(model);
+	nnNetworkOperatorsListWidget.setNnModel(model);
 	updateSectionWidgetsVisibility();
 
 	// switch NN details to show the whole network info page
@@ -903,10 +908,7 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 	unsigned unused;
 	nnOperatorStaticDataValue.setText(QString("%1 bytes")
 		.arg(S2Q(Util::formatUIntHumanReadable(ModelFunctions::sizeOfOperatorStaticData(model, operatorId, unused)))));
-	nnOperatorDataRatioValue.setText(QString("ins-to-outs: %1, model-input-to-ins: %2, model-input-to-outs: %3")
-		.arg(ModelFunctions::dataRatioOfOperator(model, operatorId))
-		.arg(ModelFunctions::dataRatioOfOperatorModelInputToIns(model, operatorId))
-		.arg(ModelFunctions::dataRatioOfOperatorModelInputToOuts(model, operatorId)));
+	nnOperatorDataRatioValue.setText(S2Q(ModelFunctions::dataRatioOfOperatorStr(model, operatorId)));
 }
 
 void MainWindow::showTensorDetails(PluginInterface::TensorId tensorId) {
@@ -1257,6 +1259,7 @@ void MainWindow::onOpenNeuralNetworkFileUserIntent() {
 
 void MainWindow::closeNeuralNetwork() {
 	nnWidget.close();
+	nnNetworkOperatorsListWidget.clearNnModel();
 	pluginInterface.reset(nullptr);
 	PluginManager::unloadPlugin(plugin);
 	model = nullptr;

@@ -2,6 +2,7 @@
 #include "model-functions.h"
 #include "plugin-interface.h"
 #include "nn-types.h"
+#include "misc.h"
 
 #include <assert.h>
 
@@ -119,6 +120,14 @@ float dataRatioOfOperatorModelInputToOuts(const PluginInterface::Model *model, P
 }
 
 void computeTensors(const PluginInterface::Model *model, std::vector<std::unique_ptr<float>> *tensorData) {
+}
+
+/// string-returting aggretgate versions
+
+std::string dataRatioOfOperatorStr(const PluginInterface::Model *model, PluginInterface::OperatorId operatorId) {
+	return STR(ModelFunctions::dataRatioOfOperator(model, operatorId) <<
+	           ", model-input-to-ins: " << ModelFunctions::dataRatioOfOperatorModelInputToIns(model, operatorId) <<
+	           ", model-input-to-outs: " << ModelFunctions::dataRatioOfOperatorModelInputToOuts(model, operatorId));
 }
 
 }

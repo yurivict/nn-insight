@@ -126,7 +126,9 @@ private: // fields
 	QLabel                                   nnOperatorOutputsLabel;
 	QLabel                                   nnOperatorComplexityLabel;
 	QLabel                                   nnOperatorComplexityValue;
+	QWidget                                  nnOperatorDetailsSpacer;
 	QGroupBox                              nnTensorDetails;   // page#2
+	QGridLayout                              nnTensorDetailsLayout;
 	QGroupBox                            noNnIsOpenGroupBox; // optionally visible
 	QVBoxLayout                            noNnIsOpenLayout;
 	NoNnIsOpenWidget                       noNnIsOpenWidget;

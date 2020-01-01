@@ -207,7 +207,9 @@ MainWindow::MainWindow()
 ,          nnOperatorOutputsLabel(tr("Outputs"), &nnOperatorDetails)
 ,          nnOperatorComplexityLabel(tr("Complexity"), &nnOperatorDetails)
 ,          nnOperatorComplexityValue(&nnOperatorDetails)
+,          nnOperatorDetailsSpacer(&nnOperatorDetails)
 ,        nnTensorDetails(&nnDetailsStack)
+,          nnTensorDetailsLayout(&nnTensorDetails)
 ,     noNnIsOpenGroupBox(tr("No Neural Network File is Open"), &rhsWidget)
 ,       noNnIsOpenLayout(&noNnIsOpenGroupBox)
 ,       noNnIsOpenWidget(&noNnIsOpenGroupBox)
@@ -409,6 +411,7 @@ MainWindow::MainWindow()
 	                &nnNetworkNumberOperatorsLabel, &nnNetworkNumberOperatorsText})
 		w->                           setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
 	nnNetworkDetailsSpacer               .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
+	nnOperatorDetailsSpacer              .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
 
 	// margins and spacing
 	for (QLayout *l : {&scaleImageLayout, &sourceEffectConvolutionParamsLayout, &computeByLayout})
@@ -417,8 +420,8 @@ MainWindow::MainWindow()
 		l->setSpacing(0);
 	for (auto w : {&spacer1Widget, &spacer2Widget, &spacer3Widget})
 		w->setMinimumWidth(10);
-	nnNetworkDetailsLayout .setVerticalSpacing(0);
-	nnOperatorDetailsLayout.setVerticalSpacing(0);
+	for (auto l : {&nnNetworkDetailsLayout, &nnOperatorDetailsLayout, &nnTensorDetailsLayout})
+		l->setVerticalSpacing(0);
 
 	// widget options and flags
 	updateSectionWidgetsVisibility();
@@ -859,6 +862,8 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 	row++;
 	nnOperatorDetailsLayout.addWidget(&nnOperatorComplexityLabel,    row,   0/*column*/);
 	nnOperatorDetailsLayout.addWidget(&nnOperatorComplexityValue,    row,   1/*column*/);
+	row++;
+	nnOperatorDetailsLayout.addWidget(&nnOperatorDetailsSpacer,      row,   0/*column*/,  1/*rowSpan*/, 4/*columnSpan*/);
 
 	// set texts
 	nnOperatorTypeValue.setText(S2Q(STR(model->getOperatorKind(operatorId))));

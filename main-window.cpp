@@ -435,6 +435,7 @@ MainWindow::MainWindow()
 	// widget options and flags
 	updateSectionWidgetsVisibility();
 	sourceEffectConvolutionCountComboBox.setEnabled(false); // is only enabled when some convoulution is chosen
+	nnNetworkStaticDataText.setWordWrap(true); // allow word wrap because text is long in this label
 
 	// widget states
 	updateResultInterpretationSummary(false/*enable*/, tr("n/a"), tr("n/a"));

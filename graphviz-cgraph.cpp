@@ -54,7 +54,7 @@ Graphviz_CGraph::Graphviz_CGraph(const char *graphName)
 }
 
 Graphviz_CGraph::~Graphviz_CGraph() {
-	agclose(GRAPH);
+	agclose(GRAPH); // the memory is lost by GraphViz, see https://gitlab.com/graphviz/graphviz/issues/1651
 }
 
 /// interface implementation

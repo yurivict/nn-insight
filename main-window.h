@@ -46,7 +46,7 @@ private: // fields
 	QSplitter                        mainSplitter;
 	// Lhs
 	QScrollArea                        svgScrollArea;
-	NnWidget                           nnWidget;
+	NnWidget                             nnWidget;
 	// Rhs
 	QWidget                            rhsWidget;
 	QVBoxLayout                          rhsLayout;

@@ -35,6 +35,12 @@ void ZoomableSvgWidget::load(const QByteArray &contents) {
 	fixWindowSize(renderer()->defaultSize());
 }
 
+/// interface for descendants
+
+double ZoomableSvgWidget::getScalingFactor() const {
+	return scalingFactor;
+}
+
 /// overridables
 
 void ZoomableSvgWidget::mousePressEvent(QMouseEvent* event) {

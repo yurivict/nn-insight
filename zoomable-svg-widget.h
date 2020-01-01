@@ -23,6 +23,9 @@ protected: // mirroring 'load' functions
 	void load(const QString &file);
 	void load(const QByteArray &contents);
 
+protected: // interface for descendants
+	double getScalingFactor() const;
+
 protected: // overridables
 	void mousePressEvent(QMouseEvent* event);
 	void mouseReleaseEvent(QMouseEvent* event);

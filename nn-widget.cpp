@@ -56,26 +56,28 @@ void NnWidget::clearIndices() {
 }
 
 NnWidget::AnyObject NnWidget::findObjectAtThePoint(const QPointF &pt) const {
+	const QPointF pts = pt/getScalingFactor();
+	
 	// XXX ad hoc algorithm until we find some good geoindexing implementation
 
 	// operator box?
 	for (PluginInterface::OperatorId oid = 0, oide = modelIndexes.allOperatorBoxes.size(); oid < oide; oid++)
-		if (modelIndexes.allOperatorBoxes[oid].contains(pt))
+		if (modelIndexes.allOperatorBoxes[oid].contains(pts))
 			return {(int)oid,-1,-1,-1};
 
 	// tensor label?
 	for (PluginInterface::TensorId tid = 0, tide = modelIndexes.allTensorLabelBoxes.size(); tid < tide; tid++)
-		if (modelIndexes.allTensorLabelBoxes[tid].contains(pt))
+		if (modelIndexes.allTensorLabelBoxes[tid].contains(pts))
 			return {-1,(int)tid,-1,-1};
 
 	// input box?
 	for (unsigned idx = 0, idxe = modelIndexes.allInputBoxes.size(); idx < idxe; idx++)
-		if (modelIndexes.allInputBoxes[idx].contains(pt))
+		if (modelIndexes.allInputBoxes[idx].contains(pts))
 			return {-1,-1,(int)model->getInputs()[idx],-1};
 
 	// output box?
 	for (unsigned idx = 0, idxe = modelIndexes.allOutputBoxes.size(); idx < idxe; idx++)
-		if (modelIndexes.allOutputBoxes[idx].contains(pt))
+		if (modelIndexes.allOutputBoxes[idx].contains(pts))
 			return {-1,-1,-1,(int)model->getOutputs()[idx]};
 
 	return {-1,-1,-1,-1}; // not found

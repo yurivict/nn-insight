@@ -5,6 +5,10 @@
 #include <QPoint>
 #include <QPixmap>
 #include <QStringList>
+#include <QImage>
+#include <QByteArray>
+#include <QSize>
+#include <QPainter>
 
 #include <string>
 #include <vector>
@@ -32,6 +36,7 @@ unsigned char* convertArrayFloatToUInt8(const float *a, size_t size);
 bool doesFileExist(const char *filePath);
 QStringList readListFromFile(const char *fileName);
 std::string getMyOwnExecutablePath();
+QImage svgToImage(const QByteArray& svgContent, const QSize& size, QPainter::CompositionMode mode);
 
 template<typename T>
 bool isValueIn(const std::vector<T> &v, T val) {

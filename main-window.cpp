@@ -10,6 +10,8 @@
 #include "nn-operators.h"
 #include "image.h"
 #include "compute.h"
+#include "svg-graphics-generator.h"
+#include "svg-push-button.h"
 
 #include <QEvent>
 #include <QWheelEvent>
@@ -814,12 +816,10 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 			nnOperatorDetailsLayout.addWidget(label,         row,   3/*column*/);
 			// button
 			if (hasStaticData || (tensorData && (*tensorData.get())[t])) {
-				auto button = new QPushButton("➞", &nnOperatorDetails);
+				auto button = new SvgPushButton(SvgGraphics::generateTableIcon(), &nnOperatorDetails);
 				button->setContentsMargins(0,0,0,0);
-				button->setStyleSheet("color: blue;");
-				button->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-				//button->setMaximumSize(QFontMetrics(button->font()).size(Qt::TextSingleLine, button->text()).grownBy(QMargins(4,0,4,0)));
-				button->setMaximumSize(QFontMetrics(button->font()).size(Qt::TextSingleLine, button->text())+QSize(8,0));
+				button->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+				button->setMaximumSize(QFontMetrics(button->font()).size(Qt::TextSingleLine, "XX")+QSize(4,4));
 				button->setToolTip(tr("Show the tensor data as a table"));
 				tempDetailWidgets.push_back(std::unique_ptr<QWidget>(button));
 				nnOperatorDetailsLayout.addWidget(button,         row,   4/*column*/);

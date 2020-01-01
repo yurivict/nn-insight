@@ -309,4 +309,30 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::arra
 	return generator.ba;
 }
 
+QByteArray generateTableIcon() {
+	SvgGenerator generator(20/*width*/, 20/*height*/, 0/*marginPixelsX*/, 0/*marginPixelsY*/, "Table Icon");
+
+	QPainter painter;
+	//painter.setRenderHint(QPainter::Antialiasing);
+	painter.begin(&generator);
+	painter.setPen(Qt::black);
+	float marginX = 2, marginY = 4;
+	float l = 0  + marginX;
+	float t = 0  + marginY;
+	float r = 20 - marginX;
+	float b = 20 - marginY;
+	painter.drawRect(QRectF(l,t, (r-l),(b-t)));
+	for (unsigned i=1; i<4; i++) {
+		float y = t + float(i)*(b-t+1)/4;
+		painter.drawLine(l,y, r,y);
+	}
+	for (unsigned i=1; i<3; i++) {
+		float x = l + float(i)*(r-l+1)/3;
+		painter.drawLine(x,t+(b-t)/4, x,b);
+	}
+	painter.end();
+
+	return generator.ba;
+}
+
 } // SvgGraphics

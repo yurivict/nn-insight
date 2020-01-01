@@ -12,4 +12,6 @@ QByteArray generateModelSvg(const PluginInterface::Model *model,
 	const std::array<std::vector<QRectF>*,4> outIndexes // indexes: allOperatorBoxes,allTensorLabelBoxes,allInputBoxes,allOutputBoxes
 );
 
+QByteArray generateTableIcon();
+
 }

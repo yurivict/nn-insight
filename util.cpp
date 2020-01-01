@@ -12,6 +12,11 @@
 #include <QGuiApplication>
 #include <QWindow>
 #include <QStringList>
+#include <QImage>
+#include <QByteArray>
+#include <QSize>
+#include <QPainter>
+#include <QSvgRenderer>
 
 #include <limits>
 #include <cstring>
@@ -168,6 +173,17 @@ std::string getMyOwnExecutablePath() {
 	PRINT("getMyOwnExecutablePath: " << buf)
 
 	return buf;
+}
+
+QImage svgToImage(const QByteArray& svgContent, const QSize& size, QPainter::CompositionMode mode) {
+	QImage image(size.width(), size.height(), QImage::Format_ARGB32);
+
+	QPainter painter(&image);
+	painter.setCompositionMode(mode);
+	image.fill(Qt::transparent);
+	QSvgRenderer(svgContent).render(&painter);
+
+	return image;
 }
 
 }

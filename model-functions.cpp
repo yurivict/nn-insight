@@ -45,10 +45,16 @@ size_t computeOperatorFlops(const PluginInterface::Model *model, PluginInterface
 	}
 }
 
-size_t sizeOfModelStaticData(const PluginInterface::Model *model, unsigned &outObjectCount) {
+size_t sizeOfModelStaticData(const PluginInterface::Model *model, unsigned &outObjectCount, size_t &outMaxStaticDataPerOperator) {
 	size_t size = 0;
-	for (PluginInterface::OperatorId oid = 0, oide = model->numOperators(); oid < oide; oid++)
-		size += sizeOfOperatorStaticData(model, oid, outObjectCount);
+	outObjectCount = 0;
+	outMaxStaticDataPerOperator = 0;
+	for (PluginInterface::OperatorId oid = 0, oide = model->numOperators(); oid < oide; oid++) {
+		auto sizeForOperator = sizeOfOperatorStaticData(model, oid, outObjectCount);
+		size += sizeForOperator;
+		if (sizeForOperator > outMaxStaticDataPerOperator)
+			outMaxStaticDataPerOperator = sizeForOperator;
+	}
 	return size;
 }
 

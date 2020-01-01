@@ -128,6 +128,8 @@ private: // fields
 	QLabel                                   nnOperatorOutputsLabel;
 	QLabel                                   nnOperatorComplexityLabel;
 	QLabel                                   nnOperatorComplexityValue;
+	QLabel                                   nnOperatorStaticDataLabel;
+	QLabel                                   nnOperatorStaticDataValue;
 	QWidget                                  nnOperatorDetailsSpacer;
 	QGroupBox                              nnTensorDetails;   // page#2
 	QGridLayout                              nnTensorDetailsLayout;

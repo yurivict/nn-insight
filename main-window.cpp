@@ -209,6 +209,8 @@ MainWindow::MainWindow()
 ,          nnOperatorOutputsLabel(tr("Outputs"), &nnOperatorDetails)
 ,          nnOperatorComplexityLabel(tr("Complexity"), &nnOperatorDetails)
 ,          nnOperatorComplexityValue(&nnOperatorDetails)
+,          nnOperatorStaticDataLabel(tr("Static data"), &nnOperatorDetails)
+,          nnOperatorStaticDataValue(&nnOperatorDetails)
 ,          nnOperatorDetailsSpacer(&nnOperatorDetails)
 ,        nnTensorDetails(&nnDetailsStack)
 ,          nnTensorDetailsLayout(&nnTensorDetails)
@@ -471,7 +473,8 @@ MainWindow::MainWindow()
 	// fonts
 	for (auto widget : {&nnNetworkDescriptionLabel, &nnNetworkComplexityLabel, &nnNetworkFileSizeLabel, &nnNetworkNumberInsOutsLabel, &nnNetworkNumberOperatorsLabel,
 	                    &nnNetworkStaticDataLabel,
-	                    &nnOperatorTypeLabel, &nnOperatorOptionsLabel, &nnOperatorInputsLabel, &nnOperatorOutputsLabel, &nnOperatorComplexityLabel})
+	                    &nnOperatorTypeLabel, &nnOperatorOptionsLabel, &nnOperatorInputsLabel, &nnOperatorOutputsLabel, &nnOperatorComplexityLabel,
+	                    &nnOperatorStaticDataLabel})
 		widget->setStyleSheet("font-weight: bold;");
 
 	// connect signals
@@ -882,11 +885,17 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 	nnOperatorDetailsLayout.addWidget(&nnOperatorComplexityLabel,    row,   0/*column*/);
 	nnOperatorDetailsLayout.addWidget(&nnOperatorComplexityValue,    row,   1/*column*/);
 	row++;
+	nnOperatorDetailsLayout.addWidget(&nnOperatorStaticDataLabel,    row,   0/*column*/);
+	nnOperatorDetailsLayout.addWidget(&nnOperatorStaticDataValue,    row,   1/*column*/);
+	row++;
 	nnOperatorDetailsLayout.addWidget(&nnOperatorDetailsSpacer,      row,   0/*column*/,  1/*rowSpan*/, 4/*columnSpan*/);
 
 	// set texts
 	nnOperatorTypeValue.setText(S2Q(STR(model->getOperatorKind(operatorId))));
 	nnOperatorComplexityValue.setText(S2Q(Util::formatFlops(ModelFunctions::computeOperatorFlops(model, operatorId))));
+	unsigned unused;
+	nnOperatorStaticDataValue.setText(QString("%1 bytes")
+		.arg(S2Q(Util::formatUIntHumanReadable(ModelFunctions::sizeOfOperatorStaticData(model, operatorId, unused)))));
 }
 
 void MainWindow::showTensorDetails(PluginInterface::TensorId tensorId) {
@@ -1087,7 +1096,7 @@ void MainWindow::updateNetworkDetailsPage() {
 
 	nnNetworkDescriptionText   .setText(S2Q(pluginInterface->modelDescription()));
 	nnNetworkComplexityText    .setText(S2Q(Util::formatFlops(ModelFunctions::computeModelFlops(model))));
-	nnNetworkFileSizeText      .setText(QString("%1 bytes").arg(S2Q(Util::formatUIntHumanReadable(Util::getFileSize(S2Q(pluginInterface->filePath()))))));
+	nnNetworkFileSizeText      .setText(QString(tr("%1 bytes")).arg(S2Q(Util::formatUIntHumanReadable(Util::getFileSize(S2Q(pluginInterface->filePath()))))));
 	nnNetworkNumberInsOutsText .setText(QString("%1 %2, %3 %4")
 		.arg(model->numInputs())
 		.arg(numInPlural(model->numInputs(), tr("input"), tr("inputs")))
@@ -1099,11 +1108,14 @@ void MainWindow::updateNetworkDetailsPage() {
 		.arg(numInPlural(model->numOperators(), tr("operator"), tr("operators")))
 	);
 	unsigned staticDataTensors = 0;
-	auto sizeOfStaticData = ModelFunctions::sizeOfModelStaticData(model, staticDataTensors);
-	nnNetworkStaticDataText.setText(QString("%1 bytes in %2 %3")
+	size_t   maxStaticDataPerOperator = 0;
+	auto sizeOfStaticData = ModelFunctions::sizeOfModelStaticData(model, staticDataTensors, maxStaticDataPerOperator);
+	nnNetworkStaticDataText.setText(QString(tr("%1 bytes in %2 %3, average %4 bytes per operator, max %5 bytes per operator"))
 		.arg(S2Q(Util::formatUIntHumanReadable(sizeOfStaticData)))
 		.arg(staticDataTensors)
 		.arg(numInPlural(staticDataTensors, tr("tensor"), tr("tensors")))
+		.arg(S2Q(Util::formatUIntHumanReadable(sizeOfStaticData/model->numOperators())))
+		.arg(S2Q(Util::formatUIntHumanReadable(maxStaticDataPerOperator)))
 	);
 }
 

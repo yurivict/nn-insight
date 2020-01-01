@@ -414,6 +414,7 @@ MainWindow::MainWindow()
 	nnOperatorDetailsSpacer              .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
 
 	// margins and spacing
+	rhsLayout.setSpacing(0);
 	for (QLayout *l : {&scaleImageLayout, &sourceEffectConvolutionParamsLayout, &computeByLayout})
 		l->setContentsMargins(0,0,0,0);
 	for (QLayout *l : {&sourceEffectConvolutionParamsLayout, &computeByLayout})
@@ -734,7 +735,7 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 	removeTableIfAny();
 	// switch to the details page, set title
 	nnDetailsStack.setCurrentIndex(/*page#1*/1);
-	nnOperatorDetails.setTitle(QString(tr("NN Operator#%1")).arg(operatorId));
+	nnOperatorDetails.setTitle(QString(tr("NN Operator#%1")).arg(operatorId+1));
 
 	// clear items
 	while (nnOperatorDetailsLayout.count() > 0)
@@ -1197,7 +1198,7 @@ void MainWindow::updateSectionWidgetsVisibility() {
 	nnDetailsStack    .setVisible(haveNn);
 	noNnIsOpenGroupBox.setVisible(!haveNn);
 
-	nnDetailsStack.setSizePolicy(QSizePolicy::Preferred, haveImage ? QSizePolicy::Fixed : QSizePolicy::Minimum);
+	//nnDetailsStack.setSizePolicy(QSizePolicy::Preferred, haveImage ? QSizePolicy::Fixed : QSizePolicy::Minimum);
 }
 
 void MainWindow::onOpenNeuralNetworkFileUserIntent() {

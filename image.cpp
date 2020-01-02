@@ -15,6 +15,7 @@
 #include <array>
 #include <memory>
 #include <cstring>
+#include <functional>
 
 #include <assert.h>
 
@@ -56,12 +57,19 @@ void writePngImageFile(const float *pixels, const TensorShape &shape, const std:
 	image.write(fileName);
 }
 
-float* readPixmap(const QPixmap &pixmap, TensorShape &outShape) {
+float* readPixmap(const QPixmap &pixmap, TensorShape &outShape, std::function<void(const std::string&)> cbWarningMessage) {
 	QImage image = pixmap.toImage();
 
 	// always convert image to RGB32 so we don't have to deal with any other formats
+#if QT_VERSION >= QT_VERSION_CHECK(5,13,0) // QImage::convertTo exists since Qt-5.13
 	image.convertTo(QImage::Format_RGB32, Qt::ColorOnly); // CAVEAT: the alpha channel is converted to black, which isn't normally desirable
 	assert(image.format()==QImage::Format_RGB32);
+#else
+	if (image.format()!=QImage::Format_RGB32) {
+		cbWarningMessage(STR("Your Qt version " << QT_VERSION_MAJOR << "." << QT_VERSION_MINOR << "." << QT_VERSION_PATCH << " is older than 5.13.0, it is missing QImage::convertTo needed to convert this image to the QImage::Format_RGB32 format"));
+		return nullptr;
+	}
+#endif
 
 	// TODO for pixmaps with alpha-channel use QImage::Format_ARGB32 and convert alpha to white (or any other background color)
 	if (pixmap.hasAlpha())

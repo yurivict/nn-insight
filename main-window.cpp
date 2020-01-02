@@ -971,7 +971,12 @@ void MainWindow::openImagePixmap(const QPixmap &imagePixmap, const QString &sour
 	clearEffects();
 	clearComputedTensorData(); // opening image invalidates computation results
 	// read the image as tensor
-	sourceTensorDataAsLoaded.reset(Image::readPixmap(imagePixmap, sourceTensorShape));
+	sourceTensorDataAsLoaded.reset(Image::readPixmap(imagePixmap, sourceTensorShape, [this,&sourceName](const std::string &msg) {
+		PRINT("WARNING: failed in " << Q2S(sourceName) << ": " << msg)
+		Util::warningOk(this, S2Q(msg));
+	}));
+	if (!sourceTensorDataAsLoaded) // message should have been called above
+		return;
 	if (0) { // TMP: scale down a huge screenshot 1/6
 		TensorShape sourceTensorShapeNew = {sourceTensorShape[0]/6, sourceTensorShape[1]/6, sourceTensorShape[2]};
 		sourceTensorDataAsLoaded.reset(Image::resizeImage(sourceTensorDataAsLoaded.get(), sourceTensorShape, sourceTensorShapeNew));

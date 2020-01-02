@@ -84,7 +84,7 @@ target_link_libraries(nn-insight
 	nlohmann_json::nlohmann_json
 	${png++_LIBRARIES}
 	${FlatBuffers}
-	PkgConfig::libcgraph ${CMAKE_INSTALL_PREFIX}/lib/graphviz/libgvplugin_dot_layout.so
+	PkgConfig::libcgraph ${libcgraph_LIBRARY_DIRS}/graphviz/libgvplugin_dot_layout.so
 	${CMAKE_DL_LIBS}
 )
 if (USE_PERFTOOLS)

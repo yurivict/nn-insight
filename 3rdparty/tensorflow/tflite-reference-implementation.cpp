@@ -61,7 +61,7 @@ public:
 	void Resize(unsigned sz_) {resize(sz_);}
 	void SetDim(unsigned dim, unsigned val) {(*this)[dim] = val;}
 	unsigned Dims(unsigned n) const {return (*this)[n];}
-	unsigned DimensionsCount() const {return size();}
+	int DimensionsCount() const {return size();}
 	int FlatSize() const {
 		int sz = 1;
 		for (auto i = begin(); i != end(); i++)

@@ -176,10 +176,6 @@ if (false) {
 
 		// templetized getter
 		template<typename T> T as() const; // not implemented by default
-		template<> float as() const {return f;}
-		template<> int32_t as() const {return i;}
-		template<> PaddingType as() const {return paddingType;}
-		template<> ActivationFunction as() const {return activationFunction;}
 	};
 
 	// OperatorOption is what is returned by the plugin for individual operators
@@ -226,3 +222,10 @@ if (false) {
 	virtual size_t numModels() const = 0;                    // how many models does this file contain
 	virtual const Model* getModel(unsigned index) const = 0; // access to one model, the Model object is owned by the plugin
 };
+
+// gcc-9 needs explicit template specializations to be outside of class scope
+template<> inline float PluginInterface::OperatorOptionValue::as() const {return f;}
+template<> inline int32_t PluginInterface::OperatorOptionValue::as() const {return i;}
+template<> inline PluginInterface::PaddingType PluginInterface::OperatorOptionValue::as() const {return paddingType;}
+template<> inline PluginInterface::ActivationFunction PluginInterface::OperatorOptionValue::as() const {return activationFunction;}
+

@@ -8,6 +8,7 @@
 #include <vector>
 #include <cmath>
 
+#include <assert.h>
 
 namespace tflite {
 

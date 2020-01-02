@@ -514,7 +514,7 @@ bool compute(
 			auto input = (*tensorData)[inputs[0]].get();
 			auto output = outputData.get();
 			auto hardSwish = [](float x) {
-				// defined in the "Searching for MobileNet3 paper" (https://arxiv.org/pdf/1905.02244.pdf)
+				// defined in the "Searching for MobileNet3" paper (https://arxiv.org/pdf/1905.02244.pdf)
 				// h-swish(x) = x*(ReLU6(x+3)/6)
 				if (x>=3)
 					return x;

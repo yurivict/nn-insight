@@ -18,7 +18,6 @@
 #include <QDebug>
 #include <QPushButton>
 #include <QFontMetrics>
-//#include <QMargins>
 #include <QDesktopWidget>
 #include <QApplication>
 #include <QFileDialog>

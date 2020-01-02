@@ -38,7 +38,7 @@ find_package(Qt5 COMPONENTS Core Gui Widgets Svg REQUIRED)
 find_package(nlohmann_json 3.2.0 REQUIRED)
 find_package(png++ REQUIRED)
 find_package(PNG REQUIRED)
-find_package(Flatbuffers REQUIRED)
+find_package(FlatBuffers REQUIRED)
 pkg_check_modules(libcgraph libgvc REQUIRED IMPORTED_TARGET libcgraph)
 if (USE_PERFTOOLS)
 	pkg_check_modules(libtcmalloc REQUIRED IMPORTED_TARGET libtcmalloc)
@@ -48,6 +48,7 @@ endif()
 message(STATUS "PNG++ found: includes ${png++_INCLUDE_DIRS}, libs ${png++_LIBRARIES}")
 
 include_directories(${png++_INCLUDE_DIRS})
+include_directories(${FLATBUFFERS_INCLUDE_DIRS})
 include_directories(${PROJECT_SOURCE_DIR}/3rdparty) # for avir/avir.h to be found
 
 ##
@@ -82,6 +83,7 @@ target_link_libraries(nn-insight
 	Qt5::Widgets Qt5::Svg
 	nlohmann_json::nlohmann_json
 	${png++_LIBRARIES}
+	${FlatBuffers}
 	PkgConfig::libcgraph ${CMAKE_INSTALL_PREFIX}/lib/graphviz/libgvplugin_dot_layout.so
 	${CMAKE_DL_LIBS}
 )

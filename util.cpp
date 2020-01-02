@@ -171,8 +171,6 @@ std::string getMyOwnExecutablePath() {
 		FAIL("Failed to read the link " << selfExeLink << " to determine our executable path")
 	buf[res] = 0;
 
-	PRINT("getMyOwnExecutablePath: " << buf)
-
 	return buf;
 }
 

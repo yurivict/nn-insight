@@ -14,6 +14,9 @@
 
 int main(int argc, char **argv) {
 
+	if (argc != 2)
+		FAIL("Usage: nn-insight {network.tflite}")
+
 	QApplication app(argc, argv);
 
 	MainWindow mainWindow;

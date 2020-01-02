@@ -62,8 +62,8 @@ public:
 	void SetDim(unsigned dim, unsigned val) {(*this)[dim] = val;}
 	unsigned Dims(unsigned n) const {return (*this)[n];}
 	unsigned DimensionsCount() const {return size();}
-	unsigned FlatSize() const {
-		unsigned sz = 1;
+	int FlatSize() const {
+		int sz = 1;
 		for (auto i = begin(); i != end(); i++)
 			sz *= *i;
 		return sz;

@@ -8,6 +8,8 @@
 
 #include <QHeaderView>
 
+#include <assert.h>
+
 /// local types
 
 enum OperatorsListColumns {

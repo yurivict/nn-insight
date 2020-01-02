@@ -65,7 +65,7 @@ add_executable(nn-insight
 	nn-widget.cpp
 	no-nn-is-open-widget.cpp
 	zoomable-svg-widget.cpp
-	DataTable2D.cpp
+	data-table-2d.cpp
 	scale-image-widget.cpp
 	svg-push-button.cpp
 	image.cpp

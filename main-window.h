@@ -9,7 +9,7 @@
 #include "no-nn-is-open-widget.h"
 #include "operators-list-widget.h"
 #include "scale-image-widget.h"
-#include "DataTable2D.h"
+#include "data-table-2d.h"
 #include <QLabel>
 #include <QPushButton>
 #include <QCheckBox>

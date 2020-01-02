@@ -1,5 +1,5 @@
 
-#include "DataTable2D.h"
+#include "data-table-2d.h"
 #include "nn-types.h"
 #include "misc.h"
 #include "util.h"

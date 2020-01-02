@@ -11,7 +11,7 @@ set(CMAKE_AUTOUIC ON)
 ##
 ## C++ standard that we use is the highest possible
 ##
-set(CMAKE_CXX_FLAGS "-std=c++2a -Wall")
+set(CMAKE_CXX_FLAGS "-std=c++2a -Wall -fstrict-enums")
 
 ##
 ## Build type

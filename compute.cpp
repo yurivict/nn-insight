@@ -293,7 +293,7 @@ bool compute(
 			int strideWidth=0, strideHeight=0;
 			int dilationWidth=0, dilationHeight=0;
 			PI::PaddingType paddingType;
-			PI::ActivationFunction activationFunction;
+			PI::ActivationFunction activationFunction = PluginInterface::ActivationFunction_NONE;
 
 			// parse the operator options supplied by the model into the above variables
 			unsigned numParsed =
@@ -358,7 +358,7 @@ bool compute(
 			int strideWidth=0, strideHeight=0;
 			int dilationWidth=0, dilationHeight=0;
 			PI::PaddingType paddingType;
-			PI::ActivationFunction activationFunction;
+			PI::ActivationFunction activationFunction = PluginInterface::ActivationFunction_NONE;
 
 			// parse the operator options supplied by the model into the above variables
 			unsigned numParsed =
@@ -426,7 +426,7 @@ bool compute(
 			int strideWidth=0, strideHeight=0;
 			int filterWidth=0, filterHeight=0;
 			PI::PaddingType paddingType;
-			PI::ActivationFunction activationFunction;
+			PI::ActivationFunction activationFunction = PluginInterface::ActivationFunction_NONE;
 
 			// parse the operator options supplied by the model into the above variables
 			unsigned numParsed =

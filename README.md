@@ -38,3 +38,6 @@ The NN Insight project was only started on Dec 20th 2019, and it is in its early
 * Scrolling issues are present in the neural network view.
 * Not all UI events are yet properly connected.
 
+## Screenshot
+![Alt text](https://raw.githubusercontent.com/yurivict/nn-insight/master/screenshot.png "NN Insight")
+

@@ -45,12 +45,6 @@ static std::map<std::string, std::unique_ptr<Plugin>> registry; // all loaded pl
 // local helpers
 
 static std::string pluginNameToPluginLibraryPath(const std::string &pluginName) {
-	// try locally built dir
-	auto pathLocalDevDir = STR("plugins/" << pluginName << "/" << pluginName << "-plugin.so");
-	if (Util::doesFileExist(pathLocalDevDir.c_str()))
-		return pathLocalDevDir;
-
-	// try globally installed situation
 	auto getMyExecutionPath = []() {
 		auto myExe = Util::getMyOwnExecutablePath();
 		auto sep = myExe.find_last_of('/');
@@ -58,6 +52,14 @@ static std::string pluginNameToPluginLibraryPath(const std::string &pluginName) 
 			FAIL("bad executable path: it doesn't contain a separator '/': " << myExe)
 		return myExe.substr(0,sep);
 	};
+
+	// try locally built dir
+	auto pathLocalDevDir = STR(getMyExecutionPath() << "/plugins/" << pluginName << "/" << pluginName << "-plugin.so");
+	if (Util::doesFileExist(pathLocalDevDir.c_str()))
+		return pathLocalDevDir;
+
+
+	// try globally installed situation
 	auto pathGlobalInstallDir = STR(getMyExecutionPath() << "/../libexec/nn-insight/" << pluginName << "-plugin.so");
 	if (Util::doesFileExist(pathGlobalInstallDir.c_str()))
 		return pathGlobalInstallDir;

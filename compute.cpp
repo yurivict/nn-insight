@@ -541,7 +541,7 @@ bool compute(
 			assert(model->getTensorShape(inputs[0]) == model->getTensorShape(outputs[0])); // produces the same shape as consumes
 
 			// operator options required to run this operator
-			PI::ActivationFunction activationFunction;
+			PI::ActivationFunction activationFunction = PluginInterface::ActivationFunction_NONE;
 
 			unsigned numParsed =
 				OperatorOptions::GetOption1<PI::OperatorOption_FUSED_ACTIVATION_FUNCTION,

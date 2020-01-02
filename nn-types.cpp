@@ -1,3 +1,5 @@
+// Copyright (C) 2020 by Yuri Victorovich. All rights reserved.
+
 #include "nn-types.h"
 
 size_t tensorFlatSize(const TensorShape &shape) {

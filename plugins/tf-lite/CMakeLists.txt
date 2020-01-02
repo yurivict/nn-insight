@@ -1,3 +1,5 @@
+# Copyright (C) 2020 by Yuri Victorovich. All rights reserved.
+
 add_library(tf-lite-plugin SHARED
 	tf-lite.cpp
 )

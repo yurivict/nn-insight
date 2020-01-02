@@ -1,3 +1,5 @@
+// Copyright (C) 2020 by Yuri Victorovich. All rights reserved.
+
 #pragma once
 
 #include "nn-types.h"

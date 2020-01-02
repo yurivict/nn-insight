@@ -1,3 +1,4 @@
+// Copyright (C) 2020 by Yuri Victorovich. All rights reserved.
 
 #include "operators-list-widget.h"
 #include "model-functions.h"

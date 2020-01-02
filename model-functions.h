@@ -41,6 +41,6 @@ void computeTensors(const PluginInterface::Model *model, std::vector<std::unique
 
 // string-returting aggretgate versions
 std::string dataRatioOfOperatorStr(const PluginInterface::Model *model, PluginInterface::OperatorId operatorId,
-	float &outIncreaseOboveInput, float &outModelInputToOut);
+	float &outIncreaseAboveInput, float &outModelInputToOut);
 
 }

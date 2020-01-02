@@ -3,6 +3,7 @@
 #include "model-functions.h"
 #include "misc.h"
 #include "util.h"
+#include "svg-graphics-generator.h"
 
 #include <QHeaderView>
 
@@ -75,26 +76,43 @@ private: // QAbstractTableModel interface implementation
 				return QString("%1 bytes").arg(S2Q(Util::formatUIntHumanReadable(
 					ModelFunctions::sizeOfOperatorStaticData(model, (PluginInterface::OperatorId)index.row(), unused))));
 			} case OperatorsListColumns_DataRatio: {
-				float dataRateIncreaseOboveInput, modelInputToOut;
+				float dataRateIncreaseAboveInput, modelInputToOut;
 				return S2Q(ModelFunctions::dataRatioOfOperatorStr(model, (PluginInterface::OperatorId)index.row(),
-					dataRateIncreaseOboveInput, modelInputToOut));
+					dataRateIncreaseAboveInput, modelInputToOut));
 			} default:
 				return QVariant();
 			}
-		case Qt::BackgroundRole: // background color
+		case Qt::DecorationRole: // icon
 			switch ((OperatorsListColumns)index.column()) {
 			case OperatorsListColumns_DataRatio: {
-				float dataRateIncreaseOboveInput, modelInputToOut;
+				float dataRateIncreaseAboveInput, modelInputToOut;
 				(void)ModelFunctions::dataRatioOfOperatorStr(model, (PluginInterface::OperatorId)index.row(),
-					dataRateIncreaseOboveInput, modelInputToOut);
-				return dataRateIncreaseOboveInput<=1
-					? QVariant()
-					: modelInputToOut<2
-						? QVariant(QColor(255,105,180)) // pink color
-						: QVariant(QColor(Qt::red));
+					dataRateIncreaseAboveInput, modelInputToOut);
+
+				// compute the icon's direction and color
+				QPointF arrowDir;
+				if (dataRateIncreaseAboveInput<0.95)
+					arrowDir = {16,8};
+				else if (dataRateIncreaseAboveInput>1.05)
+					arrowDir = {16,-8};
+				else
+					arrowDir = {16,0};
+				QColor color =
+					dataRateIncreaseAboveInput<=1
+						? Qt::black
+						: modelInputToOut<2
+							? QColor(255,105,180) // pink color
+							: QColor(Qt::red);
+				// generate and set the icon
+				return QIcon(QPixmap::fromImage(Util::svgToImage(
+					SvgGraphics::generateArrow(arrowDir, color, {0.10,0.55,0.40,0.40}),
+					QSize(16,16),
+					QPainter::CompositionMode_SourceOver))
+				);
 			} default:
 				return QVariant();
 			}
+			break;
 		default:
 			return QVariant();
 		}

@@ -1,6 +1,5 @@
 
 
-#include "plugin-interface.h"
 #include <QSvgGenerator>
 #include <QPainter>
 #include <QPainterPath>
@@ -11,13 +10,17 @@
 #include <QRectF>
 #include <QRect>
 #include <QPointF>
+#include <QBrush>
 
 #include <vector>
 #include <array>
 #include <map>
+#include <cmath>
 
 #include <assert.h>
 
+#include "svg-graphics-generator.h"
+#include "plugin-interface.h"
 #include "model-functions.h"
 #include "misc.h"
 #include "util.h"
@@ -334,5 +337,76 @@ QByteArray generateTableIcon() {
 
 	return generator.ba;
 }
+
+QByteArray generateArrow(const QPointF &vec, QColor color, const ArrowParams arrowParams) {
+	typedef qreal C;
+
+	// determine the size: it is always a square
+	unsigned dx = vec.x() > 0 ? vec.x() : -vec.x();
+	unsigned dy = vec.y() > 0 ? vec.y() : -vec.y();
+	unsigned SZ = dx > dy ? dx : dy;
+
+	auto rotate = [](const QPointF pt, C sinAngle, C cosAngle) {
+		return QPointF(pt.x()*cosAngle - pt.y()*sinAngle,
+		               pt.x()*sinAngle + pt.y()*cosAngle);
+	};
+
+	SvgGenerator generator(SZ, SZ, 0/*marginPixelsX*/, 0/*marginPixelsY*/, "Arrow");
+
+	// params
+	const ArrowParams &p = arrowParams;
+
+	// scale factor and angle
+	C vecLen = std::sqrt(vec.x()*vec.x() + vec.y()*vec.y());
+	C cosAngle = vec.x()/vecLen;
+	C sinAngle = vec.y()/vecLen;
+
+	// draw the arrow from 0,0 to 1,0
+	std::vector<QPointF> pts;
+	auto add = [&pts](qreal x, qreal y) {
+		pts.push_back(QPointF(x, y));
+	};
+	add(0,                 -p.lineWidth/2);
+	add(0,                 +p.lineWidth/2);
+	add(1-p.headLengthIn,  +p.lineWidth/2);
+	add(1-p.headLengthOut, +p.headWidth/2);
+	add(1,                 0);
+	add(1-p.headLengthOut, -p.headWidth/2);
+	add(1-p.headLengthIn,  -p.lineWidth/2);
+	add(0,                 -p.lineWidth/2);
+
+	for (auto &pt : pts) {
+		// move arrow to x in -0.5 -> +0.5
+		pt += QPointF(-0.5, 0.);
+		// rotate and center
+		pt = rotate(pt, sinAngle, cosAngle);
+		// scale to sz dimensions
+		pt.rx() *= vecLen;
+		pt.ry() *= vecLen;
+		// shift to the location require (center of the box)
+		pt.rx() += SZ/2;
+		pt.ry() += SZ/2;
+	}
+
+	// pts -> QPainterPath
+	QPainterPath path;
+	int idx = 0;
+	for (auto &pt : pts) {
+		if (idx++ == 0)
+			path.moveTo(pt);
+		else
+			path.lineTo(pt);
+	}
+
+	QPainter painter;
+	painter.begin(&generator);
+	painter.fillPath(path, QBrush(color));
+	//painter.setPen(QPen(Qt::blue));
+	//painter.drawRect(1,1, SZ-2,SZ-2);
+	painter.end();
+
+	return generator.ba;
+}
+
 
 } // SvgGraphics

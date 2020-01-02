@@ -125,15 +125,12 @@ void computeTensors(const PluginInterface::Model *model, std::vector<std::unique
 /// string-returting aggretgate versions
 
 std::string dataRatioOfOperatorStr(const PluginInterface::Model *model, PluginInterface::OperatorId operatorId,
-                                   float &outIncreaseOboveInput, float &outModelInputToOut)
+                                   float &outIncreaseAboveInput, float &outModelInputToOut)
 {
 	auto modelInputToIns = ModelFunctions::dataRatioOfOperatorModelInputToIns(model, operatorId);
 	auto modelInputToOuts = ModelFunctions::dataRatioOfOperatorModelInputToOuts(model, operatorId);
 
-	if (modelInputToOuts>1 && modelInputToIns<modelInputToOuts) // if increases the data rate above the model input rate
-		outIncreaseOboveInput = modelInputToOuts/modelInputToIns;
-	else
-		outIncreaseOboveInput = 0;
+	outIncreaseAboveInput = modelInputToOuts/modelInputToIns;
 	outModelInputToOut = modelInputToOuts;
 
 	return STR(ModelFunctions::dataRatioOfOperator(model, operatorId) <<

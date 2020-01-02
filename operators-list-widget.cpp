@@ -98,14 +98,14 @@ private: // QAbstractTableModel interface implementation
 				else
 					arrowDir = {16,0};
 				QColor color =
-					dataRateIncreaseAboveInput<=1
+					(dataRateIncreaseAboveInput<=1 || modelInputToOut<=1)
 						? Qt::black
 						: modelInputToOut<2
 							? QColor(255,105,180) // pink color
 							: QColor(Qt::red);
 				// generate and set the icon
 				return QIcon(QPixmap::fromImage(Util::svgToImage(
-					SvgGraphics::generateArrow(arrowDir, color, {0.10,0.55,0.40,0.40}),
+					SvgGraphics::generateArrow(arrowDir, color, {0.08,0.55,0.40,0.40}),
 					QSize(16,16),
 					QPainter::CompositionMode_SourceOver))
 				);

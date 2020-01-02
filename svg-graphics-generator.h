@@ -21,6 +21,7 @@ QByteArray generateModelSvg(const PluginInterface::Model *model,
 	const std::array<std::vector<QRectF>*,4> outIndexes // indexes: allOperatorBoxes,allTensorLabelBoxes,allInputBoxes,allOutputBoxes
 );
 
+QByteArray generateNnAppIcon();
 QByteArray generateTableIcon();
 QByteArray generateArrow(const QPointF &vec, QColor color, const ArrowParams arrowParams = {0.05,0.35,0.27,0.2});
 

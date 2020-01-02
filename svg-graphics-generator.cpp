@@ -312,6 +312,62 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::arra
 	return generator.ba;
 }
 
+QByteArray generateNnAppIcon() {
+	SvgGenerator generator(128/*width*/, 128/*height*/, 0/*marginPixelsX*/, 0/*marginPixelsY*/, "Table Icon");
+
+	// set of connected circles, all coordinates are w/in 0..1 range in x and y
+	float radius = 0.11;
+	float margin = 0.03;
+	float MR = margin+radius;
+	struct {
+		QPointF pt;
+		QColor  color;
+	} circles[] = {
+		{{MR, 0.3},   {100,153,237}},
+		{{MR, 0.7},   {246,219,64}},
+		{{0.5, MR},   {131,96,244}},
+		{{0.5, 0.45}, {219,83,91}},
+		{{0.5, 1-MR}, {113,210,223}},
+		{{1-MR, 0.5}, {246,219,64}}
+	};
+	struct {
+		unsigned idx1;
+		unsigned idx2;
+	} lines[] = {
+		{0,2},
+		{0,3},
+		{0,4},
+		{1,2},
+		{1,4},
+		{2,5},
+		{3,4},
+		{3,5},
+		{4,5}
+	};
+
+	// paint
+	QPainter painter;
+	painter.begin(&generator);
+	float coef = 128.;
+	painter.setPen(QPen(Qt::black, 4));
+	for (auto &c : circles) {
+		painter.setBrush(c.color);
+		painter.drawEllipse(c.pt*coef, radius*coef, radius*coef);
+	}
+	for (auto &l : lines) {
+		auto pt1 = circles[l.idx1].pt;
+		auto pt2 = circles[l.idx2].pt;
+		QPointF unit = (pt2-pt1);
+		unit /= std::sqrt(unit.x()*unit.x()+unit.y()*unit.y());
+		pt1 += unit*radius;
+		pt2 -= unit*radius;
+		painter.drawLine(pt1*coef, pt2*coef);
+	}
+	painter.end();
+
+	return generator.ba;
+}
+
 QByteArray generateTableIcon() {
 	SvgGenerator generator(20/*width*/, 20/*height*/, 0/*marginPixelsX*/, 0/*marginPixelsY*/, "Table Icon");
 

@@ -686,6 +686,9 @@ MainWindow::MainWindow()
 	fileMenu->addAction(tr("Quit"), []() {
 		QApplication::quit();
 	})->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_Q));
+
+	// icon
+	setWindowIcon(QPixmap::fromImage(Util::svgToImage(SvgGraphics::generateNnAppIcon(), QSize(128,128), QPainter::CompositionMode_SourceOver)));
 }
 
 MainWindow::~MainWindow() {

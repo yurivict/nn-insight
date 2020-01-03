@@ -14,6 +14,7 @@
 #include <memory>
 #include <functional>
 #include <cmath>
+#include <cstring>
 
 #include <assert.h>
 

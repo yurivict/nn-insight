@@ -16,9 +16,9 @@ NN Insight is a program that visualizes neural network's structure and computati
 * TF Lite (only floating point models, not quantized models)
 
 ## Supported networks
-* MobileNet V1 (download the file: https://drive.google.com/file/d/1FYK72GkbqJUwgFZ8q_32HtI7X3CrfBtT/view?usp=sharing)
-* MobileNet V2 (download the file: https://drive.google.com/file/d/1XicUqcqUNa14DfqeWyUYHZGHDXO5XAgp/view?usp=sharing)
-* MobileNet V3 (download the file: https://drive.google.com/file/d/1qq6xLx98M_wy9YqetOxuqNJCSOEq5O8f/view?usp=sharing)
+* MobileNet V1 ([link](https://drive.google.com/file/d/1FYK72GkbqJUwgFZ8q_32HtI7X3CrfBtT/view?usp=sharing))
+* MobileNet V2 ([link](https://drive.google.com/file/d/1XicUqcqUNa14DfqeWyUYHZGHDXO5XAgp/view?usp=sharing))
+* MobileNet V3 ([link](https://drive.google.com/file/d/1qq6xLx98M_wy9YqetOxuqNJCSOEq5O8f/view?usp=sharing))
 
 MobileNet networks are a series of networks that Google released over the past few years that are trained on the ImageNet image set with 1001 categories.
 Other networks might also work, but only three above networks have been verified.

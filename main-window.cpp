@@ -599,11 +599,11 @@ MainWindow::MainWindow()
 		clearComputedTensorData();
 	});
 	connect(sourceImageScrollArea.horizontalScrollBar(), &QAbstractSlider::valueChanged, [this]() {
-		if (!self)
+		if (!self && haveImageOpen()) // scrollbars still send signals after the image was closed
 			updateCurrentRegionText();
 	});
 	connect(sourceImageScrollArea.verticalScrollBar(), &QAbstractSlider::valueChanged, [this]() {
-		if (!self)
+		if (!self && haveImageOpen())
 			updateCurrentRegionText();
 	});
 	connect(&noNnIsOpenWidget, &NoNnIsOpenWidget::openNeuralNetworkFilePressed, [this]() {

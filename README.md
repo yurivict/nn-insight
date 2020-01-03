@@ -19,9 +19,12 @@ NN Insight is a program that visualizes neural network's structure and computati
 * MobileNet V1 ([link](https://drive.google.com/file/d/1FYK72GkbqJUwgFZ8q_32HtI7X3CrfBtT/view?usp=sharing))
 * MobileNet V2 ([link](https://drive.google.com/file/d/1XicUqcqUNa14DfqeWyUYHZGHDXO5XAgp/view?usp=sharing))
 * MobileNet V3 ([link](https://drive.google.com/file/d/1qq6xLx98M_wy9YqetOxuqNJCSOEq5O8f/view?usp=sharing))
+* VGG16 ([link](https://drive.google.com/file/d/1Nw6a_PcoQi4ZaTEFLO6J8KJvP-ZpgXPi/view?usp=sharing))
+* VGG19 ([link](https://drive.google.com/file/d/1wsNsQRknfKUgS_zp6kLLETE9ngdd1pYA/view?usp=sharing))
 
 MobileNet networks are a series of networks that Google released over the past few years that are trained on the ImageNet image set with 1001 categories.
-Other networks might also work, but only three above networks have been verified.
+
+VGG16 and VGG19 networks are deep convolutional betworks proposed by K. Simonyan and A. Zisserman from the University of Oxford Visual Geometry Group in the paper “Very Deep Convolutional Networks for Large-Scale Image Recognition”. [link](https://arxiv.org/abs/1409.1556)
 
 ## How to use
 1. Download a TF Lite file using one of the links above, or use a file downloaded elsewhere.

@@ -21,6 +21,7 @@ NN Insight is a program that visualizes neural network's structure and computati
 * MobileNet V3 [[link](https://drive.google.com/file/d/1qq6xLx98M_wy9YqetOxuqNJCSOEq5O8f/view?usp=sharing)]
 * VGG16 [[link](https://drive.google.com/file/d/1Nw6a_PcoQi4ZaTEFLO6J8KJvP-ZpgXPi/view?usp=sharing)]
 * VGG19 [[link](https://drive.google.com/file/d/1wsNsQRknfKUgS_zp6kLLETE9ngdd1pYA/view?usp=sharing)]
+* SqueezeNet [[link](https://storage.googleapis.com/download.tensorflow.org/models/tflite/model_zoo/upload_20180427/squeezenet_2018_04_27.tgz)]
 
 MobileNet networks are a series of networks that Google released over the past few years that are trained on the ImageNet image set with 1001 categories.
 

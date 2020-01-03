@@ -710,6 +710,58 @@ bool compute(
 			cbTensorComputed(outputs[0]);
 
 			break;
+		} case PI::KindConcatenation: {
+			assert(outputs.size()==1);
+			assert(opts); // need to have options present
+
+			// operator options required to run this operator
+			int axis = 0;
+			PI::ActivationFunction activationFunction = PluginInterface::ActivationFunction_NONE;
+
+			// parse the operator options supplied by the model into the above variables
+			unsigned numParsed =
+				OperatorOptions::GetOption1<PI::OperatorOption_AXIS,            PI::OperatorOption_TypeInt,int>(*opts, &axis)
+				+ OperatorOptions::GetOption1<PI::OperatorOption_FUSED_ACTIVATION_FUNCTION,
+					PI::OperatorOption_TypeActivationFunction,PI::ActivationFunction>(*opts, &activationFunction);
+			assert(numParsed==2); // need to have 2 options
+			assert(numParsed==opts->size()); // all options are parsed
+			UNUSED(numParsed)
+
+			// input buffers and sizes array
+			std::tuple<const float*,unsigned> ins[inputs.size()];
+			for (unsigned i = 0, ie = inputs.size(); i<ie; i++) {
+				auto inputTensorId = inputs[i];
+				auto inputShape = model->getTensorShape(inputTensorId);
+				ins[i] = {(*tensorData)[inputTensorId].get(), tensorFlatSize(tensorGetLastDims(inputShape, inputShape.size()-axis))};
+			}
+
+			// tensors
+			auto outputShape = model->getTensorShape(outputs[0]);
+			auto outputShapeSize = tensorFlatSize(outputShape);
+
+			// create output data
+			std::unique_ptr<float> outputData(new float[outputShapeSize]);
+
+			// compute
+			for (auto out = outputData.get(), oute = out+outputShapeSize; out<oute; )
+				for (auto &in : ins) {
+					auto &inBuf = std::get<0>(in);
+					auto sz = std::get<1>(in);
+					std::memcpy(out, inBuf, sz*sizeof(float));
+					inBuf += sz;
+					out += sz;
+				}
+
+			// activation function
+			applyActivationFunction(outputShapeSize, outputData.get(), activationFunction);
+
+			// save the data
+			(*tensorData)[outputs[0]].reset(outputData.release());
+
+			// notify the caller
+			cbTensorComputed(outputs[0]);
+
+			break;
 		} default: {
 			cbWarningMessage(STR("Computation didn't succeed: operator #" << (oid+1) << ": " << operatorKind << " isn't yet implemented"));
 			return false; // failed to compute the model to the end

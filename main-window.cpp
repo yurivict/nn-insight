@@ -1278,6 +1278,7 @@ void MainWindow::onOpenNeuralNetworkFileUserIntent() {
 }
 
 void MainWindow::closeNeuralNetwork() {
+	clearComputedTensorData();
 	nnWidget.close();
 	nnNetworkOperatorsListWidget.clearNnModel();
 	pluginInterface.reset(nullptr);

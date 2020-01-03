@@ -558,21 +558,26 @@ MainWindow::MainWindow()
 
 		if (succ) {
 			// interpret results: 1001
-			auto result = (*tensorData)[model->getOutputs()[0]].get();
+			auto outputTensorId = model->getOutputs()[0];
+			auto result = (*tensorData)[outputTensorId].get();
+			auto resultShape = model->getTensorShape(outputTensorId);
+			assert(resultShape.size()==2 && resultShape[0]==1); // B=1
+			assert(resultShape[1]==1001 || resultShape[1]==1000);
 			typedef std::tuple<unsigned/*order num*/,float/*likelihood*/> Likelihood;
 			std::vector<Likelihood> likelihoods;
-			for (unsigned i = 0; i < 1001; i++)
+			for (unsigned i = 0, ie = resultShape[1]; i<ie; i++)
 				likelihoods.push_back({i,result[i]});
 			std::sort(likelihoods.begin(), likelihoods.end(), [](const Likelihood &a, const Likelihood &b) {return std::get<1>(a) > std::get<1>(b);});
 			// report it to the user
 			auto labels = Util::readListFromFile(":/nn-labels/imagenet-labels.txt");
 			assert(labels.size() == 1001);
+			unsigned labelsBase = resultShape[1]==1001 ? 0:1;
 			std::ostringstream ss;
 			for (unsigned i = 0; i<10; i++)
-				ss << (i>0 ? "\n" : "") << "• " << Q2S(labels[std::get<0>(likelihoods[i])]) << " = " << std::get<1>(likelihoods[i]);
+				ss << (i>0 ? "\n" : "") << "• " << Q2S(labels[labelsBase+std::get<0>(likelihoods[i])]) << " = " << std::get<1>(likelihoods[i]);
 			updateResultInterpretationSummary(
 				true/*enable*/,
-				QString("%1 (%2)").arg(labels[std::get<0>(likelihoods[0])]).arg(std::get<1>(likelihoods[0])),
+				QString("%1 (%2)").arg(labels[labelsBase+std::get<0>(likelihoods[0])]).arg(std::get<1>(likelihoods[0])),
 				S2Q(ss.str())
 			);
 		} else

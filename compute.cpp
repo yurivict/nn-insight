@@ -416,6 +416,64 @@ bool compute(
 			cbTensorComputed(outputs[0]);
 
 			break;
+		} case PI::KindFullyConnected: {
+			assert(inputs.size()==3 && outputs.size()==1);
+			assert(opts); // need to have options present
+			assert((*tensorData)[inputs[0]]); // need to have the input data present
+
+			// operator options required to run this operator
+			bool keepNumDims = false;
+			int  weightsFormat = 0;
+			PI::ActivationFunction activationFunction = PluginInterface::ActivationFunction_NONE;
+
+			// parse the operator options supplied by the model into the above variables
+			unsigned numParsed =
+				OperatorOptions::GetOption1<PI::OperatorOption_KEEP_NUM_DIMS,    PI::OperatorOption_TypeBool,bool>(*opts, &keepNumDims)
+				+ OperatorOptions::GetOption1<PI::OperatorOption_WEIGHTS_FORMAT, PI::OperatorOption_TypeInt, int> (*opts, &weightsFormat)
+				+ OperatorOptions::GetOption1<PI::OperatorOption_FUSED_ACTIVATION_FUNCTION,
+					PI::OperatorOption_TypeActivationFunction,PI::ActivationFunction>(*opts, &activationFunction);
+			assert(numParsed==3); // need to have 6 options
+			assert(numParsed==opts->size()); // all options are parsed
+			UNUSED(numParsed)
+
+			if (weightsFormat != 0) {
+				cbWarningMessage(STR("Computation didn't succeed: operator #" << (oid+1) << ": " << operatorKind << " option weights_format isn't zero"));
+				return false; // failed to compute the model to the end
+			}
+
+			PRINT_OPTS("FullyConnected: have " << opts->size() << " options:"
+			           " keepNumDims=" << keepNumDims <<
+			           " weightsFormat=" << weightsFormat <<
+			           " activationFunction=" << activationFunction
+			)
+
+			// tensors
+			auto inputShape  = model->getTensorShape(inputs[0]);
+			auto filterShape = model->getTensorShape(inputs[1]);
+			auto outputShape = model->getTensorShape(outputs[0]);
+			auto outputShapeSize = tensorFlatSize(outputShape);
+
+			// create output data
+			std::unique_ptr<float> outputData(new float[outputShapeSize]);
+
+			// compute
+			NnOperators::FullyConnected(
+				inputShape, (*tensorData)[inputs[0]].get(), // input
+				filterShape, model->getTensorData(inputs[1]), // filter
+				model->getTensorShape(inputs[2]), model->getTensorData(inputs[2]), // bias
+				outputShape, outputData.get() // output
+			);
+
+			// activation function
+			applyActivationFunction(outputShapeSize, outputData.get(), activationFunction);
+
+			// save the data
+			(*tensorData)[outputs[0]].reset(outputData.release());
+
+			// notify the caller
+			cbTensorComputed(outputs[0]);
+
+			break;
 		} case PI::KindMaxPool:
 		  case PI::KindAveragePool: {
 			assert(inputs.size()==1 && outputs.size()==1);

@@ -224,6 +224,7 @@ if (false) {
 };
 
 // gcc-9 needs explicit template specializations to be outside of class scope
+template<> inline bool PluginInterface::OperatorOptionValue::as() const {return b;}
 template<> inline float PluginInterface::OperatorOptionValue::as() const {return f;}
 template<> inline int32_t PluginInterface::OperatorOptionValue::as() const {return i;}
 template<> inline PluginInterface::PaddingType PluginInterface::OperatorOptionValue::as() const {return paddingType;}

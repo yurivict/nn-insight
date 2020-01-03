@@ -27,6 +27,13 @@ void DepthwiseConv2D(
 	unsigned depthMultiplier
 );
 
+void FullyConnected(
+	const TensorShape &inputShape, const float *inputData,
+	const TensorShape &filterShape, const float *filterData,
+	const TensorShape &biasShape, const float *biasData,
+	const TensorShape &outputShape, float *outputData
+);
+
 void MaxPool(
 	const TensorShape &inputShape, const float *inputData,
 	const TensorShape &outputShape, float *outputData,

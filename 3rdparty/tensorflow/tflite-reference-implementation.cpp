@@ -198,6 +198,23 @@ struct DepthwiseParams { // <= BuiltinOptions_DepthwiseConv2DOptions = 2
   float float_activation_max;
 };
 
+struct FullyConnectedParams { // <= BuiltinOptions_FullyConnectedOptions = 8
+  // uint8 inference params.
+  // TODO(b/65838351): Use smaller types if appropriate.
+  int32 input_offset; // unused
+  int32 weights_offset; // unused
+  int32 output_offset; // unused
+  int32 output_multiplier; // unused
+  int output_shift; // unused
+  // uint8, etc, activation params.
+  int32 quantized_activation_min; // unused
+  int32 quantized_activation_max; // unused
+  // float activation params.
+  float float_activation_min;
+  float float_activation_max;
+  //FullyConnectedWeightsFormat weights_format; // // DEFAULT,SHUFFLED4x16INT8
+};
+
 // from: tensorflow/lite/kernels/internal/types.h
 struct PoolParams { // <= BuiltinOptions_Pool2DOptions = 5
   FusedActivationFunctionType activation; // unused
@@ -421,6 +438,48 @@ inline void DepthwiseConv(
           }
         }
       }
+    }
+  }
+}
+
+// from: tensorflow/lite/kernels/internal/reference/fully_connected.h
+inline void FullyConnected(
+    const FullyConnectedParams& params, const RuntimeShape& input_shape,
+    const float* input_data, const RuntimeShape& weights_shape,
+    const float* weights_data, const RuntimeShape& bias_shape,
+    const float* bias_data, const RuntimeShape& output_shape,
+    float* output_data) {
+//  const float output_activation_min = params.float_activation_min;
+//  const float output_activation_max = params.float_activation_max;
+  // TODO(benoitjacob): This really should be:
+  //     const int batches = ArraySize(output_dims, 1);
+  // but the current --variable_batch hack consists in overwriting the 3rd
+  // dimension with the runtime batch size, as we don't keep track for each
+  // array of which dimension is the batch dimension in it.
+  const int output_dims_count = output_shape.DimensionsCount();
+  const int weights_dims_count = weights_shape.DimensionsCount();
+  const int batches = FlatSizeSkipDim(output_shape, output_dims_count - 1);
+  const int output_depth = MatchingDim(weights_shape, weights_dims_count - 2,
+                                       output_shape, output_dims_count - 1);
+  const int accum_depth = weights_shape.Dims(weights_dims_count - 1);
+  for (int b = 0; b < batches; ++b) {
+    for (int out_c = 0; out_c < output_depth; ++out_c) {
+      float total = 0.f;
+      for (int d = 0; d < accum_depth; ++d) {
+        total += input_data[b * accum_depth + d] *
+                 weights_data[out_c * accum_depth + d];
+      }
+      float bias_value = 0.0f;
+      if (bias_data) {
+        bias_value = bias_data[out_c];
+      }
+
+      // DISABLE ActivationFunctionWithMinMax
+      //output_data[out_c + output_depth * b] = ActivationFunctionWithMinMax(
+      //    total + bias_value, output_activation_min, output_activation_max);
+
+      // INSTEAD
+      output_data[out_c + output_depth * b] = total + bias_value;
     }
   }
 }
@@ -675,6 +734,22 @@ void DepthwiseConv2D(
 	params.depth_multiplier = depthMultiplier;
 
 	tflite::DepthwiseConv(params,
+		tflite::RuntimeShape(inputShape),  inputData,
+		tflite::RuntimeShape(filterShape), filterData,
+		tflite::RuntimeShape(biasShape),   biasData,
+		tflite::RuntimeShape(outputShape), outputData
+	);
+}
+
+void FullyConnected(
+	const TensorShape &inputShape, const float *inputData,
+	const TensorShape &filterShape, const float *filterData,
+	const TensorShape &biasShape, const float *biasData,
+	const TensorShape &outputShape, float *outputData
+) {
+	tflite::FullyConnectedParams params;
+
+	tflite::FullyConnected(params,
 		tflite::RuntimeShape(inputShape),  inputData,
 		tflite::RuntimeShape(filterShape), filterData,
 		tflite::RuntimeShape(biasShape),   biasData,

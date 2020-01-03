@@ -29,7 +29,6 @@ public:
 		KindFullyConnected,
 		KindMaxPool,
 		KindAveragePool,
-		KindAdd,
 		// activation functions
 		KindRelu,
 		KindRelu6,
@@ -37,6 +36,7 @@ public:
 		KindTanh,
 		KindHardSwish,
 		//
+		KindAdd,
 		KindSub,
 		KindMul,
 		KindDiv,

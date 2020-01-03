@@ -26,6 +26,7 @@
 #include "util.h"
 #include "fonts.h"
 #include "constant-values.h"
+#include "colors.h"
 
 namespace SvgGraphics {
 
@@ -53,27 +54,6 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::arra
 	QColor clrOperatorTitleText       = Qt::white;
 	QColor clrTensorLine              = Qt::black;
 	QColor clrTensorLabel             = Qt::black;
-	auto clrOperatorTitleBackground = [](PluginInterface::OperatorKind okind) -> QColor {
-		switch (okind) {
-		case PluginInterface::KindConv2D:
-			return Qt::blue;
-		case PluginInterface::KindDepthwiseConv2D:
-			return QColor(100,100,255);
-		case PluginInterface::KindFullyConnected:
-			return QColor(50,50,150);
-		case PluginInterface::KindMaxPool:
-		case PluginInterface::KindAveragePool:
-			return QColor(50,150,50);
-		case PluginInterface::KindAdd:
-			return QColor(200,200,255);
-		case PluginInterface::KindRelu:
-		case PluginInterface::KindRelu6:
-		case PluginInterface::KindLeakyRelu:
-			return QColor(200,100,100);
-		default: // unknown?
-			return Qt::red;
-		}
-	};
 
 /*
 	auto inputs = model->getInputs();
@@ -240,7 +220,7 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::arra
 			drawBox(painter,
 				(*outIndexes[0])[oid] = boxToQRectF(dotBoxToQtBox(dotBox)),
 				STR(model->getOperatorKind(oid)),
-				clrOperatorTitleBackground(model->getOperatorKind(oid)),
+				Colors::getOperatorColor(model->getOperatorKind(oid)),
 				{},
 				""
 			);

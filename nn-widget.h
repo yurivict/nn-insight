@@ -24,9 +24,9 @@ class NnWidget : public ZoomableSvgWidget {
 private: // types
 	struct AnyObject {
 		int operatorId;
-		int tensorId;
-		int inputIdx;
-		int outputIdx;
+		int innerTensorId;
+		int inputTensorId;
+		int outputTensorId;
 	};
 
 public: // constructor
@@ -42,8 +42,8 @@ public: // overridden
 signals:
 	void clickedOnOperator(PluginInterface::OperatorId oid);
 	void clickedOnTensorEdge(PluginInterface::TensorId tid);
-	void clickedOnInput(unsigned inputIdx, PluginInterface::TensorId tid);
-	void clickedOnOutput(unsigned outputIdx, PluginInterface::TensorId tid);
+	void clickedOnInput(PluginInterface::TensorId tid);
+	void clickedOnOutput(PluginInterface::TensorId tid);
 	void clickedOnBlankSpace();
 
 private: // internals

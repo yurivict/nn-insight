@@ -500,10 +500,10 @@ MainWindow::MainWindow()
 	connect(&nnWidget, &NnWidget::clickedOnTensorEdge, [this](PluginInterface::TensorId tensorId) {
 		showTensorDetails(tensorId);
 	});
-	connect(&nnWidget, &NnWidget::clickedOnInput, [this](unsigned inputIdx, PluginInterface::TensorId tensorId) {
+	connect(&nnWidget, &NnWidget::clickedOnInput, [this](PluginInterface::TensorId tensorId) {
 		showInputDetails(tensorId);
 	});
-	connect(&nnWidget, &NnWidget::clickedOnOutput, [this](unsigned outputIdx, PluginInterface::TensorId tensorId) {
+	connect(&nnWidget, &NnWidget::clickedOnOutput, [this](PluginInterface::TensorId tensorId) {
 		showOutputDetails(tensorId);
 	});
 	connect(&nnWidget, &NnWidget::clickedOnBlankSpace, [this]() {

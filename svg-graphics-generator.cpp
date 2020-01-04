@@ -211,8 +211,7 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::arra
 	// resize indexes
 	outIndexes[0]->resize(model->numOperators());
 	outIndexes[1]->resize(model->numTensors());
-	outIndexes[2]->resize(model->numInputs());
-	outIndexes[3]->resize(model->numOutputs());
+	// outIndexes[2] with inputs and outIndexes[3] with outputs will be push_back to
 
 	{ // draw operator boxes
 		PluginInterface::OperatorId oid = 0;

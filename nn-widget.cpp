@@ -34,13 +34,13 @@ void NnWidget::mousePressEvent(QMouseEvent *event) {
 	if (model) {
 		auto searchResult = findObjectAtThePoint(event->pos());
 		if (searchResult.operatorId != -1)
-			emit clickedOnOperator(searchResult.operatorId);
-		else if (searchResult.tensorId != -1)
-			emit clickedOnTensorEdge(searchResult.tensorId);
-		else if (searchResult.inputIdx != -1)
-			emit clickedOnInput((unsigned)searchResult.inputIdx, model->getInputs()[searchResult.inputIdx]);
-		else if (searchResult.outputIdx != -1)
-			emit clickedOnOutput((unsigned)searchResult.outputIdx, model->getOutputs()[searchResult.outputIdx]);
+			emit clickedOnOperator((PluginInterface::TensorId)searchResult.operatorId);
+		else if (searchResult.innerTensorId != -1)
+			emit clickedOnTensorEdge((PluginInterface::TensorId)searchResult.innerTensorId);
+		else if (searchResult.inputTensorId != -1)
+			emit clickedOnInput((PluginInterface::TensorId)searchResult.inputTensorId);
+		else if (searchResult.outputTensorId != -1)
+			emit clickedOnOutput((PluginInterface::TensorId)searchResult.outputTensorId);
 		else
 			emit clickedOnBlankSpace();
 	}

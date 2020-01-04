@@ -2,6 +2,11 @@
 
 #include "tensor.h"
 
+#include <limits>
+#include <memory>
+
+#include <assert.h>
+
 namespace Tensor {
 
 size_t flatSize(const TensorShape &shape) {
@@ -50,6 +55,38 @@ bool isSubset(const TensorShape &shapeLarge, const TensorShape &shapeSmall) {
 
 	// all matched
 	return true;
+}
+
+float* computeArgMax(const TensorShape &inputShape, const float *input, const std::vector<float> &palette) {
+	assert(palette.size()%3 == 0); // it's a color palette with {R,G,B}
+	assert(*inputShape.rbegin() == palette.size()/3); // match the number of colors
+
+	auto inputSize = flatSize(inputShape);
+	auto nchannels = *inputShape.rbegin();
+	std::unique_ptr<float> output(new float[inputSize/nchannels*3]);
+	float *o = output.get();
+
+	for (auto inpute = input+inputSize; input<inpute; ) {
+		auto nc = nchannels;
+		unsigned c = 0;
+		float val = std::numeric_limits<float>::lowest();
+		int maxChannel = -1;
+		do {
+			if (*input > val) {
+				val = *input;
+				maxChannel = c;
+			}
+			input++;
+			c++;
+		} while (--nc > 0);
+
+		const float *p = &palette[maxChannel*3];
+		*o++ = *p++;
+		*o++ = *p++;
+		*o++ = *p;
+	}
+
+	return output.release();
 }
 
 }

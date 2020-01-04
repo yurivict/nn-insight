@@ -37,15 +37,20 @@ size_t computeOperatorFlops(const PluginInterface::Model *model, PluginInterface
 	} case PluginInterface::KindAdd:
 	  case PluginInterface::KindRelu:
 	  case PluginInterface::KindRelu6:
-	  case PluginInterface::KindLeakyRelu:
-	  case PluginInterface::KindTanh:
-	  case PluginInterface::KindHardSwish:
 	  case PluginInterface::KindSub:
 	  case PluginInterface::KindMul:
 	  case PluginInterface::KindDiv:
 	  case PluginInterface::KindMaximum:
 	  case PluginInterface::KindMinimum:
 		return tensorFlatSize(model->getTensorShape(inputs[0])); // input size
+	  case PluginInterface::KindTanh:
+		return 10*tensorFlatSize(model->getTensorShape(inputs[0])); //  tanh is expensive, maybe 10X at least
+	  case PluginInterface::KindLeakyRelu:
+		return 2*tensorFlatSize(model->getTensorShape(inputs[0])); // compare and multiply
+	  case PluginInterface::KindHardSwish:
+		return 5*tensorFlatSize(model->getTensorShape(inputs[0])); // variable number of operations, 1..7, depending on value
+	  case PluginInterface::KindConcatenation:
+		return tensorFlatSize(model->getTensorShape(inputs[0])); // unclear how to count flops for concatenation
 	  default:
 		return 0; // TODO
 	}

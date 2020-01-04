@@ -8,6 +8,7 @@
 #include "util.h"
 #include "misc.h"
 #include "nn-types.h"
+#include "tensor.h"
 #include "nn-operators.h"
 #include "image.h"
 #include "compute.h"
@@ -784,7 +785,7 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 			nnOperatorDetailsLayout.addWidget(label,         row,   1/*column*/);
 			// tensor shape
 			auto describeShape = [](const TensorShape &shape) {
-				auto flatSize = tensorFlatSize(shape);
+				auto flatSize = Tensor::flatSize(shape);
 				return STR(shape <<
 				         " (" <<
 				             Util::formatUIntHumanReadable(flatSize) << " " << Q2S(tr("floats")) << ", " <<
@@ -826,7 +827,7 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 					removeTableIfAny();
 					// show table
 					auto tableShape = model->getTensorShape(t);
-					switch (tensorNumMultiDims(tableShape)) {
+					switch (Tensor::numMultiDims(tableShape)) {
 					case 0:
 						Util::warningOk(this, "WARNING tensor shape with all ones encountered, this is meaningless in the NN models context");
 						break;
@@ -1061,7 +1062,7 @@ float* MainWindow::applyEffects(const float *image, const TensorShape &shape,
 	auto dst = [&](unsigned idx) {
 		auto &we = withEffects[idxNext(idx)-1];
 		if (!we)
-			we.reset(new float[tensorFlatSize(shape)]);
+			we.reset(new float[Tensor::flatSize(shape)]);
 		return we.get();
 	};
 
@@ -1099,7 +1100,7 @@ float* MainWindow::applyEffects(const float *image, const TensorShape &shape,
 				1,1, // strides
 				1,1  // dilation factors
 			);
-			clip(d, tensorFlatSize(shapeWithBatch)); // we have to clip the result because otherwise some values are out of range 0..255.
+			clip(d, Tensor::flatSize(shapeWithBatch)); // we have to clip the result because otherwise some values are out of range 0..255.
 			idx = idxNext(idx);
 		}
 	}

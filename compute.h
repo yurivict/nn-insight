@@ -3,7 +3,7 @@
 #pragma once
 
 #include "plugin-interface.h"
-#include "nn-types.h"
+#include "tensor.h"
 
 #include <string>
 #include <vector>

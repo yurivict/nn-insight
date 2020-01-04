@@ -3,6 +3,7 @@
 #include "model-functions.h"
 #include "plugin-interface.h"
 #include "nn-types.h"
+#include "tensor.h"
 #include "misc.h"
 
 #include <assert.h>
@@ -29,11 +30,11 @@ size_t computeOperatorFlops(const PluginInterface::Model *model, PluginInterface
 		auto shapeWeights = model->getTensorShape(inputs[1]);
 		assert(shapeImage.size() == 4 && shapeImage[0] == 1);
 		assert(shapeWeights.size() == 4);
-		return tensorFlatSize(shapeWeights)*(shapeImage[1]*shapeImage[2]); // TODO add summations, strides, pads
+		return Tensor::flatSize(shapeWeights)*(shapeImage[1]*shapeImage[2]); // TODO add summations, strides, pads
 	} case PluginInterface::KindFullyConnected: {
 		auto shapeWeights = model->getTensorShape(inputs[1]);
 		assert(shapeWeights.size() == 2);
-		return tensorFlatSize(shapeWeights); // add summations, strides, pads
+		return Tensor::flatSize(shapeWeights); // add summations, strides, pads
 	} case PluginInterface::KindAdd:
 	  case PluginInterface::KindRelu:
 	  case PluginInterface::KindRelu6:
@@ -42,15 +43,15 @@ size_t computeOperatorFlops(const PluginInterface::Model *model, PluginInterface
 	  case PluginInterface::KindDiv:
 	  case PluginInterface::KindMaximum:
 	  case PluginInterface::KindMinimum:
-		return tensorFlatSize(model->getTensorShape(inputs[0])); // input size
+		return Tensor::flatSize(model->getTensorShape(inputs[0])); // input size
 	  case PluginInterface::KindTanh:
-		return 10*tensorFlatSize(model->getTensorShape(inputs[0])); //  tanh is expensive, maybe 10X at least
+		return 10*Tensor::flatSize(model->getTensorShape(inputs[0])); //  tanh is expensive, maybe 10X at least
 	  case PluginInterface::KindLeakyRelu:
-		return 2*tensorFlatSize(model->getTensorShape(inputs[0])); // compare and multiply
+		return 2*Tensor::flatSize(model->getTensorShape(inputs[0])); // compare and multiply
 	  case PluginInterface::KindHardSwish:
-		return 5*tensorFlatSize(model->getTensorShape(inputs[0])); // variable number of operations, 1..7, depending on value
+		return 5*Tensor::flatSize(model->getTensorShape(inputs[0])); // variable number of operations, 1..7, depending on value
 	  case PluginInterface::KindConcatenation:
-		return tensorFlatSize(model->getTensorShape(inputs[0])); // unclear how to count flops for concatenation
+		return Tensor::flatSize(model->getTensorShape(inputs[0])); // unclear how to count flops for concatenation
 	  default:
 		return 0; // TODO
 	}
@@ -75,7 +76,7 @@ size_t sizeOfOperatorStaticData(const PluginInterface::Model *model, PluginInter
 	model->getOperatorIo(operatorId, inputs, outputs);
 	for (PluginInterface::TensorId tensorId : inputs)
 		if (model->getTensorHasData(tensorId)) {
-			size += tensorFlatSize(model->getTensorShape(tensorId))*sizeof(float); // TODO handle other types
+			size += Tensor::flatSize(model->getTensorShape(tensorId))*sizeof(float); // TODO handle other types
 			outObjectCount++;
 		}
 	return size;
@@ -89,9 +90,9 @@ float dataRatioOfOperator(const PluginInterface::Model *model, PluginInterface::
 	unsigned sizeOfOutputs = 0;
 	for (auto i : inputs)
 		if (isTensorComputed(model, i))
-			sizeOfInputs += tensorFlatSize(model->getTensorShape(i));
+			sizeOfInputs += Tensor::flatSize(model->getTensorShape(i));
 	for (auto o : outputs)
-		sizeOfOutputs += tensorFlatSize(model->getTensorShape(o));
+		sizeOfOutputs += Tensor::flatSize(model->getTensorShape(o));
 
 	return float(sizeOfOutputs)/float(sizeOfInputs);
 }
@@ -103,12 +104,12 @@ float dataRatioOfOperatorModelInputToIns(const PluginInterface::Model *model, Pl
 	unsigned sizeOfInputs = 0, cntInputs = 0;
 	for (auto i : inputs)
 		if (isTensorComputed(model, i)) {
-			sizeOfInputs += tensorFlatSize(model->getTensorShape(i));
+			sizeOfInputs += Tensor::flatSize(model->getTensorShape(i));
 			cntInputs++;
 		}
 
 	assert(model->numInputs()==1);
-	return float(sizeOfInputs)/cntInputs/float(tensorFlatSize(model->getTensorShape(model->getInputs()[0])));
+	return float(sizeOfInputs)/cntInputs/float(Tensor::flatSize(model->getTensorShape(model->getInputs()[0])));
 }
 
 float dataRatioOfOperatorModelInputToOuts(const PluginInterface::Model *model, PluginInterface::OperatorId operatorId) {
@@ -117,12 +118,12 @@ float dataRatioOfOperatorModelInputToOuts(const PluginInterface::Model *model, P
 
 	unsigned sizeOfOutputs = 0, cntOutputs = 0;
 	for (auto o : outputs) {
-		sizeOfOutputs += tensorFlatSize(model->getTensorShape(o));
+		sizeOfOutputs += Tensor::flatSize(model->getTensorShape(o));
 		cntOutputs++;
 	}
 
 	assert(model->numInputs()==1);
-	return float(sizeOfOutputs)/cntOutputs/float(tensorFlatSize(model->getTensorShape(model->getInputs()[0])));
+	return float(sizeOfOutputs)/cntOutputs/float(Tensor::flatSize(model->getTensorShape(model->getInputs()[0])));
 }
 
 void computeTensors(const PluginInterface::Model *model, std::vector<std::unique_ptr<float>> *tensorData) {
@@ -131,7 +132,7 @@ void computeTensors(const PluginInterface::Model *model, std::vector<std::unique
 OutputInterpretationKind guessOutputInterpretationKind(const PluginInterface::Model *model) {
 	// classify based on the first output tensor shape
 	auto outputTensorId = model->getOutputs()[0];
-	auto outputShape = tensorStripLeadingOnes(model->getTensorShape(outputTensorId));
+	auto outputShape = Tensor::stripLeadingOnes(model->getTensorShape(outputTensorId));
 
 	switch (outputShape.size()) {
 	case 1: // 1-dimensional vector with numbers, must be object classification
@@ -147,7 +148,7 @@ OutputInterpretationKind guessOutputInterpretationKind(const PluginInterface::Mo
 		}
 	case 3: { // see if the shape matches the input shape
 		auto inputTensorId = model->getInputs()[0];
-		auto inputShape = tensorStripLeadingOnes(model->getTensorShape(inputTensorId));
+		auto inputShape = Tensor::stripLeadingOnes(model->getTensorShape(inputTensorId));
 		if (inputShape.size()==3 && inputShape[0]==outputShape[0] && inputShape[1]==outputShape[1])
 			return OutputInterpretationKind_PixelClassification;
 		return OutputInterpretationKind_Undefined; // some large shape but it doesn't match the input so we don't know

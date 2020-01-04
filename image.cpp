@@ -1,7 +1,7 @@
 // Copyright (C) 2020 by Yuri Victorovich. All rights reserved.
 
 #include "image.h"
-#include "nn-types.h"
+#include "tensor.h"
 #include "misc.h"
 #include "util.h"
 
@@ -90,7 +90,7 @@ float* readPixmap(const QPixmap &pixmap, TensorShape &outShape, std::function<vo
 }
 
 float* resizeImage(const float *pixels, const TensorShape &shapeOld, const TensorShape &shapeNew) {
-	auto sz = tensorFlatSize(shapeNew);
+	auto sz = Tensor::flatSize(shapeNew);
 	std::unique_ptr<float> pixelsNew(new float[sz]);
 	avir::CImageResizer<> ImageResizer(8);
 	ImageResizer.resizeImage(
@@ -138,7 +138,7 @@ float* regionOfImage(const float *pixels, const TensorShape &shape, const std::a
 
 QPixmap toQPixmap(const float *image, const TensorShape &shape) {
 	return QPixmap::fromImage(QImage(
-		std::unique_ptr<const uchar>(Util::convertArrayFloatToUInt8(image, tensorFlatSize(shape))).get(),
+		std::unique_ptr<const uchar>(Util::convertArrayFloatToUInt8(image, Tensor::flatSize(shape))).get(),
 		shape[1], // width
 		shape[0], // height
 		shape[1]*shape[2], // bytesPerLine
@@ -156,12 +156,12 @@ static void reverseArray(const T *src, T *dst, unsigned rowSize, unsigned blockS
 void flipHorizontally(const TensorShape &shape, const float *imgSrc, float *imgDst) {
 	unsigned rowSize = shape[1]*shape[2];
 	unsigned blockSize = shape[2];
-	for (auto imgSrce = imgSrc + tensorFlatSize(shape); imgSrc<imgSrce; imgSrc+=rowSize, imgDst+=rowSize)
+	for (auto imgSrce = imgSrc + Tensor::flatSize(shape); imgSrc<imgSrce; imgSrc+=rowSize, imgDst+=rowSize)
 		reverseArray(imgSrc, imgDst, rowSize, blockSize);
 }
 
 void flipVertically(const TensorShape &shape, const float *imgSrc, float *imgDst) {
-	reverseArray(imgSrc, imgDst, tensorFlatSize(shape), shape[1]*shape[2]);
+	reverseArray(imgSrc, imgDst, Tensor::flatSize(shape), shape[1]*shape[2]);
 }
 
 void makeGrayscale(const TensorShape &shape, const float *imgSrc, float *imgDst) {
@@ -169,7 +169,7 @@ void makeGrayscale(const TensorShape &shape, const float *imgSrc, float *imgDst)
 	auto convertColor = [](float R, float G, float B) {
 		return (R+G+B)/3;
 	};
-	for (auto imgSrce = imgSrc + tensorFlatSize(shape); imgSrc<imgSrce; imgSrc+=3, imgDst+=3)
+	for (auto imgSrce = imgSrc + Tensor::flatSize(shape); imgSrc<imgSrce; imgSrc+=3, imgDst+=3)
 		imgDst[0] = imgDst[1] = imgDst[2] = convertColor(imgSrc[0], imgSrc[1], imgSrc[2]);
 }
 

@@ -12,6 +12,7 @@
 #include <functional>
 
 #include "nn-types.h"
+#include "tensor.h"
 
 class PluginInterface {
 

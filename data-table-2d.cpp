@@ -1,7 +1,7 @@
 // Copyright (C) 2020 by Yuri Victorovich. All rights reserved.
 
 #include "data-table-2d.h"
-#include "nn-types.h"
+#include "tensor.h"
 #include "misc.h"
 #include "util.h"
 
@@ -277,7 +277,7 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 	imageViewScrollArea.setWidget(&imageView);
 
 	{ // create comboboxes for shape dimensions
-		unsigned numMultiDims = tensorNumMultiDims(shape);
+		unsigned numMultiDims = Tensor::numMultiDims(shape);
 		//std::vector<bool> multiDims = tensorGetMultiDims(shape);
 		unsigned dim = 0;
 		for (auto d : shape) {
@@ -408,7 +408,7 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 	header1Layout.setContentsMargins(0,0,0,0);
 
 	// data range
-	auto dataRange = Util::arrayMinMax(data, tensorFlatSize(shape));
+	auto dataRange = Util::arrayMinMax(data, Tensor::flatSize(shape));
 	dataRangeLabel.setText(QString(tr("Data Range: %1..%2")).arg(std::get<0>(dataRange)).arg(std::get<1>(dataRange)));
 
 	// create the model

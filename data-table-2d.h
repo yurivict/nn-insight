@@ -14,7 +14,7 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 
-#include "nn-types.h"
+#include "tensor.h"
 
 #include <vector>
 #include <memory>

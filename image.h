@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "nn-types.h"
+#include "tensor.h"
 
 #include <QPixmap>
 #include <QImage>

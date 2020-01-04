@@ -3,6 +3,7 @@
 #include "compute.h"
 #include "plugin-interface.h"
 #include "nn-types.h"
+#include "tensor.h"
 #include "nn-operators.h"
 #include "image.h"
 #include "misc.h"
@@ -101,10 +102,10 @@ bool compute(
 				                     " don't know how to adjust the image for it"));
 				return false;
 			}
-			requiredShape = tensorGetLastDims(requiredShape, 3);
+			requiredShape = Tensor::getLastDims(requiredShape, 3);
 		} else if (requiredShape.size() == 3) {
 			if (requiredShape[0] == 1) { // assume [B=1,H,W], remove B and add C=1 for monochrome image
-				requiredShape = tensorGetLastDims(requiredShape, 2);
+				requiredShape = Tensor::getLastDims(requiredShape, 2);
 				requiredShape.push_back(1);
 			} else { // see if the shape is image-like
 				if (requiredShape[2]!=1 && requiredShape[2]!=3) { // expect C=1 or C=3, otherwise we can't handle it
@@ -128,7 +129,7 @@ bool compute(
 
 	if (inputNormalization != InputNormalization{InputNormalizationRange_0_255,InputNormalizationColorOrder_RGB}) { // 0..255/RGB is how images are imported from files
 		auto inputTensorShape = model->getTensorShape(modelInputs[0]);
-		auto inputTensorSize = tensorFlatSize(inputTensorShape);
+		auto inputTensorSize = Tensor::flatSize(inputTensorShape);
 
 		const float *src = sharedPtrInput.get();
 		if (!inputAllocated) // need to allocate because we change the data, otherwise use the allocated above one
@@ -326,7 +327,7 @@ bool compute(
 			auto inputShape  = model->getTensorShape(inputs[0]);
 			auto filterShape = model->getTensorShape(inputs[1]);
 			auto outputShape = model->getTensorShape(outputs[0]);
-			auto outputShapeSize = tensorFlatSize(outputShape);
+			auto outputShapeSize = Tensor::flatSize(outputShape);
 
 			// create output data
 			std::unique_ptr<float> outputData(new float[outputShapeSize]);
@@ -393,7 +394,7 @@ bool compute(
 			auto inputShape  = model->getTensorShape(inputs[0]);
 			auto filterShape = model->getTensorShape(inputs[1]);
 			auto outputShape = model->getTensorShape(outputs[0]);
-			auto outputShapeSize = tensorFlatSize(outputShape);
+			auto outputShapeSize = Tensor::flatSize(outputShape);
 
 			// create output data
 			std::unique_ptr<float> outputData(new float[outputShapeSize]);
@@ -456,7 +457,7 @@ bool compute(
 			auto inputShape  = model->getTensorShape(inputs[0]);
 			auto filterShape = model->getTensorShape(inputs[1]);
 			auto outputShape = model->getTensorShape(outputs[0]);
-			auto outputShapeSize = tensorFlatSize(outputShape);
+			auto outputShapeSize = Tensor::flatSize(outputShape);
 
 			// create output data
 			std::unique_ptr<float> outputData(new float[outputShapeSize]);
@@ -517,7 +518,7 @@ bool compute(
 			auto inputShape  = model->getTensorShape(inputs[0]);
 			TensorShape filterShape = {0,(unsigned)filterHeight,(unsigned)filterWidth,0};
 			auto outputShape = model->getTensorShape(outputs[0]);
-			auto outputShapeSize = tensorFlatSize(outputShape);
+			auto outputShapeSize = Tensor::flatSize(outputShape);
 
 			// create output data
 			std::unique_ptr<float> outputData(new float[outputShapeSize]);
@@ -546,7 +547,7 @@ bool compute(
 			assert((inputs.size()==1 || inputs.size()==2) && outputs.size()==1); // XXX now sure why the 'new_shape' is in both input[1] and 'new_shape' option
 			assert(opts); // need to have options present, but we ignore them for now ...
 			assert((*tensorData)[inputs[0]]); // need to have the input data present
-			assert(tensorFlatSize(model->getTensorShape(outputs[0])) == tensorFlatSize(model->getTensorShape(inputs[0])));
+			assert(Tensor::flatSize(model->getTensorShape(outputs[0])) == Tensor::flatSize(model->getTensorShape(inputs[0])));
 
 			PRINT_OPTS("Reshape: have " << opts->size() << " options, but we ignored them for now")
 
@@ -567,7 +568,7 @@ bool compute(
 			// tensors
 			auto inputShape = model->getTensorShape(inputs[0]);
 			auto outputShape = model->getTensorShape(outputs[0]);
-			auto inputShapeSize = tensorFlatSize(inputShape);
+			auto inputShapeSize = Tensor::flatSize(inputShape);
 			assert(inputShape==outputShape);
 
 			// create output data
@@ -620,7 +621,7 @@ bool compute(
 			auto input1Shape = model->getTensorShape(inputs[0]);
 			auto input2Shape = model->getTensorShape(inputs[1]);
 			auto outputShape = model->getTensorShape(outputs[0]);
-			auto input1ShapeSize = tensorFlatSize(input1Shape);
+			auto input1ShapeSize = Tensor::flatSize(input1Shape);
 
 			// create output data
 			std::unique_ptr<float> outputData(new float[input1ShapeSize]);
@@ -643,13 +644,13 @@ bool compute(
 				else
 					for (; input<inpute; input++, output++)
 						*output = (*input) * Const;
-			} else if (tensorIsSubset(input1Shape, input2Shape)) { // operation with a smaller computed vector (computed)
+			} else if (Tensor::isSubset(input1Shape, input2Shape)) { // operation with a smaller computed vector (computed)
 				auto input1 = (*tensorData)[inputs[0]].get();
 				auto input2 = (*tensorData)[inputs[1]].get();
 				auto output = outputData.get();
 				auto input1e = input1+input1ShapeSize;
 				auto input2b = input2;
-				auto input2e = input2+tensorFlatSize(input2Shape);
+				auto input2e = input2+Tensor::flatSize(input2Shape);
 				if (operatorKind==PI::KindAdd)
 					for (; input1<input1e; input1++, output++) {
 						*output = (*input1) + (*input2);
@@ -699,7 +700,7 @@ bool compute(
 			           " beta=" <<  beta)
 
 			// create output data
-			std::unique_ptr<float> outputData(new float[tensorFlatSize(model->getTensorShape(outputs[0]))]);
+			std::unique_ptr<float> outputData(new float[Tensor::flatSize(model->getTensorShape(outputs[0]))]);
 
 			// compute
 			NnOperators::Softmax(
@@ -737,12 +738,12 @@ bool compute(
 			for (unsigned i = 0, ie = inputs.size(); i<ie; i++) {
 				auto inputTensorId = inputs[i];
 				auto inputShape = model->getTensorShape(inputTensorId);
-				ins[i] = {(*tensorData)[inputTensorId].get(), tensorFlatSize(tensorGetLastDims(inputShape, inputShape.size()-axis))};
+				ins[i] = {(*tensorData)[inputTensorId].get(), Tensor::flatSize(Tensor::getLastDims(inputShape, inputShape.size()-axis))};
 			}
 
 			// tensors
 			auto outputShape = model->getTensorShape(outputs[0]);
-			auto outputShapeSize = tensorFlatSize(outputShape);
+			auto outputShapeSize = Tensor::flatSize(outputShape);
 
 			// create output data
 			std::unique_ptr<float> outputData(new float[outputShapeSize]);
@@ -785,7 +786,7 @@ bool compute(
 			           " alignCorners=" << alignCorners)
 
 			// create output data
-			std::unique_ptr<float> outputData(new float[tensorFlatSize(model->getTensorShape(outputs[0]))]);
+			std::unique_ptr<float> outputData(new float[Tensor::flatSize(model->getTensorShape(outputs[0]))]);
 
 			// compute
 			NnOperators::ResizeBilinear(

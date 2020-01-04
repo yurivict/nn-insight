@@ -60,6 +60,7 @@ add_executable(nn-insight
 	operators-list-widget.cpp
 	plugin-manager.cpp
 	plugin-interface.cpp
+	tensor.cpp
 	util.cpp
 	fonts.cpp
 	nn-types.cpp

@@ -3,7 +3,6 @@
 #pragma once
 
 #include "plugin-interface.h"
-#include "nn-types.h"
 
 #include <vector>
 #include <map>

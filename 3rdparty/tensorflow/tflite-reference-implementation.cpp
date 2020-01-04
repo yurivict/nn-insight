@@ -752,7 +752,7 @@ inline void ResizeBilinear(const tflite::ResizeBilinearParams& op_params,
 // exporting this functionality by wrapping it in our API
 //
 
-#include "../../nn-types.h"
+#include "../../tensor.h"
 
 namespace NnOperators {
 

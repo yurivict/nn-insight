@@ -48,6 +48,9 @@ public:
 		KindConcatenation,
 		KindStridedSlice,
 		KindMean,
+		//
+		KindResizeBilinear,
+		//
 		KindUnknown
 	};
 

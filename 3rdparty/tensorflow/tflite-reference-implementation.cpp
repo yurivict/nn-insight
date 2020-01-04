@@ -268,7 +268,6 @@ struct ArithmeticParams { // <= BuiltinOptions_AddOptions = 11 / <= BuiltinOptio
   int broadcast_shape[5];
 };
 
-
 // from: tensorflow/lite/kernels/internal/types.h
 struct SoftmaxParams { // <= BuiltinOptions_SoftmaxOptions = 9
   // beta is not really used (not a Tensorflow parameter) and not implemented
@@ -283,6 +282,10 @@ struct SoftmaxParams { // <= BuiltinOptions_SoftmaxOptions = 9
   int diff_min; // unused
 };
 
+// from kernels/internal/types.h
+struct ResizeBilinearParams {
+  bool align_corners;
+};
 
 /// operator code
 
@@ -677,6 +680,72 @@ inline void Softmax(const SoftmaxParams& params,
   }
 }
 
+// from kernels/internal/reference/reference_ops.h
+template <typename T>
+inline void ResizeBilinear(const tflite::ResizeBilinearParams& op_params,
+                           const RuntimeShape& unextended_input_shape,
+                           const T* input_data,
+                           const RuntimeShape& unextended_output_size_shape,
+                           const int32* output_size_data,
+                           const RuntimeShape& unextended_output_shape,
+                           T* output_data) {
+  TFLITE_DCHECK_LE(unextended_input_shape.DimensionsCount(), 4);
+  TFLITE_DCHECK_LE(unextended_output_size_shape.DimensionsCount(), 4);
+  TFLITE_DCHECK_LE(unextended_output_shape.DimensionsCount(), 4);
+  const RuntimeShape input_shape =
+      RuntimeShape::ExtendedShape(4, unextended_input_shape);
+  const RuntimeShape output_size_shape =
+      RuntimeShape::ExtendedShape(4, unextended_output_size_shape);
+  const RuntimeShape output_shape =
+      RuntimeShape::ExtendedShape(4, unextended_output_shape);
+
+  int32 batches = MatchingDim(input_shape, 0, output_shape, 0);
+  int32 input_height = input_shape.Dims(1);
+  int32 input_width = input_shape.Dims(2);
+  int32 depth = MatchingDim(input_shape, 3, output_shape, 3);
+
+  TFLITE_DCHECK_EQ(output_size_shape.Dims(0), 1);
+  TFLITE_DCHECK_EQ(output_size_shape.Dims(1), 1);
+  TFLITE_DCHECK_EQ(output_size_shape.Dims(2), 1);
+  TFLITE_DCHECK_EQ(output_size_shape.Dims(3), 2);
+  int32 output_height = output_size_data[Offset(output_size_shape, 0, 0, 0, 0)];
+  int32 output_width = output_size_data[Offset(output_size_shape, 0, 0, 0, 1)];
+
+  float height_scale = static_cast<float>(input_height) / output_height;
+  float width_scale = static_cast<float>(input_width) / output_width;
+  if (op_params.align_corners && output_height > 1) {
+    height_scale = static_cast<float>(input_height - 1) / (output_height - 1);
+  }
+  if (op_params.align_corners && output_width > 1) {
+    width_scale = static_cast<float>(input_width - 1) / (output_width - 1);
+  }
+
+  for (int b = 0; b < batches; ++b) {
+    for (int y = 0; y < output_height; ++y) {
+      float input_y = y * height_scale;
+      int32 y0 = static_cast<int32>(std::floor(input_y));
+      int32 y1 = std::min(y0 + 1, input_height - 1);
+      for (int x = 0; x < output_width; ++x) {
+        float input_x = x * width_scale;
+        int32 x0 = static_cast<int32>(std::floor(input_x));
+        int32 x1 = std::min(x0 + 1, input_width - 1);
+        for (int c = 0; c < depth; ++c) {
+          T interpolation =
+              static_cast<T>(input_data[Offset(input_shape, b, y0, x0, c)] *
+                                 (1 - (input_y - y0)) * (1 - (input_x - x0)) +
+                             input_data[Offset(input_shape, b, y1, x0, c)] *
+                                 (input_y - y0) * (1 - (input_x - x0)) +
+                             input_data[Offset(input_shape, b, y0, x1, c)] *
+                                 (1 - (input_y - y0)) * (input_x - x0) +
+                             input_data[Offset(input_shape, b, y1, x1, c)] *
+                                 (input_y - y0) * (input_x - x0));
+          output_data[Offset(output_shape, b, y, x, c)] = interpolation;
+        }
+      }
+    }
+  }
+}
+
 }
 
 //
@@ -837,6 +906,25 @@ void Softmax(
 
 	tflite::Softmax(params,
 		tflite::RuntimeShape(inputShape),  inputData,
+		tflite::RuntimeShape(outputShape), outputData
+	);
+}
+
+void ResizeBilinear(
+	const TensorShape &inputShape, const float *inputData,
+	const TensorShape &outputShape, float *outputData,
+	bool alignCorners
+) {
+	tflite::ResizeBilinearParams params;
+	params.align_corners = alignCorners;
+
+	// not sure why the operation was defiened to need these
+	tflite::RuntimeShape outputSizeDims = {1, 1, 1, 2};
+	tflite::int32 outputSizeData[2] = {(tflite::int32)outputShape[1/*height*/], (tflite::int32)outputShape[2/*width*/]};
+
+	tflite::ResizeBilinear(params,
+		tflite::RuntimeShape(inputShape),  inputData,
+		outputSizeDims, outputSizeData,
 		tflite::RuntimeShape(outputShape), outputData
 	);
 }

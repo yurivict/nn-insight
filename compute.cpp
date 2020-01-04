@@ -767,6 +767,40 @@ bool compute(
 			cbTensorComputed(outputs[0]);
 
 			break;
+		} case PI::KindResizeBilinear: {
+			assert(inputs.size()==1 && outputs.size()==1);
+			assert(opts); // need to have options present
+			assert((*tensorData)[inputs[0]]); // need to have the input data present
+
+			// operator options required to run this operator
+			bool alignCorners = false;
+
+			unsigned numParsed =
+				OperatorOptions::GetOption1<PI::OperatorOption_ALIGN_CORNERS, PI::OperatorOption_TypeFloat,bool>(*opts, &alignCorners);
+			assert(numParsed==1); // need to have 1 options
+			assert(numParsed==opts->size()); // all options are parsed
+			UNUSED(numParsed)
+
+			PRINT_OPTS("ResizeBilinear: have " << opts->size() << " options:"
+			           " alignCorners=" << alignCorners)
+
+			// create output data
+			std::unique_ptr<float> outputData(new float[tensorFlatSize(model->getTensorShape(outputs[0]))]);
+
+			// compute
+			NnOperators::ResizeBilinear(
+				model->getTensorShape(inputs[0]), (*tensorData)[inputs[0]].get(), // input
+				model->getTensorShape(outputs[0]), outputData.get(), // output
+				alignCorners
+			);
+
+			// save the data
+			(*tensorData)[outputs[0]].reset(outputData.release());
+
+			// notify the caller
+			cbTensorComputed(outputs[0]);
+
+			break;
 		} default: {
 			cbWarningMessage(STR("Computation didn't succeed: operator #" << (oid+1) << ": " << operatorKind << " isn't yet implemented"));
 			return false; // failed to compute the model to the end

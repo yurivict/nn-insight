@@ -68,4 +68,10 @@ void Softmax(
 	float beta
 );
 
+void ResizeBilinear(
+	const TensorShape &inputShape, const float *inputData,
+	const TensorShape &outputShape, float *outputData,
+	bool alignCorners
+);
+
 }

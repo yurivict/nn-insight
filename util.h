@@ -11,6 +11,7 @@
 #include <QByteArray>
 #include <QSize>
 #include <QPainter>
+class QComboBox;
 
 #include <string>
 #include <vector>
@@ -39,6 +40,8 @@ bool doesFileExist(const char *filePath);
 QStringList readListFromFile(const char *fileName);
 std::string getMyOwnExecutablePath();
 QImage svgToImage(const QByteArray& svgContent, const QSize& size, QPainter::CompositionMode mode);
+void selectComboBoxItemWithItemData(QComboBox &comboBox, int value);
+void setWidgetColor(QWidget *widget, const char *color);
 
 template<typename T>
 bool isValueIn(const std::vector<T> &v, T val) {

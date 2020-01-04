@@ -1,5 +1,7 @@
 <RCC>
 	<qresource prefix="/nn-labels">
             <file alias="imagenet-labels.txt">data/labels/imagenet-labels.txt</file>
+            <file alias="no-yes.txt">data/labels/no-yes.txt</file>
+            <file alias="yes-no.txt">data/labels/yes-no.txt</file>
 	</qresource>
 </RCC>

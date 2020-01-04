@@ -447,7 +447,7 @@ MainWindow::MainWindow()
 	outputInterpretationSummaryLineEdit.setWordWrap(true);
 
 	// widget states
-	updateResultInterpretationSummary(false/*enable*/, tr("n/a"), tr("n/a"));
+	updateResultInterpretationSummaryText(false/*enable*/, tr("n/a"), tr("n/a"));
 
 	// fill lists
 	sourceEffectConvolutionTypeComboBox.addItem(tr("None"),          ConvolutionEffect_None);
@@ -477,9 +477,12 @@ MainWindow::MainWindow()
 	inputNormalizationColorOrderComboBox.addItem("RGB",     InputNormalizationColorOrder_RGB); // default
 	inputNormalizationColorOrderComboBox.addItem("BGR",     InputNormalizationColorOrder_BGR);
 	//
-	outputInterpretationKindComboBox.addItem("ImageNet-1001",   ConvolutionEffect_None);
-	outputInterpretationKindComboBox.addItem("Yes/No",          ConvolutionEffect_None);
-	outputInterpretationKindComboBox.addItem("No/Yes",          ConvolutionEffect_None);
+	outputInterpretationKindComboBox.addItem("Undefined",       OutputInterpretationKind_Undefined);
+	outputInterpretationKindComboBox.addItem("ImageNet-1001",   OutputInterpretationKind_ImageNet1001);
+	outputInterpretationKindComboBox.addItem("ImageNet-1000",   OutputInterpretationKind_ImageNet1000);
+	outputInterpretationKindComboBox.addItem("No/Yes",          OutputInterpretationKind_NoYes);
+	outputInterpretationKindComboBox.addItem("Yes/No",          OutputInterpretationKind_YesNo);
+	outputInterpretationKindComboBox.addItem("Per-Pixel",       OutputInterpretationKind_PixelClassification);
 
 	// fonts
 	for (auto widget : {&nnNetworkDescriptionLabel, &nnNetworkComplexityLabel, &nnNetworkFileSizeLabel, &nnNetworkNumberInsOutsLabel, &nnNetworkNumberOperatorsLabel,
@@ -557,37 +560,15 @@ MainWindow::MainWindow()
 			//PRINT("Tensor DONE: tid=" << tid)
 		});
 
-		if (succ) {
-			// interpret results: 1001
-			auto outputTensorId = model->getOutputs()[0];
-			auto result = (*tensorData)[outputTensorId].get();
-			auto resultShape = model->getTensorShape(outputTensorId);
-			assert(resultShape.size()==2 && resultShape[0]==1); // B=1
-			assert(resultShape[1]==1001 || resultShape[1]==1000);
-			typedef std::tuple<unsigned/*order num*/,float/*likelihood*/> Likelihood;
-			std::vector<Likelihood> likelihoods;
-			for (unsigned i = 0, ie = resultShape[1]; i<ie; i++)
-				likelihoods.push_back({i,result[i]});
-			std::sort(likelihoods.begin(), likelihoods.end(), [](const Likelihood &a, const Likelihood &b) {return std::get<1>(a) > std::get<1>(b);});
-			// report it to the user
-			auto labels = Util::readListFromFile(":/nn-labels/imagenet-labels.txt");
-			assert(labels.size() == 1001);
-			unsigned labelsBase = resultShape[1]==1001 ? 0:1;
-			std::ostringstream ss;
-			for (unsigned i = 0; i<10; i++)
-				ss << (i>0 ? "\n" : "") << "• " << Q2S(labels[labelsBase+std::get<0>(likelihoods[i])]) << " = " << std::get<1>(likelihoods[i]);
-			updateResultInterpretationSummary(
-				true/*enable*/,
-				QString("%1 (%2)").arg(labels[labelsBase+std::get<0>(likelihoods[0])]).arg(std::get<1>(likelihoods[0])),
-				S2Q(ss.str())
-			);
-		} else
+		if (!succ)
 			PRINT("WARNING computation didn't succeed")
 
+		updateResultInterpretation();
 		computationTimeLabel.setText(QString("Computed in %1").arg(QString("%1 ms").arg(S2Q(Util::formatUIntHumanReadable(timer.elapsed())))));
 	});
 	connect(&computeRegionComboBox, QOverload<int>::of(&QComboBox::activated), [this](int) {
 		clearComputedTensorData();
+		updateResultInterpretation();
 	});
 	connect(&inputNormalizationRangeComboBox, QOverload<int>::of(&QComboBox::activated), [this](int) {
 		inputNormalizationChanged();
@@ -595,8 +576,13 @@ MainWindow::MainWindow()
 	connect(&inputNormalizationColorOrderComboBox, QOverload<int>::of(&QComboBox::activated), [this](int) {
 		inputNormalizationChanged();
 	});
+	connect(&outputInterpretationKindComboBox, QOverload<int>::of(&QComboBox::activated), [this](int) {
+		PRINT("outputInterpretationKindComboBox: QComboBox::activated")
+		updateResultInterpretation();
+	});
 	connect(&clearComputationResults, &QAbstractButton::pressed, [this]() {
 		clearComputedTensorData();
+		updateResultInterpretation();
 	});
 	connect(sourceImageScrollArea.horizontalScrollBar(), &QAbstractSlider::valueChanged, [this]() {
 		if (!self && haveImageOpen()) // scrollbars still send signals after the image was closed
@@ -682,6 +668,7 @@ MainWindow::MainWindow()
 		clearInputImageDisplay();
 		clearEffects();
 		clearComputedTensorData(); // closing image invalidates computation results
+		updateResultInterpretation();
 		updateSectionWidgetsVisibility();
 	})->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_W)); // like "close tab" in chrome
 	fileMenu->addAction(tr("Close Neural Network"), [this]() {
@@ -743,6 +730,9 @@ bool MainWindow::loadModelFile(const QString &filePath) {
 	nnWidget.open(model);
 	nnNetworkOperatorsListWidget.setNnModel(model);
 	updateSectionWidgetsVisibility();
+
+	// guess the output interpretation type
+	Util::selectComboBoxItemWithItemData(outputInterpretationKindComboBox, (int)ModelFunctions::guessOutputInterpretationKind(model));
 
 	// switch NN details to show the whole network info page
 	updateNetworkDetailsPage();
@@ -956,6 +946,7 @@ void MainWindow::openImageFile(const QString &imageFileName) {
 	clearInputImageDisplay();
 	clearEffects();
 	clearComputedTensorData(); // opening image invalidates computation results
+	updateResultInterpretation();
 	// read the image as tensor
 	sourceTensorDataAsLoaded.reset(Image::readPngImageFile(Q2S(imageFileName), sourceTensorShape));
 	sourceTensorDataAsUsed = sourceTensorDataAsLoaded;
@@ -976,6 +967,7 @@ void MainWindow::openImagePixmap(const QPixmap &imagePixmap, const QString &sour
 	clearInputImageDisplay();
 	clearEffects();
 	clearComputedTensorData(); // opening image invalidates computation results
+	updateResultInterpretation();
 	// read the image as tensor
 	sourceTensorDataAsLoaded.reset(Image::readPixmap(imagePixmap, sourceTensorShape, [this,&sourceName](const std::string &msg) {
 		PRINT("WARNING: failed in " << Q2S(sourceName) << ": " << msg)
@@ -1018,11 +1010,12 @@ void MainWindow::clearComputedTensorData() {
 	// clear tensor data
 	tensorData.reset(nullptr);
 	// clear result interpretation
-	updateResultInterpretationSummary(false/*enable*/, tr("n/a"), tr("n/a"));
+	updateResultInterpretationSummaryText(false/*enable*/, tr("n/a"), tr("n/a"));
 }
 
 void MainWindow::effectsChanged() {
 	clearComputedTensorData(); // effects change invalidates computation results
+	updateResultInterpretation();
 
 	// all available effects that can be applied
 	bool flipHorizontally = sourceEffectFlipHorizontallyCheckBox.isChecked();
@@ -1043,6 +1036,7 @@ void MainWindow::effectsChanged() {
 
 void MainWindow::inputNormalizationChanged() {
 	clearComputedTensorData(); // input normalization change invalidates computation results
+	updateResultInterpretation();
 }
 
 float* MainWindow::applyEffects(const float *image, const TensorShape &shape,
@@ -1219,7 +1213,87 @@ void MainWindow::updateCurrentRegionText() {
 		sourceImageCurrentRegionText.setText("<whole image>");
 }
 
-void MainWindow::updateResultInterpretationSummary(bool enable, const QString &oneLine, const QString &details) {
+void MainWindow::updateResultInterpretation() {
+	bool computedResultExists = model!=nullptr && (bool)tensorData && (*tensorData)[model->getOutputs()[0]].get();
+
+	// helpers
+	auto makeRed = [&]() {
+		Util::setWidgetColor(&outputInterpretationKindComboBox, "red");
+	};
+	auto makeBlack = [&]() {
+		Util::setWidgetColor(&outputInterpretationKindComboBox, "black");
+	};
+	auto interpretBasedOnLabelsList = [&](const char *listFile, unsigned idx0, unsigned idx1) {
+		// interpret results: 1001
+		auto outputTensorId = model->getOutputs()[0];
+		auto result = (*tensorData)[outputTensorId].get();
+		auto resultShape = model->getTensorShape(outputTensorId);
+		assert(resultShape.size()==2 && resultShape[0]==1); // [B,C] with B=1
+		if (resultShape[1] != idx1-idx0)
+			return false; // failed to interpret it
+
+		// cmpute the likelihood array
+		typedef std::tuple<unsigned/*order num*/,float/*likelihood*/> Likelihood;
+		std::vector<Likelihood> likelihoods;
+		for (unsigned i = 0, ie = resultShape[1]; i<ie; i++)
+			likelihoods.push_back({i,result[i]});
+		std::sort(likelihoods.begin(), likelihoods.end(), [](const Likelihood &a, const Likelihood &b) {return std::get<1>(a) > std::get<1>(b);});
+
+		// load labels
+		auto labels = Util::readListFromFile(listFile);
+		assert(labels.size() >= idx1-idx0);
+
+		// report top few labels to the user
+		std::ostringstream ss;
+		for (unsigned i = 0; i<10; i++)
+			ss << (i>0 ? "\n" : "") << "• " << Q2S(labels[idx0+std::get<0>(likelihoods[i])]) << " = " << std::get<1>(likelihoods[i]);
+		updateResultInterpretationSummaryText(
+			true/*enable*/,
+			QString("%1 (%2)").arg(labels[idx0+std::get<0>(likelihoods[0])]).arg(std::get<1>(likelihoods[0])),
+			S2Q(ss.str())
+		);
+
+		return true; // success
+	};
+	auto interpretAsImageNet = [&](unsigned count) {
+		return interpretBasedOnLabelsList(":/nn-labels/imagenet-labels.txt", count==1000 ? 1:0, 1001); // skip the first label of 1001 labels when count=1000
+	};
+	auto interpretAsNoYes = [&](bool reversed) {
+		return interpretBasedOnLabelsList(!reversed ? ":/nn-labels/no-yes.txt" : ":/nn-labels/yes-no.txt", 0, 2);
+	};
+	auto interpretAsPixelClassification = [&]() {
+		// TODO
+		return false;
+	};
+	auto interpretAs = [&](OutputInterpretationKind kind) {
+		switch (kind) {
+		case OutputInterpretationKind_Undefined:
+			// no nothing
+			return true;
+		case OutputInterpretationKind_ImageNet1001:
+			return interpretAsImageNet(1001);
+		case OutputInterpretationKind_ImageNet1000:
+			return interpretAsImageNet(1000);
+		case OutputInterpretationKind_NoYes:
+			return interpretAsNoYes(false);
+		case OutputInterpretationKind_YesNo:
+			return interpretAsNoYes(true);
+		case OutputInterpretationKind_PixelClassification:
+			return interpretAsPixelClassification();
+		}
+	};
+
+	updateResultInterpretationSummaryText(false/*enable*/, tr("n/a"), tr("n/a"));
+
+	if (!computedResultExists)
+		makeBlack();
+	else if (interpretAs((OutputInterpretationKind)outputInterpretationKindComboBox.itemData(outputInterpretationKindComboBox.currentIndex()).toInt()))
+		makeBlack();
+	else
+		makeRed();
+}
+
+void MainWindow::updateResultInterpretationSummaryText(bool enable, const QString &oneLine, const QString &details) {
 	outputInterpretationSummaryLineEdit.setVisible(enable);
 	outputInterpretationSummaryLineEdit.setText(oneLine);
 	outputInterpretationSummaryLineEdit.setToolTip(QString(tr("Result interpretation:\n%1")).arg(details));
@@ -1279,6 +1353,7 @@ void MainWindow::onOpenNeuralNetworkFileUserIntent() {
 
 void MainWindow::closeNeuralNetwork() {
 	clearComputedTensorData();
+	updateResultInterpretation();
 	nnWidget.close();
 	nnNetworkOperatorsListWidget.clearNnModel();
 	pluginInterface.reset(nullptr);

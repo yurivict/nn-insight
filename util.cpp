@@ -18,6 +18,7 @@
 #include <QSize>
 #include <QPainter>
 #include <QSvgRenderer>
+#include <QComboBox>
 
 #include <limits>
 #include <cstring>
@@ -25,6 +26,7 @@
 
 #include <unistd.h> // sleep,readlink
 #include <sys/stat.h>
+#include <assert.h>
 
 namespace Util {
 
@@ -183,6 +185,19 @@ QImage svgToImage(const QByteArray& svgContent, const QSize& size, QPainter::Com
 	QSvgRenderer(svgContent).render(&painter);
 
 	return image;
+}
+
+void selectComboBoxItemWithItemData(QComboBox &comboBox, int value) {
+	for (unsigned i=0, ie=comboBox.count(); i<ie; i++)
+		if (comboBox.itemData(i).toInt() == value) {
+			comboBox.setCurrentIndex(i);
+			return;
+		}
+	assert(false); // item with itemData=value not found
+}
+
+void setWidgetColor(QWidget *widget, const char *color) {
+	widget->setStyleSheet(S2Q(STR("color: " << color)));
 }
 
 }

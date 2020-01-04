@@ -190,7 +190,8 @@ private: // private methods
 	void updateNetworkDetailsPage();
 	void updateSourceImageOnScreen();
 	void updateCurrentRegionText();
-	void updateResultInterpretationSummary(bool enable, const QString &oneLine, const QString &details);
+	void updateResultInterpretation();
+	void updateResultInterpretationSummaryText(bool enable, const QString &oneLine, const QString &details);
 	std::array<unsigned,4> getVisibleImageRegion() const;
 	void updateSectionWidgetsVisibility();
 	void onOpenNeuralNetworkFileUserIntent();

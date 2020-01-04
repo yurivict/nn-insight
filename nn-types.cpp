@@ -24,6 +24,13 @@ TensorShape tensorGetLastDims(const TensorShape &shape, unsigned ndims) {
 	return s;
 }
 
+TensorShape tensorStripLeadingOnes(const TensorShape &shape) {
+	TensorShape s = shape;
+	while (!s.empty() && s[0]==1)
+		s.erase(s.begin());
+	return s;
+}
+
 bool tensorIsSubset(const TensorShape &shapeLarge, const TensorShape &shapeSmall) {
 	// check size
 	if (shapeLarge.size() < shapeSmall.size())

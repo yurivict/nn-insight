@@ -3,6 +3,7 @@
 #pragma once
 
 #include "plugin-interface.h"
+#include "nn-types.h"
 
 #include <vector>
 #include <map>
@@ -40,6 +41,7 @@ float dataRatioOfOperator(const PluginInterface::Model *model, PluginInterface::
 float dataRatioOfOperatorModelInputToIns(const PluginInterface::Model *model, PluginInterface::OperatorId operatorId);
 float dataRatioOfOperatorModelInputToOuts(const PluginInterface::Model *model, PluginInterface::OperatorId operatorId);
 void computeTensors(const PluginInterface::Model *model, std::vector<std::unique_ptr<float>> *tensorData);
+OutputInterpretationKind guessOutputInterpretationKind(const PluginInterface::Model *model);
 
 // string-returting aggretgate versions
 std::string dataRatioOfOperatorStr(const PluginInterface::Model *model, PluginInterface::OperatorId operatorId,

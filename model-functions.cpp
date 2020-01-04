@@ -123,6 +123,34 @@ float dataRatioOfOperatorModelInputToOuts(const PluginInterface::Model *model, P
 void computeTensors(const PluginInterface::Model *model, std::vector<std::unique_ptr<float>> *tensorData) {
 }
 
+OutputInterpretationKind guessOutputInterpretationKind(const PluginInterface::Model *model) {
+	// classify based on the first output tensor shape
+	auto outputTensorId = model->getOutputs()[0];
+	auto outputShape = tensorStripLeadingOnes(model->getTensorShape(outputTensorId));
+
+	switch (outputShape.size()) {
+	case 1: // 1-dimensional vector with numbers, must be object classification
+		switch (outputShape[0]) {
+		case 1000:
+			return OutputInterpretationKind_ImageNet1000; // might be wrong, but the number is the same and there aren't too many networks around
+		case 1001:
+			return OutputInterpretationKind_ImageNet1001;
+		case 2:
+			return OutputInterpretationKind_NoYes; // it could also be OutputInterpretationKind_YesNo but we can't know this
+		default:
+			return OutputInterpretationKind_Undefined; // we don't know from the information that we have
+		}
+	case 3: { // see if the shape matches the input shape
+		auto inputTensorId = model->getInputs()[0];
+		auto inputShape = tensorStripLeadingOnes(model->getTensorShape(inputTensorId));
+		if (inputShape.size()==3 && inputShape[0]==outputShape[0] && inputShape[1]==outputShape[1])
+			return OutputInterpretationKind_PixelClassification;
+		return OutputInterpretationKind_Undefined; // some large shape but it doesn't match the input so we don't know
+	} default:
+		return OutputInterpretationKind_Undefined; // we don't know from the information that we have
+	}
+}
+
 /// string-returting aggretgate versions
 
 std::string dataRatioOfOperatorStr(const PluginInterface::Model *model, PluginInterface::OperatorId operatorId,

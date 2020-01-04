@@ -37,11 +37,21 @@ enum InputNormalizationColorOrder {
 	InputNormalizationColorOrder_BGR
 };
 
+enum OutputInterpretationKind {
+	OutputInterpretationKind_Undefined,
+	OutputInterpretationKind_ImageNet1001,
+	OutputInterpretationKind_ImageNet1000,
+	OutputInterpretationKind_NoYes,
+	OutputInterpretationKind_YesNo,
+	OutputInterpretationKind_PixelClassification
+};
+
 typedef std::tuple<InputNormalizationRange,InputNormalizationColorOrder> InputNormalization;
 
 size_t tensorFlatSize(const TensorShape &shape);
 unsigned tensorNumMultiDims(const TensorShape &shape);
 TensorShape tensorGetLastDims(const TensorShape &shape, unsigned ndims);
+TensorShape tensorStripLeadingOnes(const TensorShape &shape);
 bool tensorIsSubset(const TensorShape &shapeLarge, const TensorShape &shapeSmall);
 
 // based on ComputePaddingWithOffset from the TF Lite project in order to match the results

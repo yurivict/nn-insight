@@ -33,6 +33,7 @@
 
 #include <map>
 #include <memory>
+#include <algorithm>
 
 #if defined(USE_PERFTOOLS)
 #include <gperftools/malloc_extension.h>
@@ -1225,7 +1226,7 @@ void MainWindow::updateResultInterpretation() {
 		Util::setWidgetColor(&outputInterpretationKindComboBox, "black");
 	};
 	auto interpretBasedOnLabelsList = [&](const char *listFile, unsigned idx0, unsigned idx1) {
-		// interpret results: 1001
+		// interpret results based on the labels list
 		auto outputTensorId = model->getOutputs()[0];
 		auto result = (*tensorData)[outputTensorId].get();
 		auto resultShape = model->getTensorShape(outputTensorId);
@@ -1246,7 +1247,7 @@ void MainWindow::updateResultInterpretation() {
 
 		// report top few labels to the user
 		std::ostringstream ss;
-		for (unsigned i = 0; i<10; i++)
+		for (unsigned i = 0, ie = std::min(unsigned(10), idx1-idx0); i<ie; i++)
 			ss << (i>0 ? "\n" : "") << "• " << Q2S(labels[idx0+std::get<0>(likelihoods[i])]) << " = " << std::get<1>(likelihoods[i]);
 		updateResultInterpretationSummaryText(
 			true/*enable*/,

@@ -42,6 +42,8 @@ std::string getMyOwnExecutablePath();
 QImage svgToImage(const QByteArray& svgContent, const QSize& size, QPainter::CompositionMode mode);
 void selectComboBoxItemWithItemData(QComboBox &comboBox, int value);
 void setWidgetColor(QWidget *widget, const char *color);
+std::string charToSubscript(char ch);
+std::string stringToSubscript(const std::string &str);
 
 template<typename T>
 bool isValueIn(const std::vector<T> &v, T val) {

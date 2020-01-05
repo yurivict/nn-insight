@@ -41,6 +41,7 @@ float dataRatioOfOperatorModelInputToIns(const PluginInterface::Model *model, Pl
 float dataRatioOfOperatorModelInputToOuts(const PluginInterface::Model *model, PluginInterface::OperatorId operatorId);
 void computeTensors(const PluginInterface::Model *model, std::vector<std::unique_ptr<float>> *tensorData);
 OutputInterpretationKind guessOutputInterpretationKind(const PluginInterface::Model *model);
+std::string getOperatorExtraInfoString(const PluginInterface::Model *model, PluginInterface::OperatorId operatorId);
 
 // string-returting aggretgate versions
 std::string dataRatioOfOperatorStr(const PluginInterface::Model *model, PluginInterface::OperatorId operatorId,

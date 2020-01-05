@@ -200,5 +200,36 @@ void setWidgetColor(QWidget *widget, const char *color) {
 	widget->setStyleSheet(S2Q(STR("color: " << color)));
 }
 
+std::string charToSubscript(char ch) {
+	switch (ch) {
+	case '0': return STR("₀");
+	case '1': return STR("₁");
+	case '2': return STR("₂");
+	case '3': return STR("₃");
+	case '4': return STR("₄");
+	case '5': return STR("₅");
+	case '6': return STR("₆");
+	case '7': return STR("₇");
+	case '8': return STR("₈");
+	case '9': return STR("₉");
+	case '+': return STR("₊");
+	case '-': return STR("₋");
+	case '=': return STR("=");
+	case '(': return STR("₍");
+	case ')': return STR("₎");
+	case 'x': return STR("ₓ");
+	default:
+		assert(false);
+		return " ";
+	}
+}
+
+std::string stringToSubscript(const std::string &str) {
+	std::ostringstream ss;
+	for (auto ch : str)
+		ss << charToSubscript(ch);
+	return ss.str();
+}
+
 }
 

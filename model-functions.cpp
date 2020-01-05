@@ -5,6 +5,7 @@
 #include "nn-types.h"
 #include "tensor.h"
 #include "misc.h"
+#include "util.h"
 
 #include <assert.h>
 
@@ -156,6 +157,32 @@ OutputInterpretationKind guessOutputInterpretationKind(const PluginInterface::Mo
 		return OutputInterpretationKind_Undefined; // some large shape but it doesn't match the input so we don't know
 	} default:
 		return OutputInterpretationKind_Undefined; // we don't know from the information that we have
+	}
+}
+
+std::string getOperatorExtraInfoString(const PluginInterface::Model *model, PluginInterface::OperatorId operatorId) {
+	typedef PluginInterface PI;
+	switch (model->getOperatorKind(operatorId)) {
+	  case PI::KindConv2D:
+	  case PI::KindDepthwiseConv2D: {
+		std::vector<PI::TensorId> inputs, outputs;
+		model->getOperatorIo(operatorId, inputs, outputs);
+		assert(inputs.size()==3);
+		auto filterShape = model->getTensorShape(inputs[1]);
+		assert(filterShape.size()==4);
+		return Util::stringToSubscript(STR(filterShape[1] << "x" << filterShape[2]));
+	} case PI::KindMaxPool:
+	  case PI::KindAveragePool: {
+		int filterWidth=0, filterHeight=0;
+		std::unique_ptr<PI::OperatorOptionsList> opts(model->getOperatorOptions(operatorId));
+		for (auto &o : *opts)
+			if (o.name == PI::OperatorOption_FILTER_WIDTH)
+				filterWidth = o.value.as<int>();
+			else if (o.name == PI::OperatorOption_FILTER_HEIGHT)
+				filterHeight = o.value.as<int>();
+		return Util::stringToSubscript(STR(filterWidth << "x" << filterHeight));
+	} default:
+		return ""; // no extra info
 	}
 }
 

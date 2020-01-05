@@ -218,7 +218,7 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::arra
 		for (auto &dotBox : operatorBoxes) {
 			drawBox(painter,
 				(*outIndexes[0])[oid] = boxToQRectF(dotBoxToQtBox(dotBox)),
-				STR(model->getOperatorKind(oid)),
+				STR(model->getOperatorKind(oid) << ModelFunctions::getOperatorExtraInfoString(model, oid)),
 				Colors::getOperatorColor(model->getOperatorKind(oid)),
 				{},
 				""

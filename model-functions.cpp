@@ -35,6 +35,8 @@ size_t computeOperatorFlops(const PluginInterface::Model *model, PluginInterface
 		auto shapeWeights = model->getTensorShape(inputs[1]);
 		assert(shapeWeights.size() == 2);
 		return Tensor::flatSize(shapeWeights); // add summations, strides, pads
+	} case PluginInterface::KindLocalResponseNormalization: {
+		return 0; // TODO
 	} case PluginInterface::KindAdd:
 	  case PluginInterface::KindRelu:
 	  case PluginInterface::KindRelu6:

@@ -28,6 +28,7 @@ public:
 		KindDepthwiseConv2D,
 		KindPad,
 		KindFullyConnected,
+		KindLocalResponseNormalization,
 		KindMaxPool,
 		KindAveragePool,
 		// activation functions

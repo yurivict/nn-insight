@@ -74,4 +74,10 @@ void ResizeBilinear(
 	bool alignCorners
 );
 
+void LocalResponseNormalization(
+	const TensorShape &inputShape, const float *inputData,
+	const TensorShape &outputShape, float *outputData,
+	int radius, float alpha, float beta, float bias
+);
+
 }

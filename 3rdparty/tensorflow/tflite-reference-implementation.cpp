@@ -287,6 +287,13 @@ struct ResizeBilinearParams {
   bool align_corners;
 };
 
+struct LocalResponseNormalizationParams {
+  int32 range;
+  double bias;
+  double alpha;
+  double beta;
+};
+
 /// operator code
 
 // from: tensorflow/lite/kernels/internal/reference/conv.h
@@ -746,6 +753,33 @@ inline void ResizeBilinear(const tflite::ResizeBilinearParams& op_params,
   }
 }
 
+// from: tensorflow/lite/kernels/internal/reference/reference_ops.h
+inline void LocalResponseNormalization(
+    const tflite::LocalResponseNormalizationParams& op_params,
+    const RuntimeShape& input_shape, const float* input_data,
+    const RuntimeShape& output_shape, float* output_data) {
+  const int trailing_dim = input_shape.DimensionsCount() - 1;
+  const int outer_size =
+      MatchingFlatSizeSkipDim(input_shape, trailing_dim, output_shape);
+  const int depth =
+      MatchingDim(input_shape, trailing_dim, output_shape, trailing_dim);
+
+  for (int i = 0; i < outer_size; ++i) {
+    for (int c = 0; c < depth; ++c) {
+      const int begin_input_c = std::max(0, c - op_params.range);
+      const int end_input_c = std::min(depth, c + op_params.range);
+      float accum = 0.f;
+      for (int input_c = begin_input_c; input_c < end_input_c; ++input_c) {
+        const float input_val = input_data[i * depth + input_c];
+        accum += input_val * input_val;
+      }
+      const float multiplier =
+          std::pow(op_params.bias + op_params.alpha * accum, -op_params.beta);
+      output_data[i * depth + c] = input_data[i * depth + c] * multiplier;
+    }
+  }
+}
+
 }
 
 //
@@ -925,6 +959,23 @@ void ResizeBilinear(
 	tflite::ResizeBilinear(params,
 		tflite::RuntimeShape(inputShape),  inputData,
 		outputSizeDims, outputSizeData,
+		tflite::RuntimeShape(outputShape), outputData
+	);
+}
+
+void LocalResponseNormalization(
+	const TensorShape &inputShape, const float *inputData,
+	const TensorShape &outputShape, float *outputData,
+	int radius, float alpha, float beta, float bias
+) {
+	tflite::LocalResponseNormalizationParams params;
+	params.range = radius; // XXX in TF Lite sources the operator option is called "radius" but the parameter in the structure is called "range"
+	params.alpha = alpha;
+	params.beta = beta;
+	params.bias = bias;
+
+	tflite::LocalResponseNormalization(params,
+		tflite::RuntimeShape(inputShape),  inputData,
 		tflite::RuntimeShape(outputShape), outputData
 	);
 }

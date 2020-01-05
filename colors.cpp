@@ -14,6 +14,8 @@ QColor getOperatorColor(PluginInterface::OperatorKind okind) {
 		return QColor(212,170,11);
 	case PluginInterface::KindFullyConnected:
 		return QColor(50,50,150);
+	case PluginInterface::KindLocalResponseNormalization:
+		return QColor(32,216,39);
 	case PluginInterface::KindMaxPool:
 	case PluginInterface::KindAveragePool:
 		return QColor(50,150,50);

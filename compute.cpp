@@ -438,7 +438,7 @@ bool compute(
 				+ OperatorOptions::GetOption1<PI::OperatorOption_WEIGHTS_FORMAT, PI::OperatorOption_TypeInt, int> (*opts, &weightsFormat)
 				+ OperatorOptions::GetOption1<PI::OperatorOption_FUSED_ACTIVATION_FUNCTION,
 					PI::OperatorOption_TypeActivationFunction,PI::ActivationFunction>(*opts, &activationFunction);
-			assert(numParsed==3); // need to have 6 options
+			assert(numParsed==3); // need to have 3 options
 			assert(numParsed==opts->size()); // all options are parsed
 			UNUSED(numParsed)
 
@@ -472,6 +472,49 @@ bool compute(
 
 			// activation function
 			applyActivationFunction(outputShapeSize, outputData.get(), activationFunction);
+
+			// save the data
+			(*tensorData)[outputs[0]].reset(outputData.release());
+
+			// notify the caller
+			cbTensorComputed(outputs[0]);
+
+			break;
+		} case PI::KindLocalResponseNormalization: {
+			assert(inputs.size()==1 && outputs.size()==1);
+			assert(opts); // need to have options present
+			assert((*tensorData)[inputs[0]]); // need to have the input data present
+
+			// operator options required to run this operator
+			int radius = 0;
+			float alpha, beta, bias;
+
+			// parse the operator options supplied by the model into the above variables
+			unsigned numParsed =
+				OperatorOptions::GetOption1<PI::OperatorOption_RADIUS,    PI::OperatorOption_TypeInt,int>(*opts, &radius)
+				+ OperatorOptions::GetOption1<PI::OperatorOption_ALPHA,   PI::OperatorOption_TypeFloat,float> (*opts, &alpha)
+				+ OperatorOptions::GetOption1<PI::OperatorOption_BETA,    PI::OperatorOption_TypeFloat,float> (*opts, &beta)
+				+ OperatorOptions::GetOption1<PI::OperatorOption_BIAS,    PI::OperatorOption_TypeFloat,float> (*opts, &bias);
+			assert(numParsed==4); // need to have 4 options
+			assert(numParsed==opts->size()); // all options are parsed
+			UNUSED(numParsed)
+
+			PRINT_OPTS("LocalResponseNormalization: have " << opts->size() << " options:"
+			           " radius=" << radius <<
+			           " alpha=" << alpha <<
+			           " beta=" << beta <<
+			           " bias=" << bias
+			)
+
+			// create output data
+			std::unique_ptr<float> outputData(new float[Tensor::flatSize(model->getTensorShape(outputs[0]))]);
+
+			// compute
+			NnOperators::LocalResponseNormalization(
+				model->getTensorShape(inputs[0]), (*tensorData)[inputs[0]].get(), // input
+				model->getTensorShape(outputs[0]), outputData.get(), // output
+				radius, alpha, beta, bias
+			);
 
 			// save the data
 			(*tensorData)[outputs[0]].reset(outputData.release());

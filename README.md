@@ -22,6 +22,7 @@ NN Insight is a program that visualizes neural network's structure and computati
 * VGG16 [[link](https://drive.google.com/file/d/1Nw6a_PcoQi4ZaTEFLO6J8KJvP-ZpgXPi/view?usp=sharing)]
 * VGG19 [[link](https://drive.google.com/file/d/1wsNsQRknfKUgS_zp6kLLETE9ngdd1pYA/view?usp=sharing)]
 * SqueezeNet [[link](https://storage.googleapis.com/download.tensorflow.org/models/tflite/model_zoo/upload_20180427/squeezenet_2018_04_27.tgz)]
+* Fire-Detection-CNN [[link](https://drive.google.com/file/d/17wuKEUUL2ONkPMiYExh8Bx6M6lAUGbxA/view?usp=sharing)] from the paper _Dunnings and Breckon, In Proc. International Conference on Image Processing IEEE, 2018_ [[pdf](https://breckon.org/toby/publications/papers/dunnings18fire.pdf)] (use normalizaton 0..255 and BGR)
 
 MobileNet networks are a series of networks that Google released over the past few years that are trained on the ImageNet image set with 1001 categories.
 

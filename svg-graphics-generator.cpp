@@ -62,6 +62,12 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::arra
 	auto pixelsToInches = [dpi](float pixels) {
 		return pixels/dpi;
 	};
+	auto inputLabel = [&](PluginInterface::TensorId tensorId) {
+		return model->getTensorName(tensorId);
+	};
+	auto outputLabel = [&](PluginInterface::TensorId tensorId) {
+		return model->getTensorName(tensorId);
+	};
 
 /*
 	auto inputs = model->getInputs();
@@ -117,11 +123,11 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::arra
 				return QSizeF(pixelsToInches(szPixels.width()), pixelsToInches(szPixels.height()));
 			},
 			[&](PluginInterface::TensorId tid) { // inputBoxFn
-				auto szPixels = fm.size(Qt::TextSingleLine, S2Q(STR("Input#" << tid)));
+				auto szPixels = fm.size(Qt::TextSingleLine, S2Q(inputLabel(tid)));
 				return QSizeF(pixelsToInches(szPixels.width()), pixelsToInches(szPixels.height()));
 			},
 			[&](PluginInterface::TensorId tid) { // outputBoxFn
-				auto szPixels = fm.size(Qt::TextSingleLine, S2Q(STR("Output#" << tid)));
+				auto szPixels = fm.size(Qt::TextSingleLine, S2Q(outputLabel(tid)));
 				return QSizeF(pixelsToInches(szPixels.width()), pixelsToInches(szPixels.height()));
 			},
 			graphBBox,
@@ -262,7 +268,7 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::arra
 		outIndexes[2]->push_back(box);
 		drawBox(painter,
 			box,
-			model->getTensorName(it.first/*tid*/),
+			inputLabel(it.first/*tid*/),
 			Qt::gray,
 			{},
 			""
@@ -275,7 +281,7 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::arra
 		outIndexes[3]->push_back(box);
 		drawBox(painter,
 			box,
-			model->getTensorName(it.first/*tid*/),
+			outputLabel(it.first/*tid*/),
 			Qt::gray,
 			{},
 			""

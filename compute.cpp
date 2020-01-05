@@ -586,6 +586,36 @@ bool compute(
 			cbTensorComputed(outputs[0]);
 
 			break;
+		} case PI::KindTanh: {
+			assert(inputs.size()==1 && outputs.size()==1);
+			assert(!opts || opts->empty()); // tanh has no options
+			assert((*tensorData)[inputs[0]]); // need to have the input data present
+
+			PRINT_OPTS("Tanh: activation function")
+
+			// tensors
+			auto inputShape = model->getTensorShape(inputs[0]);
+			auto outputShape = model->getTensorShape(outputs[0]);
+			auto inputShapeSize = Tensor::flatSize(inputShape);
+			assert(inputShape==outputShape);
+			UNUSED(outputShape)
+
+			// create output data
+			std::unique_ptr<float> outputData(new float[inputShapeSize]);
+
+			// compute
+			auto input = (*tensorData)[inputs[0]].get();
+			auto output = outputData.get();
+			for (auto inpute = input+inputShapeSize; input<inpute; input++, output++)
+				*output = std::tanh(*input);
+
+			// save the data
+			(*tensorData)[outputs[0]].reset(outputData.release());
+
+			// notify the caller
+			cbTensorComputed(outputs[0]);
+
+			break;
 		} case PI::KindReshape: {
 			assert((inputs.size()==1 || inputs.size()==2) && outputs.size()==1); // XXX now sure why the 'new_shape' is in both input[1] and 'new_shape' option
 			assert(opts); // need to have options present, but we ignore them for now ...
@@ -613,6 +643,7 @@ bool compute(
 			auto outputShape = model->getTensorShape(outputs[0]);
 			auto inputShapeSize = Tensor::flatSize(inputShape);
 			assert(inputShape==outputShape);
+			UNUSED(outputShape)
 
 			// create output data
 			std::unique_ptr<float> outputData(new float[inputShapeSize]);

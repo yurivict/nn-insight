@@ -233,7 +233,7 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::arra
 		outIndexes[2]->push_back(box);
 		drawBox(painter,
 			box,
-			STR("Input#" << it.first/*tid*/),
+			model->getTensorName(it.first/*tid*/),
 			Qt::gray,
 			{},
 			""
@@ -246,7 +246,7 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::arra
 		outIndexes[3]->push_back(box);
 		drawBox(painter,
 			box,
-			STR("Output#" << it.first/*tid*/),
+			model->getTensorName(it.first/*tid*/),
 			Qt::gray,
 			{},
 			""

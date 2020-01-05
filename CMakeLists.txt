@@ -78,6 +78,7 @@ add_executable(nn-insight
 	graphviz-cgraph.cpp
 	constant-values.cpp
 	colors.cpp
+	palette.cpp
 	3rdparty/tensorflow/tflite-reference-implementation.cpp
 	resources.qrc
 )

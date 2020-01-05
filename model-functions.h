@@ -12,7 +12,6 @@
 
 #include <QMarginsF>
 #include <QSizeF>
-#include <QPoint>
 
 namespace ModelFunctions {
 
@@ -27,8 +26,8 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 	std::vector<Box2> &operatorBoxes, //  return: operator boxes in pixels
 	std::map<PluginInterface::TensorId, ModelFunctions::Box2> &inputBoxes, //  return: input boxes in pixels
 	std::map<PluginInterface::TensorId, ModelFunctions::Box2> &outputBoxes, //  return: output boxes in pixels
-	std::vector<std::vector<std::vector<QPointF>>> &tensorLineCubicSplines, // cubic splines
-	std::vector<std::vector<QPointF>> &tensorLabelPositions // return: tensor label positions in pixels
+	std::vector<std::vector<std::vector<std::array<float,2>>>> &tensorLineCubicSplines, // cubic splines
+	std::vector<std::vector<std::array<float,2>>> &tensorLabelPositions // return: tensor label positions in pixels
 );
 
 bool isTensorComputed(PluginInterface::TensorId tensorId);

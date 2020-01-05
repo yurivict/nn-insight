@@ -55,6 +55,14 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::arra
 	QColor clrTensorLine              = Qt::black;
 	QColor clrTensorLabel             = Qt::black;
 
+	auto dpi = Util::getScreenDPI();
+	auto inchesToPixels = [dpi](float inches) {
+		return inches*dpi;
+	};
+	auto pixelsToInches = [dpi](float pixels) {
+		return pixels/dpi;
+	};
+
 /*
 	auto inputs = model->getInputs();
 	auto outputs = model->getOutputs();
@@ -94,60 +102,71 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::arra
 	//PRINT("json: bb=" << j["bb"].get<std::string>())
 
 	// render the model to the coordinates
-	ModelFunctions::Box2 bbox;
+	ModelFunctions::Box2 graphBBox;
 	std::vector<ModelFunctions::Box2> operatorBoxes;
 	std::map<PluginInterface::TensorId, ModelFunctions::Box2> inputBoxes;
 	std::map<PluginInterface::TensorId, ModelFunctions::Box2> outputBoxes;
-	std::vector<std::vector<std::vector<QPointF>>> tensorLineCubicSplines;
-	std::vector<std::vector<QPointF>> tensorLabelPositions;
+	std::vector<std::vector<std::vector<std::array<float,2>>>> tensorLineCubicSplines;
+	std::vector<std::vector<std::array<float,2>>> tensorLabelPositions;
 	{
 		QFontMetrics fm(Fonts::fontOperatorTitle);
-		qreal dpi = (qreal)Util::getScreenDPI();
 		ModelFunctions::renderModelToCoordinates(model,
-			QMarginsF(0.2, 0.1, 0.22, 0.1), // operator box margins in inches
-			[model,&fm,dpi](PluginInterface::OperatorId oid) {
+			QMarginsF(0.15, 0.04, 0.15, 0.04), // operator box margins in inches
+			[&](PluginInterface::OperatorId oid) { // operatorBoxFn
 				auto szPixels = fm.size(Qt::TextSingleLine, S2Q(STR(model->getOperatorKind(oid))));
-				return QSizeF(qreal(szPixels.width())/dpi, qreal(szPixels.height())/dpi);
+				return QSizeF(pixelsToInches(szPixels.width()), pixelsToInches(szPixels.height()));
 			},
-			[&fm,dpi](PluginInterface::TensorId tid) {
+			[&](PluginInterface::TensorId tid) { // inputBoxFn
 				auto szPixels = fm.size(Qt::TextSingleLine, S2Q(STR("Input#" << tid)));
-				return QSizeF(qreal(szPixels.width())/dpi, qreal(szPixels.height())/dpi);
+				return QSizeF(pixelsToInches(szPixels.width()), pixelsToInches(szPixels.height()));
 			},
-			[&fm,dpi](PluginInterface::TensorId tid) {
+			[&](PluginInterface::TensorId tid) { // outputBoxFn
 				auto szPixels = fm.size(Qt::TextSingleLine, S2Q(STR("Output#" << tid)));
-				return QSizeF(qreal(szPixels.width())/dpi, qreal(szPixels.height())/dpi);
+				return QSizeF(pixelsToInches(szPixels.width()), pixelsToInches(szPixels.height()));
 			},
-			bbox,
+			graphBBox,
 			operatorBoxes,
 			inputBoxes,
 			outputBoxes,
 			tensorLineCubicSplines,
 			tensorLabelPositions
 		);
+
+		// convert bbox inches->pixels
+		assert(graphBBox[0][0]==0 && graphBBox[0][0]==0);
+		graphBBox[1][0] = inchesToPixels(graphBBox[1][0]); // width
+		graphBBox[1][1] = inchesToPixels(graphBBox[1][1]); // height
 	}
 
 	// generate the SVG file
 
-	float marginPixelsX = ConstantValues::nnDisplayMarginInchesX*Util::getScreenDPI();
-	float marginPixelsY = ConstantValues::nnDisplayMarginInchesY*Util::getScreenDPI();
+	float marginPixelsX = ConstantValues::nnDisplayMarginInchesX*dpi;
+	float marginPixelsY = ConstantValues::nnDisplayMarginInchesY*dpi;
 
-	SvgGenerator generator(bbox[1][0]/*width*/, bbox[1][1]/*height*/, (unsigned)marginPixelsX, (unsigned)marginPixelsY, "NN Model");
+	SvgGenerator generator(
+		graphBBox[1][0]/*width*/,
+		graphBBox[1][1]/*height*/,
+		(unsigned)marginPixelsX,
+		(unsigned)marginPixelsY,
+		"NN Model"
+	);
 
 	QPainter painter;
 	//painter.setRenderHint(QPainter::Antialiasing);
 	painter.begin(&generator);
 
-	auto dotYToQtY = [&bbox](float Y) {
-		return bbox[1][1]-Y;
+
+	auto dotYToQtY = [&graphBBox](float Y) {
+		return graphBBox[1][1]-Y;
 	};
-	auto dotQPointToQtQPoint = [&](const QPointF &pt) {
-		return QPointF(pt.x(), dotYToQtY(pt.y()));
+	auto dotPointToQtQPoint = [&](const std::array<float,2> &pt) {
+		return QPointF(inchesToPixels(pt[0]), dotYToQtY(inchesToPixels(pt[1])));
 	};
-	auto dotVectorQPointToQtVectorQPoint = [&](const std::vector<QPointF> &pts) {
-		std::vector<QPointF> res;
-		for (auto &p : pts)
-			res.push_back(dotQPointToQtQPoint(p));
-		return res;
+	auto boxInchesToPixels = [&](const ModelFunctions::Box2 &box2) {
+		return ModelFunctions::Box2{{
+			{inchesToPixels(box2[0][0]), inchesToPixels(box2[0][1])},
+			{inchesToPixels(box2[1][0]), inchesToPixels(box2[1][1])}
+		}};
 	};
 	auto dotBoxToQtBox = [&](const ModelFunctions::Box2 &box2) {
 		auto center = box2[0];
@@ -180,15 +199,25 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::arra
 		painter.drawText(bbox, Qt::AlignCenter, S2Q(title));
 	};
 	auto drawTensorSplines = [&](QPainter &painter,
-	                             const std::vector<QPointF> &splines)
+	                             const std::vector<std::array<float,2>> &splines)
 	{
-		assert(splines.size()%3 == 2);
+		assert(splines.size()>2 && (splines.size()-2)%3 == 1); // {startp,endp, 1+3n}
+
+		auto ptToQPointF = [&](std::array<float,2> pt) {
+			return QPointF(inchesToPixels(pt[0]), dotYToQtY(inchesToPixels(pt[1])));
+		};
 
 		QPainterPath path;
-		path.moveTo(splines[0]);
-		for (unsigned i = 1; i+2 < splines.size(); i += 3)
-			path.cubicTo(splines[i+0], splines[i+1], splines[i+2]);
-		path.lineTo(splines[splines.size()-1]); // TODO draw the arrow here
+		// splines
+		path.moveTo(ptToQPointF(splines[2+0]));
+		for (unsigned i = 2+1; i+2 < splines.size(); i += 3)
+			path.cubicTo(ptToQPointF(splines[i+0]), ptToQPointF(splines[i+1]), ptToQPointF(splines[i+2]));
+		// startp
+		assert(splines[0][0] == -1); // we don't support startp yet
+		// endp
+		if (splines[1][0] != -1)
+			path.lineTo(ptToQPointF(splines[1])); // TODO draw the arrow here
+		// finish
 		painter.drawPath(path);
 	};
 	auto drawTensorLabel = [&](QPainter &painter,
@@ -217,7 +246,7 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::arra
 		PluginInterface::OperatorId oid = 0;
 		for (auto &dotBox : operatorBoxes) {
 			drawBox(painter,
-				(*outIndexes[0])[oid] = boxToQRectF(dotBoxToQtBox(dotBox)),
+				(*outIndexes[0])[oid] = boxToQRectF(dotBoxToQtBox(boxInchesToPixels(dotBox))),
 				STR(model->getOperatorKind(oid) << ModelFunctions::getOperatorExtraInfoString(model, oid)),
 				Colors::getOperatorColor(model->getOperatorKind(oid)),
 				{},
@@ -229,7 +258,7 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::arra
 
 	// draw input boxes
 	for (auto it : inputBoxes) {
-		auto box = boxToQRectF(dotBoxToQtBox(it.second));
+		auto box = boxToQRectF(dotBoxToQtBox(boxInchesToPixels(it.second)));
 		outIndexes[2]->push_back(box);
 		drawBox(painter,
 			box,
@@ -242,7 +271,7 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::arra
 
 	// draw output boxes
 	for (auto it : outputBoxes) {
-		auto box = boxToQRectF(dotBoxToQtBox(it.second));
+		auto box = boxToQRectF(dotBoxToQtBox(boxInchesToPixels(it.second)));
 		outIndexes[3]->push_back(box);
 		drawBox(painter,
 			box,
@@ -257,7 +286,7 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::arra
 		painter.setPen(clrTensorLine);
 		for (auto &tensorLineCubicSplineList : tensorLineCubicSplines)
 			for (auto &tensorLineCubicSpline : tensorLineCubicSplineList) // not all tensors are between operators, so the spline list here can be empty
-				drawTensorSplines(painter, dotVectorQPointToQtVectorQPoint(tensorLineCubicSpline));
+				drawTensorSplines(painter, tensorLineCubicSpline);
 	}
 
 	{ // draw tensor labels
@@ -269,7 +298,7 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::arra
 			for (auto &tensorLabelPosition : tensorLabelPositionsList) { // not all tensors are between operators, so the label list here can be empty
 				QRectF outTextRect;
 				drawTensorLabel(painter,
-					dotQPointToQtQPoint(tensorLabelPosition),
+					dotPointToQtQPoint(tensorLabelPosition),
 					STR(model->getTensorShape(tid)),
 					fm,
 					outTextRect

@@ -19,7 +19,6 @@
 #include "util.h"
 
 #include <QSizeF>
-#include <QPointF>
 
 // helper classes
 class ConvStrToFloat {
@@ -40,8 +39,8 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 	std::vector<Box2> &operatorBoxes,
 	std::map<PluginInterface::TensorId, Box2> &inputBoxes,
 	std::map<PluginInterface::TensorId, Box2> &outputBoxes,
-	std::vector<std::vector<std::vector<QPointF>>> &tensorLineCubicSplines,
-	std::vector<std::vector<QPointF>> &tensorLabelPositions
+	std::vector<std::vector<std::vector<std::array<float,2>>>> &tensorLineCubicSplines,
+	std::vector<std::vector<std::array<float,2>>> &tensorLabelPositions
 ) {
 
 	// map tensors to operators
@@ -65,8 +64,7 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 	/// build the graphviz graph
 
 	// create the graph
-	Graphviz_CGraph graph("NnModel");
-	graph.setGraphDpi(Util::getScreenDPI());
+	Graphviz_CGraph graph("NnModel", Util::getScreenDPI());
 	graph.setGraphOrdering(true/*orderingIn*/, false/*orderingOut*/); // preserve edge order as they are consumed as inputs.
 	                                                                  // ideally we need to have both "in" and "out" ordering
 	                                                                  // see https://gitlab.com/graphviz/graphviz/issues/1645
@@ -134,34 +132,6 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 
 	graph.render();
 
-	// helpers
-	auto posToQPointF = [](const std::array<float,2> &pos) {
-		return QPointF(pos[0], pos[1]);
-	};
-	auto parseSplines = [](const std::string &splines) {
-		std::vector<std::string> strpts;
-		Util::splitString(splines, strpts, ' ');
-		assert(strpts.size()%3 == 2); // n = 1 (mod 3) for splines, and the e,Pt endpoint
-
-		std::vector<QPointF> pts;
-		QPointF endp;
-		for (auto &s : strpts)
-			if (s[0] != 'e') { // ignore it for now
-				assert(s[0] != 's'); // we don't yet support startp (if startp is not given, p1 touches a node)
-				std::vector<float> ptFloats;
-				Util::splitString<std::vector<float>, ConvStrToFloat>(s, ptFloats, ',');
-				assert(ptFloats.size() == 2);
-				pts.push_back(QPointF(ptFloats[0], ptFloats[1]));
-			} else { // endp
-				std::vector<float> ptFloats;
-				Util::splitString<std::vector<float>, ConvStrToFloat>(s.substr(2), ptFloats, ',');
-				assert(ptFloats.size() == 2);
-				endp = QPointF(ptFloats[0], ptFloats[1]);
-			}
-		pts.push_back(endp);
-		return pts;
-	};
-
 	// bbox
 	bbox = graph.getBBox();
 
@@ -181,9 +151,9 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 	for (PluginInterface::TensorId tid = 0, tide = tensorEdges.size(); tid<tide; tid++)
 		for (auto edge : tensorEdges[tid]) {
 			// splines
-			tensorLineCubicSplines[tid].push_back(parseSplines(graph.getEdgeSplines(edge)));
+			tensorLineCubicSplines[tid].push_back(graph.getEdgeSplines(edge));
 			// label position
-			tensorLabelPositions[tid].push_back(posToQPointF(graph.getEdgeLabelPosition(edge)));
+			tensorLabelPositions[tid].push_back(graph.getEdgeLabelPosition(edge));
 		}
 }
 

@@ -10,6 +10,7 @@
 #include <assert.h>
 
 #include <array>
+#include <vector>
 #include <string>
 
 #define S(str) ((char*)str)
@@ -32,6 +33,7 @@ static GVC_t *gvc = gvContextPlugins(lt_preloaded_symbols, 1/*demand_loading*/);
 /// static helpers
 
 static std::array<float,2> parseTwoFloats(const char *str) {
+	assert(str);
 	float p[2];
 	auto n = ::sscanf(str, "%f,%f", &p[0], &p[1]);
 	assert(n == 2);
@@ -43,15 +45,17 @@ static std::array<float,2> parseTwoFloats(const char *str) {
 
 /// Graphviz_CGraph
 
-Graphviz_CGraph::Graphviz_CGraph(const char *graphName)
+Graphviz_CGraph::Graphviz_CGraph(const char *graphName, float userDPI_)
 : symNodeShape(nullptr)
 , symNodeWidth(nullptr)
 , symNodeHeight(nullptr)
 , symEdgeLabel(nullptr)
-, dpi(600) // default value
+, userDPI(userDPI_)
 {
 	_g = agopen(S(graphName), Agdirected, NULL);
 
+	// set the dpi value of 72 because that's what GraphViz assumes anyway
+	agattr(GRAPH, AGRAPH, S("dpi"), S(CSTR(assumedDPI())));
 }
 
 Graphviz_CGraph::~Graphviz_CGraph() {
@@ -75,13 +79,8 @@ void Graphviz_CGraph::setDefaultNodeShape(const char *shapeValue) {
 
 void Graphviz_CGraph::setDefaultNodeSize(float width, float height) {
 	assert(!symNodeWidth && !symNodeHeight);
-	symNodeWidth = agattr(GRAPH, AGNODE, S("width"), S(CSTR(pixelsToInches(width))));
-	symNodeHeight = agattr(GRAPH, AGNODE, S("height"), S(CSTR(pixelsToInches(height))));
-}
-
-void Graphviz_CGraph::setGraphDpi(unsigned dpi_) {
-	agattr(GRAPH, AGRAPH, S("dpi"), S(CSTR(dpi_)));
-	dpi = dpi_;
+	symNodeWidth = agattr(GRAPH, AGNODE, S("width"), S(CSTR(userInchesToInches(width))));
+	symNodeHeight = agattr(GRAPH, AGNODE, S("height"), S(CSTR(userInchesToInches(height))));
 }
 
 void Graphviz_CGraph::setGraphOrdering(bool orderingIn, bool orderingOut) {
@@ -106,8 +105,8 @@ void Graphviz_CGraph::setNodeShape(Node node, const char *shapeValue) {
 
 void Graphviz_CGraph::setNodeSize(Node node, float width, float height) {
 	assert(symNodeWidth && symNodeHeight); // need to call setDefaultNodeSize() first
-	agxset(NODE(node), SYM(symNodeWidth), S(CSTR(width)));
-	agxset(NODE(node), SYM(symNodeHeight), S(CSTR(height)));
+	agxset(NODE(node), SYM(symNodeWidth), S(CSTR(userInchesToInches(width))));
+	agxset(NODE(node), SYM(symNodeHeight), S(CSTR(userInchesToInches(height))));
 }
 
 void Graphviz_CGraph::setEdgeLabel(Edge edge, const char *label) {
@@ -135,33 +134,53 @@ std::array<std::array<float, 2>, 2> Graphviz_CGraph::getBBox() const {
 	assert(n == 4);
 	UNUSED(n)
 
-	return {{{{p[0],p[1]}},{{p[2],p[3]}}}};
+	return {{
+		{{pixelsToUserInches(p[0]), pixelsToUserInches(p[1])}},
+		{{pixelsToUserInches(p[2]), pixelsToUserInches(p[3])}}
+	}};
 }
 
 std::array<float,2> Graphviz_CGraph::getNodePos(Graphviz_CGraph::Node node) const {
-	auto str = agget(NODE(node), S("pos"));
-	assert(str);
-
-	return parseTwoFloats(str);
+	return pixelsToUserInches(parseTwoFloats(agget(NODE(node), S("pos"))));
 }
 
 std::array<float,2> Graphviz_CGraph::getNodeSize(Graphviz_CGraph::Node node) const {
 	auto strW = agget(NODE(node), S("width"));
 	auto strH = agget(NODE(node), S("height"));
-	return {inchesToPixels(std::stof(strW)), inchesToPixels(std::stof(strH))};
+	return {inchesToUserInches(std::stof(strW)), inchesToUserInches(std::stof(strH))};
 }
 
-std::string Graphviz_CGraph::getEdgeSplines(Edge edge) const {
-	auto str = agget(EDGE(edge), S("pos"));
-	assert(str);
-	return str; // TODO parse splines here instead of by the caller
+std::vector<std::array<float,2>> Graphviz_CGraph::getEdgeSplines(Edge edge) const {
+	auto splines = agget(EDGE(edge), S("pos"));
+	assert(splines);
+
+	std::vector<std::string> segments;
+	Util::splitString(splines, segments, ' ');
+
+	std::vector<std::array<float,2>> pts;
+	pts.push_back({-1,-1}); // startp
+	pts.push_back({-1,-1}); // endp
+
+	for (auto &s : segments)
+		switch (s[0]) {
+		case 's': // startp
+			assert(s.size()>=5 && s[1]=='.');
+			pts[0] = pixelsToUserInches(parseTwoFloats(s.c_str()+2));
+			break;
+		case 'e': // endp
+			assert(s.size()>=5 && s[1]=='.');
+			pts[1] = pixelsToUserInches(parseTwoFloats(s.c_str()+2));
+			break;
+		default: // a spline point
+			pts.push_back(pixelsToUserInches(parseTwoFloats(s.c_str())));
+		}
+	assert((pts.size()-2)%3==1); // n = 1 (mod 3) for splines
+
+	return pts; // {startp,endp, 1+2*n points defining the spline}, startp,endp are optional, {-1,-1} means it isn't set
 }
 
-std::array<float,2> Graphviz_CGraph::getEdgeLabelPosition(Edge edge) const {
-	auto str = agget(EDGE(edge), S("lp"));
-	assert(str);
-
-	return parseTwoFloats(str);
+std::array<float,2> Graphviz_CGraph::getEdgeLabelPosition(Edge edge) const { // CAVEAT there's no way to specify boxes for edge labels, we just have to use positions
+	return pixelsToUserInches(parseTwoFloats(agget(EDGE(edge), S("lp"))));
 }
 
 // DEBUG
@@ -170,12 +189,27 @@ void Graphviz_CGraph::writeDotToStdio() const {
 	agwrite(GRAPH, stdout);
 }
 
-// internals
+/// internals
 
-float Graphviz_CGraph::pixelsToInches(float pixels) const {
-	return pixels/72;//dpi; // graphviz uses 72 regardless of the actually supplied dpi, see https://gitlab.com/graphviz/graphviz/issues/1649
+float Graphviz_CGraph::assumedDPI() {
+	return 72; // GraphViz always uses 72dpi internally, see https://gitlab.com/graphviz/graphviz/issues/1649
 }
 
-float Graphviz_CGraph::inchesToPixels(float inches) const {
-	return inches*72;//dpi;
+float Graphviz_CGraph::userInchesToInches(float inches) const {
+	return inches*userDPI/assumedDPI();
+}
+
+float Graphviz_CGraph::inchesToUserInches(float inches) const {
+	return inches*assumedDPI()/userDPI;
+}
+
+float Graphviz_CGraph::pixelsToUserInches(float pixels) const {
+	return pixels/userDPI;
+}
+
+std::array<float,2> Graphviz_CGraph::pixelsToUserInches(const std::array<float,2> pixels) const {
+	return {{
+		pixelsToUserInches(pixels[0]),
+		pixelsToUserInches(pixels[1])
+	}};
 }

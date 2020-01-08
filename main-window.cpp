@@ -773,13 +773,13 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 		for (auto t : tensors) {
 			row++;
 			// tensor number
-			auto label = new QLabel(QString(tr("tensor#%1:")).arg(t), &nnOperatorDetails);
+			auto label = makeTextSelectable(new QLabel(QString(tr("tensor#%1:")).arg(t), &nnOperatorDetails));
 			label->setToolTip(tr("Tensor number"));
 			label->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
 			nnOperatorDetailsLayout.addWidget(label,         row,   0/*column*/);
 			// tensor name
-			label = new QLabel(S2Q(model->getTensorName(t)), &nnOperatorDetails);
+			label = makeTextSelectable(new QLabel(S2Q(model->getTensorName(t)), &nnOperatorDetails));
 			label->setToolTip(tr("Tensor name"));
 			label->setAlignment(Qt::AlignLeft|Qt::AlignVCenter);
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
@@ -794,7 +794,7 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 				          ")"
 				);
 			};
-			label = new QLabel(S2Q(describeShape(model->getTensorShape(t))), &nnOperatorDetails);
+			label = makeTextSelectable(new QLabel(S2Q(describeShape(model->getTensorShape(t))), &nnOperatorDetails));
 			label->setToolTip(tr("Tensor shape and data size"));
 			label->setAlignment(Qt::AlignLeft|Qt::AlignVCenter);
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
@@ -804,12 +804,12 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 			bool isOutput = Util::isValueIn(model->getOutputs(), t);
 			auto hasStaticData = model->getTensorHasData(t);
 			auto isVariable = model->getTensorIsVariableFlag(t);
-			label = new QLabel(QString("<%1>").arg(
+			label = makeTextSelectable(new QLabel(QString("<%1>").arg(
 				isInput ? tr("input")
 				: isOutput ? tr("output")
 				: hasStaticData ? tr("static tensor")
 				: isVariable ? tr("variable") : tr("computed")),
-				&nnOperatorDetails);
+				&nnOperatorDetails));
 			label->setToolTip(tr("Tensor type"));
 			label->setAlignment(Qt::AlignCenter|Qt::AlignVCenter);
 			label->setStyleSheet("font: italic");
@@ -862,20 +862,20 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 		for (auto &opt : *opts) {
 			row++;
 			// option name
-			auto label = new QLabel(S2Q(STR(opt.name)), &nnOperatorDetails);
+			auto label = makeTextSelectable(new QLabel(S2Q(STR(opt.name)), &nnOperatorDetails));
 			label->setToolTip("Option name");
 			label->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
 			nnOperatorDetailsLayout.addWidget(label,               row,   0/*column*/);
 			// option type
-			label = new QLabel(S2Q(STR("<" << opt.value.type << ">")), &nnOperatorDetails);
+			label = makeTextSelectable(new QLabel(S2Q(STR("<" << opt.value.type << ">")), &nnOperatorDetails));
 			label->setToolTip(tr("Option type"));
 			label->setAlignment(Qt::AlignLeft|Qt::AlignVCenter);
 			label->setStyleSheet("font: italic");
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
 			nnOperatorDetailsLayout.addWidget(label,               row,   1/*column*/);
 			// option value
-			label = new QLabel(S2Q(STR(opt.value)), &nnOperatorDetails);
+			label = makeTextSelectable(new QLabel(S2Q(STR(opt.value)), &nnOperatorDetails));
 			label->setToolTip(tr("Option value"));
 			label->setAlignment(Qt::AlignLeft|Qt::AlignVCenter);
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
@@ -883,7 +883,7 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 		}
 		if (opts->empty()) {
 			row++;
-			auto label = new QLabel("-none-", &nnOperatorDetails);
+			auto label = makeTextSelectable(new QLabel("-none-", &nnOperatorDetails));
 			label->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
 			nnOperatorDetailsLayout.addWidget(label,               row,   0/*column*/);
@@ -1364,4 +1364,9 @@ void MainWindow::closeNeuralNetwork() {
 	plugin = nullptr;
 	// update screen
 	updateSectionWidgetsVisibility();
+}
+
+QLabel* MainWindow::makeTextSelectable(QLabel *label) {
+	label->setTextInteractionFlags(Qt::TextSelectableByMouse);
+	return label;
 }

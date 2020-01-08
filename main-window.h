@@ -196,5 +196,6 @@ private: // private methods
 	void updateSectionWidgetsVisibility();
 	void onOpenNeuralNetworkFileUserIntent();
 	void closeNeuralNetwork();
+	static QLabel* makeTextSelectable(QLabel *label);
 };
 

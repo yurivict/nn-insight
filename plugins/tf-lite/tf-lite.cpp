@@ -131,13 +131,15 @@ class TfLitePlugin : public PluginInterface {
 			bool getTensorHasData(TensorId tensorId) const override {
 				auto buffer = subgraph->tensors()->Get(tensorId)->buffer();
 				assert(buffer < plugin->model->buffers()->size());
-				return plugin->model->buffers()->Get(buffer)->data() != nullptr;
+				auto data = plugin->model->buffers()->Get(buffer)->data();
+				return data != nullptr && data->size() > 0;
 			}
 			const float* getTensorData(TensorId tensorId) const override {
 				auto buffer = subgraph->tensors()->Get(tensorId)->buffer();
 				assert(buffer < plugin->model->buffers()->size());
-				assert(plugin->model->buffers()->Get(buffer)->data() != nullptr);
-				return (const float*)plugin->model->buffers()->Get(buffer)->data()->Data();
+				auto data = plugin->model->buffers()->Get(buffer)->data();
+				assert(data!=nullptr && data->size()!=0);
+				return (const float*)data->Data();
 			}
 			bool getTensorIsVariableFlag(TensorId tensorId) const override {
 				return subgraph->tensors()->Get(tensorId)->is_variable();

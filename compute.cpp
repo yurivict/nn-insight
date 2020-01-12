@@ -487,7 +487,7 @@ bool compute(
 
 			// operator options required to run this operator
 			int radius = 0;
-			float alpha, beta, bias;
+			float alpha = 0, beta = 0, bias = 0;
 
 			// parse the operator options supplied by the model into the above variables
 			unsigned numParsed =

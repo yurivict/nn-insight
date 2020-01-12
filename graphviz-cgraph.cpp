@@ -59,6 +59,7 @@ Graphviz_CGraph::Graphviz_CGraph(const char *graphName, float userDPI_)
 }
 
 Graphviz_CGraph::~Graphviz_CGraph() {
+	gvFreeLayout(gvc, GRAPH);
 	agclose(GRAPH); // the memory is lost by GraphViz, see https://gitlab.com/graphviz/graphviz/issues/1651
 }
 

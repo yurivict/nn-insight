@@ -165,11 +165,11 @@ std::vector<std::array<float,2>> Graphviz_CGraph::getEdgeSplines(Edge edge) cons
 	for (auto &s : segments)
 		switch (s[0]) {
 		case 's': // startp
-			assert(s.size()>=5 && s[1]=='.');
+			assert(s.size()>=5 && s[1]==',');
 			pts[0] = pixelsToUserInches(parseTwoFloats(s.c_str()+2));
 			break;
 		case 'e': // endp
-			assert(s.size()>=5 && s[1]=='.');
+			assert(s.size()>=5 && s[1]==',');
 			pts[1] = pixelsToUserInches(parseTwoFloats(s.c_str()+2));
 			break;
 		default: // a spline point

@@ -12,6 +12,8 @@
 
 #include <assert.h>
 
+/// local helper classes
+
 class DataSource {
 	unsigned numRows;
 	unsigned numColumns;
@@ -50,13 +52,13 @@ public: // iface: data computations
 
 class TensorSliceDataSource : public DataSource {
 	const TensorShape               shape;
-	const float*                    data;
+	const float*                   &data; // shares data pointer with the DataTable2D instance
 	unsigned                        idxVertical;
 	unsigned                        idxHorizontal;
 	mutable std::vector<unsigned>   fixedIdxs;
 
 public:
-	TensorSliceDataSource(const TensorShape &shape_, unsigned idxVertical_, unsigned idxHorizontal_, const std::vector<unsigned> &fixedIdxs_, const float *data_)
+	TensorSliceDataSource(const TensorShape &shape_, unsigned idxVertical_, unsigned idxHorizontal_, const std::vector<unsigned> &fixedIdxs_, const float *&data_)
 	: DataSource(shape_[idxVertical_], shape_[idxHorizontal_])
 	, shape(shape_)
 	, data(data_)
@@ -230,7 +232,15 @@ public: // custom interface
 	const DataSource* getDataSource() const {
 		return dataSource.get();
 	}
+	void beginResetModel() {
+		QAbstractTableModel::beginResetModel();
+	}
+	void endResetModel() {
+		QAbstractTableModel::endResetModel();
+	}
 };
+
+/// DataTable2D
 
 DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget *parent)
 : QWidget(parent)
@@ -500,6 +510,14 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 	colorSchemaComboBox      .setToolTip(tr("Change the color schema of data visualization"));
 	viewDataAsBwImageCheckBox.setToolTip(tr("View data as image"));
 	tableView                .setToolTip(tr("Tensor data values"));
+}
+
+/// interface
+
+void DataTable2D::dataChanged(const float *data_) {
+	(static_cast<DataModel*>(tableModel.get()))->beginResetModel();
+	data = data_;
+	(static_cast<DataModel*>(tableModel.get()))->endResetModel();
 }
 
 /// internals

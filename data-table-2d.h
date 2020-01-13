@@ -49,8 +49,11 @@ class DataTable2D : public QWidget {
 	QScrollArea                            imageViewScrollArea;
 	QLabel                                   imageView;
 
-public:
+public: // constructor
 	DataTable2D(const TensorShape &shape_, const float *data_, QWidget *parent);
+
+public: // interface
+	void dataChanged(const float *data_); // notify the widget that the data changed (only the data itself, not the array shape)
 
 private: // internals
 	std::vector<unsigned> mkIdxs() const;

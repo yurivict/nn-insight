@@ -4,6 +4,14 @@
 
 #include <cctype>
 
+/// convenience functions
+
+bool PluginInterface::Model::isTensorComputed(TensorId tensorId) const {
+	return (!getTensorHasData(tensorId) && !getTensorIsVariableFlag(tensorId));
+}
+
+/// print operators
+
 std::ostream& operator<<(std::ostream &os, PluginInterface::OperatorKind okind) {
 #define CASE(kind) case PluginInterface::Kind##kind: os << #kind; break;
 	switch (okind) {

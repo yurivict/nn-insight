@@ -224,6 +224,7 @@ MainWindow::MainWindow()
 ,     noNnIsOpenGroupBox(tr("No Neural Network File is Open"), &rhsWidget)
 ,       noNnIsOpenLayout(&noNnIsOpenGroupBox)
 ,       noNnIsOpenWidget(&noNnIsOpenGroupBox)
+,     nnDataTableTensor(0)
 , menuBar(this)
 , statusBar(this)
 #if defined(USE_PERFTOOLS)
@@ -517,6 +518,8 @@ MainWindow::MainWindow()
 		assert(scaleImageWidthPct!=0 && scaleImageHeightPct!=0); // scaling percentages are initially set when the image is open/pasted/etc
 		self++;
 
+		inputParamsChanged(); // scaling change invalidates computation results because this changes the image ares on which computation is performed
+
 		// accept percentages set by the user
 		scaleImageWidthPct = widthFactor;
 		scaleImageHeightPct = heightFactor;
@@ -565,11 +568,15 @@ MainWindow::MainWindow()
 		if (!succ)
 			PRINT("WARNING computation didn't succeed")
 
+		if (nnDataTable && model->isTensorComputed(nnDataTableTensor)) {
+			nnDataTable->dataChanged((*tensorData.get())[nnDataTableTensor].get());
+			nnDataTable->setEnabled(true);
+		}
 		updateResultInterpretation();
 		computationTimeLabel.setText(QString("Computed in %1").arg(QString("%1 ms").arg(S2Q(Util::formatUIntHumanReadable(timer.elapsed())))));
 	});
 	connect(&computeRegionComboBox, QOverload<int>::of(&QComboBox::activated), [this](int) {
-		clearComputedTensorData();
+		clearComputedTensorData(Temporary);
 		updateResultInterpretation();
 	});
 	connect(&inputNormalizationRangeComboBox, QOverload<int>::of(&QComboBox::activated), [this](int) {
@@ -583,7 +590,7 @@ MainWindow::MainWindow()
 		updateResultInterpretation();
 	});
 	connect(&clearComputationResults, &QAbstractButton::pressed, [this]() {
-		clearComputedTensorData();
+		clearComputedTensorData(Temporary);
 		updateResultInterpretation();
 	});
 	connect(sourceImageScrollArea.horizontalScrollBar(), &QAbstractSlider::valueChanged, [this]() {
@@ -669,7 +676,7 @@ MainWindow::MainWindow()
 	fileMenu->addAction(tr("Close Image"), [this]() {
 		clearInputImageDisplay();
 		clearEffects();
-		clearComputedTensorData(); // closing image invalidates computation results
+		clearComputedTensorData(Permanent); // closing image invalidates computation results
 		updateResultInterpretation();
 		updateSectionWidgetsVisibility();
 	})->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_W)); // like "close tab" in chrome
@@ -770,16 +777,16 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 
 	// helper
 	auto addTensorLines = [this](auto &tensors, unsigned &row) {
-		for (auto t : tensors) {
+		for (auto tensorId : tensors) {
 			row++;
 			// tensor number
-			auto label = makeTextSelectable(new QLabel(QString(tr("tensor#%1:")).arg(t), &nnOperatorDetails));
+			auto label = makeTextSelectable(new QLabel(QString(tr("tensor#%1:")).arg(tensorId), &nnOperatorDetails));
 			label->setToolTip(tr("Tensor number"));
 			label->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
 			nnOperatorDetailsLayout.addWidget(label,         row,   0/*column*/);
 			// tensor name
-			label = makeTextSelectable(new QLabel(S2Q(model->getTensorName(t)), &nnOperatorDetails));
+			label = makeTextSelectable(new QLabel(S2Q(model->getTensorName(tensorId)), &nnOperatorDetails));
 			label->setToolTip(tr("Tensor name"));
 			label->setAlignment(Qt::AlignLeft|Qt::AlignVCenter);
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
@@ -794,16 +801,16 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 				          ")"
 				);
 			};
-			label = makeTextSelectable(new QLabel(S2Q(describeShape(model->getTensorShape(t))), &nnOperatorDetails));
+			label = makeTextSelectable(new QLabel(S2Q(describeShape(model->getTensorShape(tensorId))), &nnOperatorDetails));
 			label->setToolTip(tr("Tensor shape and data size"));
 			label->setAlignment(Qt::AlignLeft|Qt::AlignVCenter);
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
 			nnOperatorDetailsLayout.addWidget(label,         row,   2/*column*/);
 			// has buffer? is variable?
-			bool isInput = Util::isValueIn(model->getInputs(), t);
-			bool isOutput = Util::isValueIn(model->getOutputs(), t);
-			auto hasStaticData = model->getTensorHasData(t);
-			auto isVariable = model->getTensorIsVariableFlag(t);
+			bool isInput = Util::isValueIn(model->getInputs(), tensorId);
+			bool isOutput = Util::isValueIn(model->getOutputs(), tensorId);
+			auto hasStaticData = model->getTensorHasData(tensorId);
+			auto isVariable = model->getTensorIsVariableFlag(tensorId);
 			label = makeTextSelectable(new QLabel(QString("<%1>").arg(
 				isInput ? tr("input")
 				: isOutput ? tr("output")
@@ -816,7 +823,7 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
 			nnOperatorDetailsLayout.addWidget(label,         row,   3/*column*/);
 			// button
-			if (hasStaticData || (tensorData && (*tensorData.get())[t])) {
+			if (hasStaticData || (tensorData && (*tensorData.get())[tensorId])) {
 				auto button = new SvgPushButton(SvgGraphics::generateTableIcon(), &nnOperatorDetails);
 				button->setContentsMargins(0,0,0,0);
 				button->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
@@ -824,10 +831,9 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 				button->setToolTip(tr("Show the tensor data as a table"));
 				tempDetailWidgets.push_back(std::unique_ptr<QWidget>(button));
 				nnOperatorDetailsLayout.addWidget(button,         row,   4/*column*/);
-				connect(button, &QAbstractButton::pressed, [this,t,hasStaticData]() {
-					removeTableIfAny();
+				connect(button, &QAbstractButton::pressed, [this,tensorId,hasStaticData]() {
 					// show table
-					auto tableShape = model->getTensorShape(t);
+					auto tableShape = model->getTensorShape(tensorId);
 					switch (Tensor::numMultiDims(tableShape)) {
 					case 0:
 						Util::warningOk(this, "WARNING tensor shape with all ones encountered, this is meaningless in the NN models context");
@@ -836,10 +842,14 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 						Util::warningOk(this, "WARNING DataTable1D isn't yet implemented (TODO)");
 						break;
 					default: {
-						nnDataTable.reset(new DataTable2D(tableShape,
-							hasStaticData ? model->getTensorData(t) : (*tensorData.get())[t].get(),
-							&rhsWidget));
-						rhsLayout.addWidget(nnDataTable.get());
+						if (!nnDataTable || nnDataTableTensor!=tensorId) {
+							removeTableIfAny();
+							nnDataTable.reset(new DataTable2D(tableShape,
+								hasStaticData ? model->getTensorData(tensorId) : (*tensorData.get())[tensorId].get(),
+								&rhsWidget));
+							rhsLayout.addWidget(nnDataTable.get());
+							nnDataTableTensor = tensorId;
+						}
 						break;
 					}}
 				});
@@ -937,17 +947,21 @@ void MainWindow::showOutputDetails(PluginInterface::TensorId tensorId) {
 }
 
 void MainWindow::removeTableIfAny() {
-	if (nnDataTable.get()) {
-		rhsLayout.removeWidget(nnDataTable.get());
-		nnDataTable.reset(nullptr);
-	}
+	if (nnDataTable)
+		removeTable();
+}
+
+void MainWindow::removeTable() {
+	rhsLayout.removeWidget(nnDataTable.get());
+	nnDataTable.reset(nullptr);
+	nnDataTableTensor = 0;
 }
 
 void MainWindow::openImageFile(const QString &imageFileName) {
 	// clear the previous image data if any
 	clearInputImageDisplay();
 	clearEffects();
-	clearComputedTensorData(); // opening image invalidates computation results
+	clearComputedTensorData(Permanent); // opening image invalidates computation results
 	updateResultInterpretation();
 	// read the image as tensor
 	sourceTensorDataAsLoaded.reset(Image::readPngImageFile(Q2S(imageFileName), sourceTensorShape));
@@ -968,7 +982,7 @@ void MainWindow::openImagePixmap(const QPixmap &imagePixmap, const QString &sour
 	// clear the previous image data if any
 	clearInputImageDisplay();
 	clearEffects();
-	clearComputedTensorData(); // opening image invalidates computation results
+	clearComputedTensorData(Permanent); // opening image invalidates computation results
 	updateResultInterpretation();
 	// read the image as tensor
 	sourceTensorDataAsLoaded.reset(Image::readPixmap(imagePixmap, sourceTensorShape, [this,&sourceName](const std::string &msg) {
@@ -1006,9 +1020,13 @@ void MainWindow::clearInputImageDisplay() {
 	scaleImageHeightPct = 0;
 }
 
-void MainWindow::clearComputedTensorData() {
+void MainWindow::clearComputedTensorData(HowLong howLong) {
 	// clear table-like display of data about to be invalidated
-	removeTableIfAny();
+	if (howLong == Temporary) {
+		if (nnDataTable && model->isTensorComputed(nnDataTableTensor))
+			nnDataTable->setEnabled(false);
+	} else
+		removeTableIfAny();
 	// clear tensor data
 	tensorData.reset(nullptr);
 	// clear result interpretation
@@ -1016,8 +1034,7 @@ void MainWindow::clearComputedTensorData() {
 }
 
 void MainWindow::effectsChanged() {
-	clearComputedTensorData(); // effects change invalidates computation results
-	updateResultInterpretation();
+	inputParamsChanged(); // effects change invalidates computation results
 
 	// all available effects that can be applied
 	bool flipHorizontally = sourceEffectFlipHorizontallyCheckBox.isChecked();
@@ -1037,7 +1054,13 @@ void MainWindow::effectsChanged() {
 }
 
 void MainWindow::inputNormalizationChanged() {
-	clearComputedTensorData(); // input normalization change invalidates computation results
+	inputParamsChanged(); // input normalization change invalidates computation results
+}
+
+void MainWindow::inputParamsChanged() {
+	clearComputedTensorData(Temporary); // effects change invalidates computation results
+	if (nnDataTable && model->isTensorComputed(nnDataTableTensor))
+		nnDataTable->setEnabled(false); // gray out the table because its tensor data is cleared
 	updateResultInterpretation();
 }
 
@@ -1354,7 +1377,7 @@ void MainWindow::onOpenNeuralNetworkFileUserIntent() {
 }
 
 void MainWindow::closeNeuralNetwork() {
-	clearComputedTensorData();
+	clearComputedTensorData(Permanent);
 	updateResultInterpretation();
 	nnWidget.close();
 	nnNetworkOperatorsListWidget.clearNnModel();

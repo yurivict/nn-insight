@@ -144,6 +144,7 @@ private: // fields
 	NoNnIsOpenWidget                       noNnIsOpenWidget;
 	// Rhs/NN tables
 	std::unique_ptr<DataTable2D>         nnDataTable;
+	PluginInterface::TensorId            nnDataTableTensor; // tensor displayed in nnDataTable
 
 	QMenuBar                         menuBar;
 	QStatusBar                       statusBar;
@@ -168,6 +169,9 @@ private: // fields
 	unsigned                         scaleImageHeightPct;
 	int                              self; // to prevent signals from programmatically changed values
 
+private: // types
+	enum HowLong {Temporary, Permanent};
+
 private: // private methods
 	bool haveImageOpen() const;
 	void showNetworkDetails();
@@ -177,12 +181,14 @@ private: // private methods
 	void showInputDetails(PluginInterface::TensorId tensorId);
 	void showOutputDetails(PluginInterface::TensorId tensorId);
 	void removeTableIfAny();
+	void removeTable();
 	void openImageFile(const QString &imageFileName);
 	void openImagePixmap(const QPixmap &imagePixmap, const QString &sourceName);
 	void clearInputImageDisplay();
-	void clearComputedTensorData();
+	void clearComputedTensorData(HowLong howLong);
 	void effectsChanged();
 	void inputNormalizationChanged();
+	void inputParamsChanged();
 	float* applyEffects(const float *image, const TensorShape &shape,
 		bool flipHorizontally, bool flipVertically, bool makeGrayscale,
 		const std::tuple<TensorShape,std::vector<float>> &convolution, unsigned convolutionCount) const;

@@ -217,6 +217,9 @@ if (false) {
 		virtual bool                    getTensorHasData(TensorId tensorId) const = 0;                                  // tensors that are fixed have buffers
 		virtual const float*            getTensorData(TensorId tensorId) const = 0;                                     // can only be called when getTensorHasData()=true
 		virtual bool                    getTensorIsVariableFlag(TensorId tensorId) const = 0;                           // some tensors are variables that can be altered
+
+	public: // convenience functions
+		bool isTensorComputed(TensorId tensorId) const;
 	};
 
 	// plugin interface

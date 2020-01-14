@@ -18,6 +18,7 @@
 
 #include <vector>
 #include <memory>
+#include <tuple>
 
 class DataTable2D : public QWidget {
 	Q_OBJECT
@@ -57,4 +58,5 @@ public: // interface
 
 private: // internals
 	std::vector<unsigned> mkIdxs() const;
+	std::tuple<float,float> updateBwImageView();
 };

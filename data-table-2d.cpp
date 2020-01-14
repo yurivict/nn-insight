@@ -445,30 +445,6 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 	scaleBwImageLabel.setVisible(false); // scale widgets are only visible when the image to scale is displayed
 	scaleBwImageSpinBox.setVisible(false);
 
-	// helpers
-	auto dataSourceToBwImage = [](const DataSource *dataSource, unsigned scaleFactor, std::tuple<float,float> &minMax) {
-		std::unique_ptr<uchar> data(new uchar[dataSource->ncols()*dataSource->nrows()*scaleFactor*scaleFactor]);
-		minMax = dataSource->computeMinMax();
-		auto minMaxRange = std::get<1>(minMax)-std::get<0>(minMax);
-		auto normalize = [minMax,minMaxRange](float d) {
-			return 255.*(d-std::get<0>(minMax))/minMaxRange;
-		};
-		uchar *p = data.get();
-		for (unsigned r = 0, re = dataSource->nrows(); r < re; r++)
-			for (unsigned rptRow = 0; rptRow<scaleFactor; rptRow++)
-				for (unsigned c = 0, ce = dataSource->ncols(); c < ce; c++)
-					for (unsigned rptCol = 0; rptCol<scaleFactor; rptCol++)
-						*p++ = normalize(dataSource->value(r,c));
-		return QImage(data.get(), dataSource->ncols()*scaleFactor, dataSource->nrows()*scaleFactor, dataSource->ncols()*scaleFactor, QImage::Format_Grayscale8);
-	};
-	auto updateBwImageView = [this,dataSourceToBwImage]() {
-		std::tuple<float,float> minMax;
-		QImage img(dataSourceToBwImage((static_cast<DataModel*>(tableModel.get()))->getDataSource(), scaleBwImageSpinBox.value()/*scale 1+*/, minMax));
-		imageView.setPixmap(QPixmap::fromImage(img));
-		imageView.resize(img.width(), img.height());
-		return minMax;
-	};
-
 	// connect signals
 	connect(&colorSchemaComboBox, QOverload<int>::of(&QComboBox::activated), [this,dataRange](int index) {
 		(static_cast<DataModel*>(tableModel.get()))->setColorSchema(createColorSchema(
@@ -477,10 +453,10 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 			std::get<1>(dataRange)
 		));
 	});
-	connect(&scaleBwImageSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), [updateBwImageView](int i) {
+	connect(&scaleBwImageSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), [this](int i) {
 		(void)updateBwImageView();
 	});
-	connect(&viewDataAsBwImageCheckBox, &QCheckBox::stateChanged, [this,updateBwImageView](int state) {
+	connect(&viewDataAsBwImageCheckBox, &QCheckBox::stateChanged, [this](int state) {
 		bool showImageView = state!=0;
 		dataViewStackWidget.setCurrentIndex(showImageView ? 1/*imageView*/ : 0/*tableView*/);
 		if (showImageView) {
@@ -515,9 +491,13 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 /// interface
 
 void DataTable2D::dataChanged(const float *data_) {
+	// update the numeric table
 	(static_cast<DataModel*>(tableModel.get()))->beginResetModel();
 	data = data_;
 	(static_cast<DataModel*>(tableModel.get()))->endResetModel();
+	// update XRay-style view if it is enabled
+	if (viewDataAsBwImageCheckBox.isChecked())
+		(void)updateBwImageView();
 }
 
 /// internals
@@ -535,4 +515,27 @@ std::vector<unsigned> DataTable2D::mkIdxs() const {
 	return idxs;
 }
 
+std::tuple<float,float> DataTable2D::updateBwImageView() {
+	// helpers
+	auto dataSourceToBwImage = [](const DataSource *dataSource, unsigned scaleFactor, std::tuple<float,float> &minMax) {
+		std::unique_ptr<uchar> data(new uchar[dataSource->ncols()*dataSource->nrows()*scaleFactor*scaleFactor]);
+		minMax = dataSource->computeMinMax();
+		auto minMaxRange = std::get<1>(minMax)-std::get<0>(minMax);
+		auto normalize = [minMax,minMaxRange](float d) {
+			return 255.*(d-std::get<0>(minMax))/minMaxRange;
+		};
+		uchar *p = data.get();
+		for (unsigned r = 0, re = dataSource->nrows(); r < re; r++)
+			for (unsigned rptRow = 0; rptRow<scaleFactor; rptRow++)
+				for (unsigned c = 0, ce = dataSource->ncols(); c < ce; c++)
+					for (unsigned rptCol = 0; rptCol<scaleFactor; rptCol++)
+						*p++ = normalize(dataSource->value(r,c));
+		return QImage(data.get(), dataSource->ncols()*scaleFactor, dataSource->nrows()*scaleFactor, dataSource->ncols()*scaleFactor, QImage::Format_Grayscale8);
+	};
+	std::tuple<float,float> minMax;
+	QImage img(dataSourceToBwImage((static_cast<DataModel*>(tableModel.get()))->getDataSource(), scaleBwImageSpinBox.value()/*scale 1+*/, minMax));
+	imageView.setPixmap(QPixmap::fromImage(img));
+	imageView.resize(img.width(), img.height());
+	return minMax;
+}
 

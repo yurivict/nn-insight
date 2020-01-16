@@ -71,6 +71,7 @@ add_executable(nn-insight
 	no-nn-is-open-widget.cpp
 	zoomable-svg-widget.cpp
 	data-table-2d.cpp
+	image-grid-widget.cpp
 	scale-image-widget.cpp
 	svg-push-button.cpp
 	image.cpp

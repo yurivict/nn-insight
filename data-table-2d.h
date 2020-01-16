@@ -14,11 +14,11 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 
+#include "image-grid-widget.h"
 #include "tensor.h"
 
 #include <vector>
 #include <memory>
-#include <tuple>
 
 class DataTable2D : public QWidget {
 	Q_OBJECT
@@ -27,6 +27,7 @@ class DataTable2D : public QWidget {
 	const float*     data;
 	unsigned         dimVertical;
 	unsigned         dimHorizontal;
+	bool             self;   // to prevent signals from programmatically changed values
 
 	QVBoxLayout                          layout;
 	QWidget                              headerWidget;
@@ -48,7 +49,8 @@ class DataTable2D : public QWidget {
 	QTableView                             tableView;
 	std::unique_ptr<QAbstractTableModel>     tableModel;
 	QScrollArea                            imageViewScrollArea;
-	QLabel                                   imageView;
+	ImageGridWidget                          imageView;
+	bool                                     imageViewInitialized;
 
 public: // constructor
 	DataTable2D(const TensorShape &shape_, const float *data_, QWidget *parent);
@@ -58,5 +60,5 @@ public: // interface
 
 private: // internals
 	std::vector<unsigned> mkIdxs() const;
-	std::tuple<float,float> updateBwImageView();
+	void updateBwImageView(bool initialUpdate);
 };

@@ -5,10 +5,14 @@
 #include "misc.h"
 #include "util.h"
 
-#include <QPixmap>
+#include <QFontMetrics>
 #include <QImage>
+#include <QPixmap>
 
 #include <cmath>
+#include <functional>
+#include <sstream>
+#include <tuple>
 
 #include <assert.h>
 
@@ -248,6 +252,7 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 , data(data_)
 , dimVertical(0)
 , dimHorizontal(0)
+, self(false)
 , layout(this)
 , headerWidget(this)
 ,   headerLayout(&headerWidget)
@@ -267,6 +272,7 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 ,   tableView(&dataViewStackWidget)
 ,   imageViewScrollArea(&dataViewStackWidget)
 ,     imageView(&imageViewScrollArea)
+,     imageViewInitialized(false)
 {
 	assert(shape.size() > 1); // otherwise DataTable1D should be used
 
@@ -437,7 +443,6 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 	colorSchemaComboBox.addItem(tr("Grayscale Middle Down"), COLORSCHEME_GRAYSCALE_MIDDLE_DOWN);
 
 	// set up the spin-box
-	scaleBwImageSpinBox.setRange(1,20);
 	scaleBwImageSpinBox.setSuffix(tr(" times"));
 	//scaleBwImageSpinBox.lineEdit()->setReadOnly(true);
 
@@ -454,24 +459,24 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 		));
 	});
 	connect(&scaleBwImageSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), [this](int i) {
-		(void)updateBwImageView();
+		if (self)
+			return;
+		updateBwImageView(false/*initialUpdate*/);
 	});
 	connect(&viewDataAsBwImageCheckBox, &QCheckBox::stateChanged, [this](int state) {
 		bool showImageView = state!=0;
 		dataViewStackWidget.setCurrentIndex(showImageView ? 1/*imageView*/ : 0/*tableView*/);
 		if (showImageView) {
-			// create the image from the datasource that the table sees
-			std::tuple<float,float> minMax = updateBwImageView();
+			if (!imageViewInitialized) {
+				// create the image from the datasource that the table sees
+				updateBwImageView(true/*initialUpdate*/);
+				// set tooltip with explanation custom to the data
+				imageView.setToolTip(QString(tr("Tensor data as a B/W image normalized to the data range of currently viewed tensor slice")));
+				imageViewInitialized = true;
+			}
 			// disable all other widgets so that the data view can't be changed
 			headerWidget.setEnabled(false);
-			// set tooltip with explanation custom to the data
-			imageView.setToolTip(QString(tr("Tensor data as a B/W image normalized to the range of data in the currently viewed tensor slice: %1..%2"))
-				.arg(std::get<0>(minMax))
-				.arg(std::get<1>(minMax)));
 		} else {
-			// clear the image, reenable the widgets
-			imageView.setPixmap(QPixmap());
-			imageView.resize(0,0);
 			headerWidget.setEnabled(true);
 		}
 
@@ -497,7 +502,7 @@ void DataTable2D::dataChanged(const float *data_) {
 	(static_cast<DataModel*>(tableModel.get()))->endResetModel();
 	// update XRay-style view if it is enabled
 	if (viewDataAsBwImageCheckBox.isChecked())
-		(void)updateBwImageView();
+		updateBwImageView(false/*initialUpdate*/);
 }
 
 /// internals
@@ -515,7 +520,7 @@ std::vector<unsigned> DataTable2D::mkIdxs() const {
 	return idxs;
 }
 
-std::tuple<float,float> DataTable2D::updateBwImageView() {
+void DataTable2D::updateBwImageView(bool initialUpdate) {
 	// helpers
 	auto dataSourceToBwImage = [](const DataSource *dataSource, unsigned scaleFactor, std::tuple<float,float> &minMax) {
 		std::unique_ptr<uchar> data(new uchar[dataSource->ncols()*dataSource->nrows()*scaleFactor*scaleFactor]);
@@ -532,10 +537,67 @@ std::tuple<float,float> DataTable2D::updateBwImageView() {
 						*p++ = normalize(dataSource->value(r,c));
 		return QImage(data.get(), dataSource->ncols()*scaleFactor, dataSource->nrows()*scaleFactor, dataSource->ncols()*scaleFactor, QImage::Format_Grayscale8);
 	};
-	std::tuple<float,float> minMax;
-	QImage img(dataSourceToBwImage((static_cast<DataModel*>(tableModel.get()))->getDataSource(), scaleBwImageSpinBox.value()/*scale 1+*/, minMax));
-	imageView.setPixmap(QPixmap::fromImage(img));
-	imageView.resize(img.width(), img.height());
-	return minMax;
+
+	// list all combinations
+	std::vector<std::vector<unsigned>> indexes; // elements are sized like the shape, with ones in places of X and Y // indexes are 0-based
+	{
+		std::function<void(unsigned pos, std::vector<unsigned> curr, const std::vector<unsigned> &dims, std::vector<std::vector<unsigned>> &indexes)> iterate;
+		iterate = [&iterate](unsigned pos, std::vector<unsigned> curr, const std::vector<unsigned> &dims, std::vector<std::vector<unsigned>> &indexes) {
+			curr.push_back(0);
+			for (auto &index = *curr.rbegin(); index < dims[pos]; index++)
+				if (pos+1 < dims.size())
+					iterate(pos+1, curr, dims, indexes);
+				else
+					indexes.push_back(curr);
+			curr.resize(curr.size()-1);
+		};
+
+		auto dims = shape;
+		dims[dimVertical] = 1; // X and Y are set to 1 - we don't need to list them because they are on X,Y axes of pictures
+		dims[dimHorizontal] = 1;
+		iterate(0, {}, dims, indexes);
+	}
+
+	auto fmtIndex = [this](const std::vector<unsigned> &index) {
+		std::ostringstream ss;
+		ss << "[";
+		unsigned n = 0;
+		for (auto i : index) {
+			ss << (n==0 ? "" : ",") << (n==dimVertical ? "Y" : n==dimHorizontal ? "X" : STR(i+1));
+			++n;
+		}
+		ss << "]";
+		return ss.str();
+	};
+
+
+	if (initialUpdate) { // decide on a scaling factor
+		auto maxLabelWidth = QFontMetrics(shapeLabel.font()).size(0/*flags*/,
+			QString("%1\n%2 .. %3").arg(S2Q(fmtIndex({1000,1000,1000,1000}))).arg(-1.234567891).arg(+1.234567891)).width();
+		unsigned minScaleFactor = maxLabelWidth/shape[dimHorizontal];
+		if (minScaleFactor == 0)
+			minScaleFactor = 1;
+		else
+			while (minScaleFactor*shape[dimHorizontal] < maxLabelWidth)
+			minScaleFactor++;
+		self = true;
+		scaleBwImageSpinBox.setRange(minScaleFactor, 5*minScaleFactor); // XXX sizing issues and image not being in the center issues arise when
+		scaleBwImageSpinBox.setValue(minScaleFactor);                   //     images are allowed to be smaller tha labels
+		self = false;
+	}
+
+	const unsigned numColumns = 16; // TODO should be based on width()/cell.width // TODO scaling coefficient initial value should also be adaptable
+	const unsigned numRows = (indexes.size()+numColumns-1)/numColumns;
+	imageView.setSizesAndData(numColumns/*width*/, numRows/*height*/, numColumns - (numRows*numColumns - indexes.size()), [&](unsigned x, unsigned y) {
+		std::unique_ptr<DataSource> dataSource(new TensorSliceDataSource(shape, dimVertical, dimHorizontal, indexes[y*numColumns+x], data));
+		std::tuple<float,float> minMax;
+		QImage image = dataSourceToBwImage(dataSource.get(), scaleBwImageSpinBox.value()/*scale 1+*/, minMax);
+		return std::tuple<QString,QImage>(
+			QString("%1\n%2 .. %3")
+				.arg(S2Q(fmtIndex(indexes[y*numColumns+x])))
+				.arg(std::get<0>(minMax))
+				.arg(std::get<1>(minMax)),
+			image);
+	});
 }
 

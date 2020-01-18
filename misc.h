@@ -36,3 +36,5 @@
 		exit(EXIT_FAILURE); \
 	}
 
+class QSettings;
+extern QSettings appSettings;

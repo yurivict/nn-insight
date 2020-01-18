@@ -9,8 +9,10 @@
 #include "svg-graphics-generator.h"
 
 #include <QApplication>
+#include <QSettings>
 
-#include <QFile>
+
+QSettings appSettings("NN Insight"); // a global settings object allowing the app to have persistent settings
 
 int main(int argc, char **argv) {
 

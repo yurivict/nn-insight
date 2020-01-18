@@ -15,6 +15,7 @@
 #include "svg-graphics-generator.h"
 #include "svg-push-button.h"
 
+#include <QByteArray>
 #include <QEvent>
 #include <QWheelEvent>
 #include <QDebug>
@@ -28,6 +29,7 @@
 #include <QClipboard>
 #include <QMimeData>
 #include <QScrollBar>
+#include <QSettings>
 
 #include <assert.h>
 
@@ -691,6 +693,9 @@ MainWindow::MainWindow()
 
 	// icon
 	setWindowIcon(QPixmap::fromImage(Util::svgToImage(SvgGraphics::generateNnAppIcon(), QSize(128,128), QPainter::CompositionMode_SourceOver)));
+
+	// restore geometry
+	restoreGeometry(appSettings.value("MainWindow.geometry", QByteArray()).toByteArray());
 }
 
 MainWindow::~MainWindow() {
@@ -698,6 +703,9 @@ MainWindow::~MainWindow() {
 		pluginInterface.reset(nullptr);
 		PluginManager::unloadPlugin(plugin);
 	}
+
+	// save geometry
+	appSettings.setValue("MainWindow.geometry", saveGeometry());
 }
 
 bool MainWindow::loadModelFile(const QString &filePath) {

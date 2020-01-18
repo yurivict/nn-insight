@@ -8,6 +8,7 @@
 #include <QFontMetrics>
 #include <QImage>
 #include <QPixmap>
+#include <QSettings>
 
 #include <cmath>
 #include <functional>
@@ -450,6 +451,12 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 	scaleBwImageLabel.setVisible(false); // scale widgets are only visible when the image to scale is displayed
 	scaleBwImageSpinBox.setVisible(false);
 
+	// values
+	viewDataAsBwImageCheckBox.setChecked(appSettings.value("DataTable2D.viewAsImages", true).toBool()); // view mode based on user's choice
+
+	// set the initial mode
+	setShowImageViewMode(viewDataAsBwImageCheckBox.isChecked());
+
 	// connect signals
 	connect(&colorSchemaComboBox, QOverload<int>::of(&QComboBox::activated), [this,dataRange](int index) {
 		(static_cast<DataModel*>(tableModel.get()))->setColorSchema(createColorSchema(
@@ -465,24 +472,11 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 	});
 	connect(&viewDataAsBwImageCheckBox, &QCheckBox::stateChanged, [this](int state) {
 		bool showImageView = state!=0;
-		dataViewStackWidget.setCurrentIndex(showImageView ? 1/*imageView*/ : 0/*tableView*/);
-		if (showImageView) {
-			if (!imageViewInitialized) {
-				// create the image from the datasource that the table sees
-				updateBwImageView(true/*initialUpdate*/);
-				// set tooltip with explanation custom to the data
-				imageView.setToolTip(QString(tr("Tensor data as a B/W image normalized to the data range of currently viewed tensor slice")));
-				imageViewInitialized = true;
-			}
-			// disable all other widgets so that the data view can't be changed
-			headerWidget.setEnabled(false);
-		} else {
-			headerWidget.setEnabled(true);
-		}
+		// save user's choice
+		appSettings.setValue("DataTable2D.viewAsImages", showImageView);
+		// set the mode
+		setShowImageViewMode(showImageView);
 
-		// visibility of scale controls
-		scaleBwImageLabel.setVisible(showImageView);
-		scaleBwImageSpinBox.setVisible(showImageView);
 	});
 
 	// tooltips
@@ -601,3 +595,24 @@ void DataTable2D::updateBwImageView(bool initialUpdate) {
 	});
 }
 
+void DataTable2D::setShowImageViewMode(bool showImageView) {
+	// switch the view
+	dataViewStackWidget.setCurrentIndex(showImageView ? 1/*imageView*/ : 0/*tableView*/);
+	// update the screen
+	if (showImageView) {
+		if (!imageViewInitialized) {
+			// create the image from the datasource that the table sees
+			updateBwImageView(true/*initialUpdate*/);
+			// set tooltip with explanation custom to the data
+			imageView.setToolTip(QString(tr("Tensor data as a B/W image normalized to the data range of currently viewed tensor slice")));
+			imageViewInitialized = true;
+		}
+		// disable all other widgets so that the data view can't be changed
+		headerWidget.setEnabled(false);
+	} else {
+		headerWidget.setEnabled(true);
+	}
+	// visibility of scale controls
+	scaleBwImageLabel.setVisible(showImageView);
+	scaleBwImageSpinBox.setVisible(showImageView);
+}

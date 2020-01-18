@@ -61,4 +61,5 @@ public: // interface
 private: // internals
 	std::vector<unsigned> mkIdxs() const;
 	void updateBwImageView(bool initialUpdate);
+	void setShowImageViewMode(bool showImageView);
 };

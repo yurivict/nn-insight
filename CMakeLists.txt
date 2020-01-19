@@ -65,7 +65,7 @@ add_executable(nn-insight
 	fonts.cpp
 	nn-types.cpp
 	model-functions.cpp
-	render-model-to-coordinates.cpp
+	render-model.cpp
 	svg-graphics-generator.cpp
 	nn-widget.cpp
 	no-nn-is-open-widget.cpp

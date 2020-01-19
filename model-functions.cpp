@@ -15,6 +15,14 @@ bool isTensorComputed(const PluginInterface::Model *model, PluginInterface::Tens
 	return !model->getTensorHasData(tensorId) && !model->getTensorIsVariableFlag(tensorId);
 }
 
+std::string tensorKind(const PluginInterface::Model *model, PluginInterface::TensorId tensorId) { // TODO translations, tr() doesn't work outside of Q_OBJECT scope
+	return Util::isValueIn(model->getInputs(), tensorId) ? "input"
+	       : Util::isValueIn(model->getOutputs(), tensorId) ? "output"
+	       : model->getTensorHasData(tensorId) ? "static tensor"
+	       : model->getTensorIsVariableFlag(tensorId) ? "variable"
+	       : "computed";
+}
+
 size_t computeModelFlops(const PluginInterface::Model *model) {
 	size_t flops = 0;
 	for (PluginInterface::OperatorId oid = 0, oide = model->numOperators(); oid < oide; oid++)

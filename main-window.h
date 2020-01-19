@@ -107,7 +107,7 @@ private: // fields
 	QLabel                                   sourceImage;
 	// Rhs/NN details
 	QStackedWidget                       nnDetailsStack;
-	QGroupBox                              nnNetworkDetails;   // page#0
+	QGroupBox                              nnNetworkDetails;   // page#0: network
 	QGridLayout                              nnNetworkDetailsLayout;
 	QLabel                                   nnNetworkDescriptionLabel;
 	QLabel                                   nnNetworkDescriptionText;
@@ -123,7 +123,7 @@ private: // fields
 	QLabel                                   nnNetworkStaticDataText;
 	QLabel                                   nnNetworkOperatorsListLabel;
 	OperatorsListWidget                      nnNetworkOperatorsListWidget;
-	QGroupBox                              nnOperatorDetails; // page#1
+	QGroupBox                              nnOperatorDetails; // page#1: operator
 	QGridLayout                              nnOperatorDetailsLayout;
 	QLabel                                   nnOperatorTypeLabel;
 	QLabel                                   nnOperatorTypeValue;
@@ -137,14 +137,21 @@ private: // fields
 	QLabel                                   nnOperatorDataRatioLabel;
 	QLabel                                   nnOperatorDataRatioValue;
 	QWidget                                  nnOperatorDetailsSpacer;
-	QGroupBox                              nnTensorDetails;   // page#2
+	QGroupBox                              nnTensorDetails;   // page#2: tensor
+	int                                      nnCurrentTensorId;
 	QGridLayout                              nnTensorDetailsLayout;
+	QLabel                                   nnTensorKindLabel;
+	QLabel                                   nnTensorKindValue;
+	QLabel                                   nnTensorShapeLabel;
+	QLabel                                   nnTensorShapeValue;
+	QLabel                                   nnTensorTypeLabel;
+	QLabel                                   nnTensorTypeValue;
+	QLabel                                   nnTensorDataPlaceholder;
+	QLabel                                   nnTensorDataPlaceholder1DnotImplemented;
+	std::unique_ptr<DataTable2D>             nnTensorData2D;
 	QGroupBox                            noNnIsOpenGroupBox; // optionally visible
 	QVBoxLayout                            noNnIsOpenLayout;
 	NoNnIsOpenWidget                       noNnIsOpenWidget;
-	// Rhs/NN tables
-	std::unique_ptr<DataTable2D>         nnDataTable;
-	PluginInterface::TensorId            nnDataTableTensor; // tensor displayed in nnDataTable
 
 	QMenuBar                         menuBar;
 	QStatusBar                       statusBar;
@@ -181,7 +188,6 @@ private: // private methods
 	void showInputDetails(PluginInterface::TensorId tensorId);
 	void showOutputDetails(PluginInterface::TensorId tensorId);
 	void removeTableIfAny();
-	void removeTable();
 	void openImageFile(const QString &imageFileName);
 	void openImagePixmap(const QPixmap &imagePixmap, const QString &sourceName);
 	void clearInputImageDisplay();
@@ -203,5 +209,7 @@ private: // private methods
 	void onOpenNeuralNetworkFileUserIntent();
 	void closeNeuralNetwork();
 	static QLabel* makeTextSelectable(QLabel *label);
+	void showNnTensorData2D();
+	void clearNnTensorData2D();
 };
 

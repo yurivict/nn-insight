@@ -222,11 +222,19 @@ MainWindow::MainWindow()
 ,          nnOperatorDataRatioValue(&nnOperatorDetails)
 ,          nnOperatorDetailsSpacer(&nnOperatorDetails)
 ,        nnTensorDetails(&nnDetailsStack)
+,          nnCurrentTensorId(-1)
 ,          nnTensorDetailsLayout(&nnTensorDetails)
+,          nnTensorKindLabel(tr("Kind"), &nnTensorDetails)
+,          nnTensorKindValue(&nnTensorDetails)
+,          nnTensorShapeLabel(tr("Shape"), &nnTensorDetails)
+,          nnTensorShapeValue(&nnTensorDetails)
+,          nnTensorTypeLabel(tr("Type"), &nnTensorDetails)
+,          nnTensorTypeValue(&nnTensorDetails)
+,          nnTensorDataPlaceholder(tr("No Tensor Data Available"), &nnTensorDetails)
+,          nnTensorDataPlaceholder1DnotImplemented(tr("1D Data View Not Yet Implemented"), &nnTensorDetails)
 ,     noNnIsOpenGroupBox(tr("No Neural Network File is Open"), &rhsWidget)
 ,       noNnIsOpenLayout(&noNnIsOpenGroupBox)
 ,       noNnIsOpenWidget(&noNnIsOpenGroupBox)
-,     nnDataTableTensor(0)
 , menuBar(this)
 , statusBar(this)
 #if defined(USE_PERFTOOLS)
@@ -311,6 +319,14 @@ MainWindow::MainWindow()
 		nnNetworkDetailsLayout.addWidget(&nnNetworkStaticDataText,        5/*row*/, 1/*col*/);
 		nnNetworkDetailsLayout.addWidget(&nnNetworkOperatorsListLabel,    6/*row*/, 0/*col*/);
 		nnNetworkDetailsLayout.addWidget(&nnNetworkOperatorsListWidget,   7/*row*/, 0/*col*/,  1/*rowSpan*/, 2/*columnSpan*/);
+		nnTensorDetailsLayout .addWidget(&nnTensorKindLabel,              0/*row*/, 0/*col*/);
+		nnTensorDetailsLayout .addWidget(&nnTensorKindValue,              0/*row*/, 1/*col*/);
+		nnTensorDetailsLayout .addWidget(&nnTensorShapeLabel,             1/*row*/, 0/*col*/);
+		nnTensorDetailsLayout .addWidget(&nnTensorShapeValue,             1/*row*/, 1/*col*/);
+		nnTensorDetailsLayout .addWidget(&nnTensorTypeLabel,              2/*row*/, 0/*col*/);
+		nnTensorDetailsLayout .addWidget(&nnTensorTypeValue,              2/*row*/, 1/*col*/);
+		for (auto l : {&nnTensorDataPlaceholder, &nnTensorDataPlaceholder1DnotImplemented})
+			nnTensorDetailsLayout.addWidget(l,                        3/*row*/, 0/*col*/,  1/*rowSpan*/, 2/*columnSpan*/);
 	nnDetailsStack.addWidget(&nnOperatorDetails);
 	nnDetailsStack.addWidget(&nnTensorDetails);
 
@@ -340,6 +356,8 @@ MainWindow::MainWindow()
 	for (auto w : {&inputNormalizationLabel, &computationTimeLabel})
 		w->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
 	sourceImage.setAlignment(Qt::AlignHCenter|Qt::AlignVCenter);
+	for (auto l : {&nnTensorDataPlaceholder, &nnTensorDataPlaceholder1DnotImplemented})
+		l->setAlignment(Qt::AlignCenter|Qt::AlignVCenter);
 
 	{ // double the font size in the summary
 		QFont font = outputInterpretationSummaryLineEdit.font();
@@ -379,6 +397,7 @@ MainWindow::MainWindow()
 		w->                          setToolTip(tr("How to interpret the computation result?"));
 	clearComputationResults             .setToolTip(tr("Clear computation results"));
 	sourceImage                         .setToolTip(tr("Image currently used as NN input"));
+	// network page
 	for (auto l : {&nnNetworkDescriptionLabel,&nnNetworkDescriptionText})
 		l->                          setToolTip(tr("Network description as specified in the NN file, if any"));
 	for (auto l : {&nnNetworkComplexityLabel,&nnNetworkComplexityText})
@@ -393,8 +412,16 @@ MainWindow::MainWindow()
 		l->                          setToolTip(tr("Amount of static data supplied for operators in the network"));
 	for (auto w : {(QWidget*)&nnNetworkOperatorsListLabel,(QWidget*)&nnNetworkOperatorsListWidget})
 		w->                          setToolTip(tr("List of operators in the model with details about them"));
-	nnOperatorTypeLabel                 .setToolTip(tr("Operator type: what kind of operation does it perform"));
-	nnOperatorComplexityValue           .setToolTip(tr("Complexity of the currntly selected NN in FLOPS"));
+	// operator page
+	for (auto l : {&nnOperatorComplexityLabel,&nnOperatorComplexityValue})
+		l->                          setToolTip(tr("Complexity of the currently selected NN in FLOPS"));
+	// tensor page
+	for (auto l : {&nnTensorKindLabel,&nnTensorKindValue})
+		l->                          setToolTip(tr("What kind of tensor this is"));
+	for (auto l : {&nnTensorShapeLabel,&nnTensorShapeValue})
+		l->                          setToolTip(tr("Shape of the tensor describes how meny dimensions does it have and sizes in each dimension"));
+	for (auto l : {&nnTensorTypeLabel,&nnTensorTypeValue})
+		l->                          setToolTip(tr("Type of data in this tensor"));
 
 	// size policies
 	svgScrollArea                        .setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
@@ -429,10 +456,15 @@ MainWindow::MainWindow()
 	sourceImageScrollArea                .setSizePolicy(QSizePolicy::Fixed,   QSizePolicy::Fixed);
 	for (auto *w : {&nnNetworkDescriptionLabel, &nnNetworkDescriptionText, &nnNetworkComplexityLabel, &nnNetworkComplexityText,
 	                &nnNetworkFileSizeLabel, &nnNetworkFileSizeText, &nnNetworkNumberInsOutsLabel, &nnNetworkNumberInsOutsText,
-	                &nnNetworkNumberOperatorsLabel, &nnNetworkNumberOperatorsText, &nnNetworkStaticDataLabel, &nnNetworkStaticDataText, &nnNetworkOperatorsListLabel})
+	                &nnNetworkNumberOperatorsLabel, &nnNetworkNumberOperatorsText, &nnNetworkStaticDataLabel, &nnNetworkStaticDataText, &nnNetworkOperatorsListLabel,
+	                &nnOperatorTypeLabel, &nnOperatorTypeValue, &nnOperatorOptionsLabel, &nnOperatorInputsLabel, &nnOperatorOutputsLabel,
+	                &nnOperatorComplexityLabel, &nnOperatorComplexityValue, &nnOperatorStaticDataLabel, &nnOperatorStaticDataValue, &nnOperatorDataRatioLabel, &nnOperatorDataRatioValue,
+	                &nnTensorKindLabel, &nnTensorKindValue, &nnTensorShapeLabel, &nnTensorShapeValue, &nnTensorTypeLabel})
 		w->                           setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
 	nnNetworkOperatorsListWidget         .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
 	nnOperatorDetailsSpacer              .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
+	for (auto l : {&nnTensorDataPlaceholder, &nnTensorDataPlaceholder1DnotImplemented})
+		l->                           setSizePolicy(QSizePolicy::Minimum,   QSizePolicy::Minimum);
 
 	// margins and spacing
 	rhsLayout.setSpacing(0);
@@ -450,6 +482,7 @@ MainWindow::MainWindow()
 	sourceEffectConvolutionCountComboBox.setEnabled(false); // is only enabled when some convoulution is chosen
 	nnNetworkStaticDataText.setWordWrap(true); // allow word wrap because text is long in this label
 	outputInterpretationSummaryLineEdit.setWordWrap(true);
+	nnTensorDataPlaceholder1DnotImplemented.hide();
 
 	// widget states
 	updateResultInterpretationSummaryText(false/*enable*/, tr("n/a"), tr("n/a"));
@@ -493,8 +526,11 @@ MainWindow::MainWindow()
 	for (auto widget : {&nnNetworkDescriptionLabel, &nnNetworkComplexityLabel, &nnNetworkFileSizeLabel, &nnNetworkNumberInsOutsLabel, &nnNetworkNumberOperatorsLabel,
 	                    &nnNetworkStaticDataLabel, &nnNetworkOperatorsListLabel,
 	                    &nnOperatorTypeLabel, &nnOperatorOptionsLabel, &nnOperatorInputsLabel, &nnOperatorOutputsLabel, &nnOperatorComplexityLabel,
-	                    &nnOperatorStaticDataLabel, &nnOperatorDataRatioLabel})
+	                    &nnOperatorStaticDataLabel, &nnOperatorDataRatioLabel,
+	                    &nnTensorKindLabel, &nnTensorShapeLabel, &nnTensorTypeLabel})
 		widget->setStyleSheet("font-weight: bold;");
+	for (auto l : {&nnTensorDataPlaceholder, &nnTensorDataPlaceholder1DnotImplemented})
+		l->setStyleSheet("color: gray; font: 35pt;");
 
 	// connect signals
 	connect(&nnWidget, &NnWidget::clickedOnOperator, [this](PluginInterface::OperatorId operatorId) {
@@ -563,16 +599,20 @@ MainWindow::MainWindow()
 
 		bool succ = Compute::compute(model, imageRegion,inputNormalization, sourceTensorDataAsUsed,sourceTensorShape, tensorData, [this](const std::string &msg) {
 			Util::warningOk(this, S2Q(msg));
-		}, [](PluginInterface::TensorId tid) {
-			//PRINT("Tensor DONE: tid=" << tid)
+		}, [](PluginInterface::TensorId tensorId) {
+			//PRINT("Tensor DONE: tid=" << tensorId)
 		});
 
 		if (!succ)
 			PRINT("WARNING computation didn't succeed")
 
-		if (nnDataTable && model->isTensorComputed(nnDataTableTensor)) {
-			nnDataTable->dataChanged((*tensorData.get())[nnDataTableTensor].get());
-			nnDataTable->setEnabled(true);
+		if (nnCurrentTensorId!=-1 && model->isTensorComputed(nnCurrentTensorId)) {
+			if (!nnTensorData2D) {
+				showNnTensorData2D();
+			} else {
+				nnTensorData2D->dataChanged((*tensorData.get())[nnCurrentTensorId].get());
+				nnTensorData2D->setEnabled(true);
+			}
 		}
 		updateResultInterpretation();
 		computationTimeLabel.setText(QString("Computed in %1").arg(QString("%1 ms").arg(S2Q(Util::formatUIntHumanReadable(timer.elapsed())))));
@@ -593,6 +633,7 @@ MainWindow::MainWindow()
 	});
 	connect(&clearComputationResults, &QAbstractButton::pressed, [this]() {
 		clearComputedTensorData(Temporary);
+		removeTableIfAny();
 		updateResultInterpretation();
 	});
 	connect(sourceImageScrollArea.horizontalScrollBar(), &QAbstractSlider::valueChanged, [this]() {
@@ -768,12 +809,10 @@ bool MainWindow::haveImageOpen() const {
 }
 
 void MainWindow::showNetworkDetails() {
-	removeTableIfAny();
 	nnDetailsStack.setCurrentIndex(/*page#*/0);
 }
 
 void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
-	removeTableIfAny();
 	// switch to the details page, set title
 	nnDetailsStack.setCurrentIndex(/*page#1*/1);
 	nnOperatorDetails.setTitle(QString(tr("NN Operator#%1")).arg(operatorId+1));
@@ -815,15 +854,8 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
 			nnOperatorDetailsLayout.addWidget(label,         row,   2/*column*/);
 			// has buffer? is variable?
-			bool isInput = Util::isValueIn(model->getInputs(), tensorId);
-			bool isOutput = Util::isValueIn(model->getOutputs(), tensorId);
-			auto hasStaticData = model->getTensorHasData(tensorId);
-			auto isVariable = model->getTensorIsVariableFlag(tensorId);
-			label = makeTextSelectable(new QLabel(QString("<%1>").arg(
-				isInput ? tr("input")
-				: isOutput ? tr("output")
-				: hasStaticData ? tr("static tensor")
-				: isVariable ? tr("variable") : tr("computed")),
+			label = makeTextSelectable(
+				new QLabel(QString("<%1>").arg(S2Q(ModelFunctions::tensorKind(model, tensorId))),
 				&nnOperatorDetails));
 			label->setToolTip(tr("Tensor type"));
 			label->setAlignment(Qt::AlignCenter|Qt::AlignVCenter);
@@ -831,6 +863,7 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
 			nnOperatorDetailsLayout.addWidget(label,         row,   3/*column*/);
 			// button
+			auto hasStaticData = model->getTensorHasData(tensorId);
 			if (hasStaticData || (tensorData && (*tensorData.get())[tensorId])) {
 				auto button = new SvgPushButton(SvgGraphics::generateTableIcon(), &nnOperatorDetails);
 				button->setContentsMargins(0,0,0,0);
@@ -839,27 +872,8 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 				button->setToolTip(tr("Show the tensor data as a table"));
 				tempDetailWidgets.push_back(std::unique_ptr<QWidget>(button));
 				nnOperatorDetailsLayout.addWidget(button,         row,   4/*column*/);
-				connect(button, &QAbstractButton::pressed, [this,tensorId,hasStaticData]() {
-					// show table
-					auto tableShape = model->getTensorShape(tensorId);
-					switch (Tensor::numMultiDims(tableShape)) {
-					case 0:
-						Util::warningOk(this, "WARNING tensor shape with all ones encountered, this is meaningless in the NN models context");
-						break;
-					case 1:
-						Util::warningOk(this, "WARNING DataTable1D isn't yet implemented (TODO)");
-						break;
-					default: {
-						if (!nnDataTable || nnDataTableTensor!=tensorId) {
-							removeTableIfAny();
-							nnDataTable.reset(new DataTable2D(tableShape,
-								hasStaticData ? model->getTensorData(tensorId) : (*tensorData.get())[tensorId].get(),
-								&rhsWidget));
-							rhsLayout.addWidget(nnDataTable.get());
-							nnDataTableTensor = tensorId;
-						}
-						break;
-					}}
+				connect(button, &QAbstractButton::pressed, [this,tensorId]() {
+					showTensorDetails(tensorId);
 				});
 			}
 		}
@@ -941,9 +955,19 @@ void MainWindow::showTensorDetails(PluginInterface::TensorId tensorId) {
 }
 
 void MainWindow::showTensorDetails(PluginInterface::TensorId tensorId, const char *label) {
-	removeTableIfAny();
 	nnDetailsStack.setCurrentIndex(/*page#*/2);
 	nnTensorDetails.setTitle(QString("%1Tensor#%2: %3").arg(label).arg(tensorId).arg(S2Q(model->getTensorName(tensorId))));
+	nnTensorKindValue .setText(S2Q(ModelFunctions::tensorKind(model, tensorId)));
+	nnTensorShapeValue.setText(S2Q(STR(model->getTensorShape(tensorId))));
+	nnTensorTypeValue .setText("float32"); // TODO types aren't implemented yet
+	// tensor data table
+	if (tensorId != nnCurrentTensorId) {
+		nnCurrentTensorId = tensorId;
+		if (nnTensorData2D)
+			clearNnTensorData2D();
+		if (tensorData && (*tensorData)[nnCurrentTensorId])
+			showNnTensorData2D();
+	}
 }
 
 void MainWindow::showInputDetails(PluginInterface::TensorId tensorId) {
@@ -955,14 +979,8 @@ void MainWindow::showOutputDetails(PluginInterface::TensorId tensorId) {
 }
 
 void MainWindow::removeTableIfAny() {
-	if (nnDataTable)
-		removeTable();
-}
-
-void MainWindow::removeTable() {
-	rhsLayout.removeWidget(nnDataTable.get());
-	nnDataTable.reset(nullptr);
-	nnDataTableTensor = 0;
+	if (nnTensorData2D)
+		clearNnTensorData2D();
 }
 
 void MainWindow::openImageFile(const QString &imageFileName) {
@@ -1031,14 +1049,12 @@ void MainWindow::clearInputImageDisplay() {
 void MainWindow::clearComputedTensorData(HowLong howLong) {
 	// clear table-like display of data about to be invalidated
 	if (howLong == Temporary) {
-		if (nnDataTable && model->isTensorComputed(nnDataTableTensor))
-			nnDataTable->setEnabled(false);
+		if (nnTensorData2D && model->isTensorComputed(nnCurrentTensorId))
+			nnTensorData2D->setEnabled(false);
 	} else
 		removeTableIfAny();
 	// clear tensor data
 	tensorData.reset(nullptr);
-	// clear result interpretation
-	updateResultInterpretationSummaryText(false/*enable*/, tr("n/a"), tr("n/a"));
 }
 
 void MainWindow::effectsChanged() {
@@ -1067,8 +1083,8 @@ void MainWindow::inputNormalizationChanged() {
 
 void MainWindow::inputParamsChanged() {
 	clearComputedTensorData(Temporary); // effects change invalidates computation results
-	if (nnDataTable && model->isTensorComputed(nnDataTableTensor))
-		nnDataTable->setEnabled(false); // gray out the table because its tensor data is cleared
+	if (nnTensorData2D && model->isTensorComputed(nnCurrentTensorId))
+		nnTensorData2D->setEnabled(false); // gray out the table because its tensor data is cleared
 	updateResultInterpretation();
 }
 
@@ -1400,4 +1416,25 @@ void MainWindow::closeNeuralNetwork() {
 QLabel* MainWindow::makeTextSelectable(QLabel *label) {
 	label->setTextInteractionFlags(Qt::TextSelectableByMouse);
 	return label;
+}
+
+void MainWindow::showNnTensorData2D() {
+	assert(nnCurrentTensorId >= 0);
+	if (Tensor::numMultiDims(model->getTensorShape(nnCurrentTensorId)) >= 2) {
+		nnTensorData2D.reset(new DataTable2D(model->getTensorShape(nnCurrentTensorId),
+			model->isTensorComputed(nnCurrentTensorId) ? (*tensorData.get())[nnCurrentTensorId].get() : model->getTensorData(nnCurrentTensorId),
+			&nnTensorDetails
+		));
+		nnTensorDetailsLayout.addWidget(nnTensorData2D.get(),   3/*row*/, 0/*col*/,  1/*rowSpan*/, 2/*columnSpan*/);
+		nnTensorData2D.get()->setSizePolicy(QSizePolicy::Minimum,   QSizePolicy::Minimum);
+	} else {
+		nnTensorDataPlaceholder1DnotImplemented.show();
+	}
+	nnTensorDataPlaceholder.hide();
+}
+
+void MainWindow::clearNnTensorData2D() {
+	nnTensorData2D.reset(nullptr);
+	nnTensorDataPlaceholder.show();
+	nnTensorDataPlaceholder1DnotImplemented.hide();
 }

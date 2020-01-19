@@ -31,6 +31,7 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 );
 
 bool isTensorComputed(PluginInterface::TensorId tensorId);
+std::string tensorKind(const PluginInterface::Model *model, PluginInterface::TensorId tensorId);
 size_t computeModelFlops(const PluginInterface::Model *model);
 size_t computeOperatorFlops(const PluginInterface::Model *model, PluginInterface::OperatorId operatorId);
 size_t sizeOfModelStaticData(const PluginInterface::Model *model, unsigned &outObjectCount, size_t &outMaxStaticDataPerOperator);

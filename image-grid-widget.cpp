@@ -10,6 +10,8 @@
 
 #include "util.h"
 
+// NN Insight sometimes shows garbage instead of BW images due to this big: "QLabel::setPixmap fails and QLabel displays garbage", see https://bugreports.qt.io/browse/QTBUG-81516
+
 ImageGridWidget::ImageGridWidget(QWidget *parent)
 : QWidget(parent)
 , layout(this)

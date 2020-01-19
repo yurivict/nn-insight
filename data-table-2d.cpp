@@ -529,7 +529,11 @@ void DataTable2D::updateBwImageView(bool initialUpdate) {
 				for (unsigned c = 0, ce = dataSource->ncols(); c < ce; c++)
 					for (unsigned rptCol = 0; rptCol<scaleFactor; rptCol++)
 						*p++ = normalize(dataSource->value(r,c));
-		return QImage(data.get(), dataSource->ncols()*scaleFactor, dataSource->nrows()*scaleFactor, dataSource->ncols()*scaleFactor, QImage::Format_Grayscale8);
+		return QImage(data.get(),
+			dataSource->ncols()*scaleFactor,               // width
+			dataSource->nrows()*scaleFactor,               // height
+			dataSource->ncols()*scaleFactor*sizeof(uchar), // bytesPerLine
+			QImage::Format_Grayscale8);
 	};
 
 	// list all combinations

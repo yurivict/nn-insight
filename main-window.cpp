@@ -965,7 +965,7 @@ void MainWindow::showTensorDetails(PluginInterface::TensorId tensorId, const cha
 		nnCurrentTensorId = tensorId;
 		if (nnTensorData2D)
 			clearNnTensorData2D();
-		if (tensorData && (*tensorData)[nnCurrentTensorId])
+		if (model->getTensorHasData(nnCurrentTensorId) || (tensorData && (*tensorData)[nnCurrentTensorId]))
 			showNnTensorData2D();
 	}
 }

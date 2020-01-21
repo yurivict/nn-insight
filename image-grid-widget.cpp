@@ -19,8 +19,10 @@ ImageGridWidget::ImageGridWidget(QWidget *parent)
 }
 
 void ImageGridWidget::setSizesAndData(size_t width, size_t height, size_t lastRow, std::function<std::tuple<QString,QImage>(unsigned x, unsigned y)> cbGetImage) {
+#if defined(NDEBUG)
 	unsigned imgWidth = 0;
 	unsigned imgHeight = 0;
+#endif
 
 	std::unique_ptr<QFontMetrics> labelFontMetrics;
 
@@ -32,6 +34,7 @@ void ImageGridWidget::setSizesAndData(size_t width, size_t height, size_t lastRo
 			auto img = cbGetImage(col, row);
 			auto &imgLabelString = std::get<0>(img);
 			auto &imgImage       = std::get<1>(img);
+#if defined(NDEBUG)
 			if (row==0 && col==0) {
 				imgWidth = imgImage.width();
 				imgHeight = imgImage.height();
@@ -39,6 +42,7 @@ void ImageGridWidget::setSizesAndData(size_t width, size_t height, size_t lastRo
 				assert(imgImage.width() == imgWidth);
 				assert(imgImage.height() == imgHeight);
 			}
+#endif
 			auto &widgets = imageWidgets[row][col];
 			auto &labelWidget = std::get<0>(widgets);
 			auto &imageWidget = std::get<1>(widgets);

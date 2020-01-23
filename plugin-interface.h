@@ -227,12 +227,13 @@ if (false) {
 
 	// plugin interface
 	virtual uint32_t capabilities() const = 0;
-	virtual std::string filePath() const = 0;                // returns back the file name that it was opened from
-	virtual std::string modelDescription() const = 0;        // description of the model from the NN file
-	virtual bool open(const std::string &filePath_) = 0;     // open the model (can only be done once per object, close is implicit on destruction for simplicity)
-	virtual std::string errorMessage() const = 0;            // returns the error of the last operation if it has failed
-	virtual size_t numModels() const = 0;                    // how many models does this file contain
-	virtual const Model* getModel(unsigned index) const = 0; // access to one model, the Model object is owned by the plugin
+	virtual std::string filePath() const = 0;                                        // returns back the file name that it was opened from
+	virtual std::string modelDescription() const = 0;                                // description of the model from the NN file
+	virtual bool open(const std::string &filePath_) = 0;                             // open the model (can only be done once per object, close is implicit on destruction for simplicity)
+	virtual std::string errorMessage() const = 0;                                    // returns the error of the last operation if it has failed
+	virtual size_t numModels() const = 0;                                            // how many models does this file contain
+	virtual const Model* getModel(unsigned index) const = 0;                         // access to one model, the Model object is owned by the plugin
+	virtual void write(const Model *model, const std::string &fileName) const = 0;  // write the model to disk
 };
 
 // gcc-9 needs explicit template specializations to be outside of class scope

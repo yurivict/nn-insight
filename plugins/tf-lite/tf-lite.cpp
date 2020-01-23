@@ -7,6 +7,7 @@
 #include <fstream>
 #include <vector>
 #include <memory>
+#include <string>
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -246,6 +247,9 @@ public: // interface implementation
 		}
 
 		return modelObj.get();
+	}
+	void write(const PluginInterface::Model *model, const std::string &fileName) const override {
+		PRINT("TfLite plugin doesn't support model writing yet")
 	}
 
 private:

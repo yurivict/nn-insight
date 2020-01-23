@@ -19,6 +19,9 @@ class PluginInterface {
 public:
 	virtual ~PluginInterface() { }
 
+	// capability flags
+	enum Capabilities {Capability_CanWrite=0x00000001};
+
 	// types related to the plugin interface
 	typedef unsigned TensorId;
 	typedef unsigned OperatorId;
@@ -223,6 +226,7 @@ if (false) {
 	};
 
 	// plugin interface
+	virtual uint32_t capabilities() const = 0;
 	virtual std::string filePath() const = 0;                // returns back the file name that it was opened from
 	virtual std::string modelDescription() const = 0;        // description of the model from the NN file
 	virtual bool open(const std::string &filePath_) = 0;     // open the model (can only be done once per object, close is implicit on destruction for simplicity)

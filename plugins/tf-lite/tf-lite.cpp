@@ -170,6 +170,10 @@ public:
 
 public: // interface implementation
 
+	uint32_t capabilities() const override {
+		return 0; // no capability flags to report
+	}
+
 	std::string filePath() const override {
 		return modelFileName;
 	}

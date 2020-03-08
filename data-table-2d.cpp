@@ -523,17 +523,22 @@ void DataTable2D::updateBwImageView(bool initialUpdate) {
 		auto normalize = [minMax,minMaxRange](float d) {
 			return 255.*(d-std::get<0>(minMax))/minMaxRange;
 		};
-		uchar *p = data.get();
+		auto *p = data.get();
 		for (unsigned r = 0, re = dataSource->nrows(); r < re; r++)
 			for (unsigned rptRow = 0; rptRow<scaleFactor; rptRow++)
 				for (unsigned c = 0, ce = dataSource->ncols(); c < ce; c++)
 					for (unsigned rptCol = 0; rptCol<scaleFactor; rptCol++)
 						*p++ = normalize(dataSource->value(r,c));
-		return QImage(data.get(),
-			dataSource->ncols()*scaleFactor,               // width
-			dataSource->nrows()*scaleFactor,               // height
-			dataSource->ncols()*scaleFactor*sizeof(uchar), // bytesPerLine
-			QImage::Format_Grayscale8);
+		auto dataPtr = data.release();
+		return std::tuple<std::unique_ptr<uchar>,QImage>(
+			std::unique_ptr<uchar>(dataPtr),
+			QImage(   dataPtr
+				, dataSource->ncols()*scaleFactor               // width
+				, dataSource->nrows()*scaleFactor               // height
+				, dataSource->ncols()*scaleFactor*sizeof(uchar) // bytesPerLine
+				, QImage::Format_Grayscale8
+			)
+		);
 	};
 
 	// list all combinations
@@ -589,13 +594,15 @@ void DataTable2D::updateBwImageView(bool initialUpdate) {
 	imageView.setSizesAndData(numColumns/*width*/, numRows/*height*/, numColumns - (numRows*numColumns - indexes.size()), [&](unsigned x, unsigned y) {
 		std::unique_ptr<DataSource> dataSource(new TensorSliceDataSource(shape, dimVertical, dimHorizontal, indexes[y*numColumns+x], data));
 		std::tuple<float,float> minMax;
-		QImage image = dataSourceToBwImage(dataSource.get(), scaleBwImageSpinBox.value()/*scale 1+*/, minMax);
-		return std::tuple<QString,QImage>(
+		auto imageWithData = dataSourceToBwImage(dataSource.get(), scaleBwImageSpinBox.value()/*scale 1+*/, minMax);
+		return ImageGridWidget::ImageData(
 			QString("%1\n%2 .. %3")
 				.arg(S2Q(fmtIndex(indexes[y*numColumns+x])))
 				.arg(std::get<0>(minMax))
 				.arg(std::get<1>(minMax)),
-			image);
+			std::unique_ptr<uchar>(std::get<0>(imageWithData).release()),
+			std::get<1>(imageWithData)
+		);
 	});
 }
 

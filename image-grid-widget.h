@@ -23,9 +23,12 @@ class ImageGridWidget : public QWidget {
 	QGridLayout       layout;
 	std::vector<std::vector<std::tuple<std::unique_ptr<QLabel>,std::unique_ptr<QLabel>>>> imageWidgets; // by row, by col: {label, image}
 
+public: // types
+	typedef std::tuple<QString,std::unique_ptr<uchar>,QImage> ImageData;
+
 public: // constructor
 	ImageGridWidget(QWidget *parent);
 
 public: // interface
-	void setSizesAndData(size_t width, size_t height, size_t lastRow, std::function<std::tuple<QString,QImage>(unsigned x, unsigned y)> cbGetImage);
+	void setSizesAndData(size_t width, size_t height, size_t lastRow, std::function<ImageData(unsigned x, unsigned y)> cbGetImage);
 };

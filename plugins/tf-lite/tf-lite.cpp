@@ -131,9 +131,12 @@ class TfLitePlugin : public PluginInterface {
 			}
 			bool getTensorHasData(TensorId tensorId) const override {
 				auto buffer = subgraph->tensors()->Get(tensorId)->buffer();
-				assert(buffer < plugin->model->buffers()->size());
-				auto data = plugin->model->buffers()->Get(buffer)->data();
-				return data != nullptr && data->size() > 0;
+				if (buffer < plugin->model->buffers()->size()) {
+					auto data = plugin->model->buffers()->Get(buffer)->data();
+					return data != nullptr && data->size() > 0;
+				} else {
+					return false;
+				}
 			}
 			const float* getTensorData(TensorId tensorId) const override {
 				auto buffer = subgraph->tensors()->Get(tensorId)->buffer();

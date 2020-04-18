@@ -19,10 +19,10 @@ ImageGridWidget::ImageGridWidget(QWidget *parent)
 }
 
 void ImageGridWidget::setSizesAndData(size_t width, size_t height, size_t lastRow, std::function<ImageGridWidget::ImageData(unsigned x, unsigned y)> cbGetImage) {
-#if defined(NDEBUG)
+#if defined(WITH_ASSERTS)
 	unsigned imgWidth = 0;
-	unsigned imgHeight = 0;
 #endif
+	unsigned imgHeight = 0;
 
 	std::unique_ptr<QFontMetrics> labelFontMetrics;
 
@@ -34,15 +34,15 @@ void ImageGridWidget::setSizesAndData(size_t width, size_t height, size_t lastRo
 			auto img = cbGetImage(col, row);
 			auto &imgLabelString = std::get<0>(img);
 			auto &imgImage       = std::get<2>(img);
-#if defined(NDEBUG)
 			if (row==0 && col==0) {
+#if defined(WITH_ASSERTS)
 				imgWidth = imgImage.width();
+#endif
 				imgHeight = imgImage.height();
 			} else { // all images are assumed to have the same size, because they are slices of the same tensor
 				assert(imgImage.width() == imgWidth);
 				assert(imgImage.height() == imgHeight);
 			}
-#endif
 			auto &widgets = imageWidgets[row][col];
 			auto &labelWidget = std::get<0>(widgets);
 			auto &imageWidget = std::get<1>(widgets);

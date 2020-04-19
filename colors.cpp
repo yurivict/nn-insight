@@ -23,6 +23,7 @@ QColor getOperatorColor(PluginInterface::OperatorKind okind) {
 	case PluginInterface::KindRelu6:
 	case PluginInterface::KindLeakyRelu:
 	case PluginInterface::KindTanh:
+	case PluginInterface::KindLogistic:
 	case PluginInterface::KindHardSwish:
 		return QColor(120,14,30); // activation functions
 	case PluginInterface::KindAdd:

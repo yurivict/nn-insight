@@ -57,6 +57,8 @@ size_t computeOperatorFlops(const PluginInterface::Model *model, PluginInterface
 		return Tensor::flatSize(model->getTensorShape(inputs[0])); // input size
 	  case PluginInterface::KindTanh:
 		return 10*Tensor::flatSize(model->getTensorShape(inputs[0])); //  tanh is expensive, maybe 10X at least
+	  case PluginInterface::KindLogistic:
+		return 10*Tensor::flatSize(model->getTensorShape(inputs[0])); //  logistic function is expensive, maybe 10X at least
 	  case PluginInterface::KindLeakyRelu:
 		return 2*Tensor::flatSize(model->getTensorShape(inputs[0])); // compare and multiply
 	  case PluginInterface::KindHardSwish:

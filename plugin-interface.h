@@ -39,6 +39,7 @@ public:
 		KindRelu6,
 		KindLeakyRelu,
 		KindTanh,
+		KindLogistic,
 		KindHardSwish,
 		//
 		KindAdd,

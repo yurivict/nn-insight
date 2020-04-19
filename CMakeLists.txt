@@ -84,7 +84,7 @@ add_executable(nn-insight
 	resources.qrc
 )
 target_link_libraries(nn-insight
-	Qt5::Widgets Qt5::Svg
+	Qt5::Core Qt5::Gui Qt5::Widgets Qt5::Svg
 	nlohmann_json::nlohmann_json
 	${png++_LIBRARIES}
 	${FlatBuffers}

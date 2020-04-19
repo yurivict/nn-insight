@@ -25,7 +25,7 @@
 #include <QApplication>
 #include <QFileDialog>
 #include <QPixmap>
-#include <QTime>
+#include <QElapsedTimer>
 #include <QClipboard>
 #include <QMimeData>
 #include <QScrollBar>
@@ -586,7 +586,7 @@ MainWindow::MainWindow()
 			effectsChanged();
 	});
 	connect(&computeButton, &QAbstractButton::pressed, [this]() {
-		QTime timer;
+		QElapsedTimer timer;
 		timer.start();
 
 		// computation arguments

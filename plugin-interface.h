@@ -54,6 +54,9 @@ public:
 		KindConcatenation,
 		KindStridedSlice,
 		KindMean,
+		// Misc
+		KindArgMax,
+		KindArgMin,
 		//
 		KindResizeBilinear,
 		//

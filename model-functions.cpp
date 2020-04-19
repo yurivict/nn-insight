@@ -65,6 +65,9 @@ size_t computeOperatorFlops(const PluginInterface::Model *model, PluginInterface
 		return 5*Tensor::flatSize(model->getTensorShape(inputs[0])); // variable number of operations, 1..7, depending on value
 	  case PluginInterface::KindConcatenation:
 		return Tensor::flatSize(model->getTensorShape(inputs[0])); // unclear how to count flops for concatenation
+	  case PluginInterface::KindArgMax:
+	  case PluginInterface::KindArgMin:
+		return Tensor::flatSize(model->getTensorShape(inputs[0]));
 	  default:
 		return 0; // TODO
 	}

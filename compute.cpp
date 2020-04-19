@@ -286,6 +286,35 @@ bool compute(
 				return;
 			}
 		};
+		auto doArgMxx = [&](float v0, std::function<bool(float,float)> cmp) {
+			assert(inputs.size()==1);
+			assert(outputs.size()==1);
+			assert(opts); // need to have options present // TODO check the output_type operator option
+
+			auto inputShape = model->getTensorShape(inputs[0]);
+			assert(Tensor::flatSize(model->getTensorShape(outputs[0])) == 1);
+
+			// create output data
+			std::unique_ptr<float> outputData(new float[1]); // always return one number
+
+			// compute
+			auto input = (*tensorData)[inputs[0]].get();
+			int idx = -1;
+			for (unsigned i = 0, ie = Tensor::flatSize(inputShape); i < ie; i++) {
+				auto v = *input++;
+				if (cmp(v, v0)) {
+					idx = i;
+					v0 = v;
+				}
+			}
+			outputData.get()[0] = idx;
+
+			// save the data
+			(*tensorData)[outputs[0]].reset(outputData.release());
+
+			// notify the caller
+			cbTensorComputed(outputs[0]);
+		};
 
 		// by operator kind
 		auto operatorKind = model->getOperatorKind(oid);
@@ -868,6 +897,12 @@ bool compute(
 			// notify the caller
 			cbTensorComputed(outputs[0]);
 
+			break;
+		} case PI::KindArgMax: {
+			doArgMxx(std::numeric_limits<float>::lowest(), [](float f1,float f2) {return f1>f2;});
+			break;
+		} case PI::KindArgMin: {
+			doArgMxx(std::numeric_limits<float>::max(), [](float f1,float f2) {return f1<f2;});
 			break;
 		} case PI::KindResizeBilinear: {
 			assert(inputs.size()==1 && outputs.size()==1);

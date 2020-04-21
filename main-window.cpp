@@ -784,6 +784,10 @@ bool MainWindow::loadModelFile(const QString &filePath) {
 		FAIL("multi-model files aren't supported yet")
 	model = pluginInterface->getModel(0);
 
+	// check number of inputs/outputs
+	if (model->numInputs() != 1 || model->numOutputs() != 1)
+		FAIL("model has " << model->numInputs() << " inputs and " << model->numOutputs() << " outputs: models with multiple inputs or multiple inputs aren't supported aren't supported yet")
+
 	// render the model as SVG image
 	nnWidget.open(model);
 	nnNetworkOperatorsListWidget.setNnModel(model);

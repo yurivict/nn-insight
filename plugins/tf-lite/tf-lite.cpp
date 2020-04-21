@@ -116,6 +116,7 @@ class TfLitePlugin : public PluginInterface {
 			}
 			PluginInterface::OperatorOptionsList* getOperatorOptions(OperatorId operatorId) const override {
 				auto o = subgraph->operators()->Get(operatorId);
+				assert(o->opcode_index() < plugin->model->operator_codes()->size());
 				return Helpers::convertOperatorOptions(o, plugin->model->operator_codes()->Get(o->opcode_index())->builtin_code());
 			}
 			unsigned numTensors() const override {
@@ -123,7 +124,11 @@ class TfLitePlugin : public PluginInterface {
 			}
 			TensorShape getTensorShape(TensorId tensorId) const override {
 				std::vector<unsigned> shape;
-				Helpers::convertContainers(*subgraph->tensors()->Get(tensorId)->shape(), shape);
+				assert(tensorId < subgraph->tensors()->size());
+				if (subgraph->tensors()->Get(tensorId)->shape() != nullptr)
+					Helpers::convertContainers(*subgraph->tensors()->Get(tensorId)->shape(), shape);
+				else
+					{ } // leave the shape empty: it must be a scalar in such case
 				return shape;
 			}
 			std::string getTensorName(TensorId tensorId) const override {

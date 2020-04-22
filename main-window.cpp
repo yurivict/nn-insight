@@ -188,8 +188,9 @@ MainWindow::MainWindow()
 ,            outputInterpretationKindComboBox(&computeByWidget)
 ,            spacer3Widget(&computeByWidget)
 ,            clearComputationResults(tr("Clear"), &computeByWidget)
-,        sourceImageScrollArea(&sourceWidget)
-,          sourceImage(&sourceWidget)
+,        sourceImageStack(&sourceWidget)
+,          sourceImageScrollArea(&sourceImageStack)
+,            sourceImage(&sourceImageScrollArea)
 ,      nnDetailsStack(&rhsWidget)
 ,        nnNetworkDetails(tr("Neural Network Details"), &nnDetailsStack)
 ,          nnNetworkDetailsLayout(&nnNetworkDetails)
@@ -299,8 +300,9 @@ MainWindow::MainWindow()
 	      computeByLayout.addWidget(&outputInterpretationKindComboBox);
 	      computeByLayout.addWidget(&spacer3Widget);
 	      computeByLayout.addWidget(&clearComputationResults);
-	  sourceLayout.addWidget(&sourceImageScrollArea);
-	    sourceImageScrollArea.setWidget(&sourceImage);
+	  sourceLayout.addWidget(&sourceImageStack);
+	    sourceImageStack.addWidget(&sourceImageScrollArea);
+	      sourceImageScrollArea.setWidget(&sourceImage);
 	rhsLayout.addWidget(&nnDetailsStack);
 	rhsLayout.addWidget(&noNnIsOpenGroupBox);
 	  noNnIsOpenLayout.addWidget(&noNnIsOpenWidget);
@@ -453,7 +455,7 @@ MainWindow::MainWindow()
 	outputInterpretationLabel            .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
 	outputInterpretationKindComboBox     .setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
 	spacer3Widget                        .setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum);
-	sourceImageScrollArea                .setSizePolicy(QSizePolicy::Fixed,   QSizePolicy::Fixed);
+	sourceImageStack                     .setSizePolicy(QSizePolicy::Fixed,   QSizePolicy::Fixed);
 	for (auto *w : {&nnNetworkDescriptionLabel, &nnNetworkDescriptionText, &nnNetworkComplexityLabel, &nnNetworkComplexityText,
 	                &nnNetworkFileSizeLabel, &nnNetworkFileSizeText, &nnNetworkNumberInsOutsLabel, &nnNetworkNumberInsOutsText,
 	                &nnNetworkNumberOperatorsLabel, &nnNetworkNumberOperatorsText, &nnNetworkStaticDataLabel, &nnNetworkStaticDataText, &nnNetworkOperatorsListLabel,
@@ -515,12 +517,13 @@ MainWindow::MainWindow()
 	inputNormalizationColorOrderComboBox.addItem("RGB",     InputNormalizationColorOrder_RGB); // default
 	inputNormalizationColorOrderComboBox.addItem("BGR",     InputNormalizationColorOrder_BGR);
 	//
-	outputInterpretationKindComboBox.addItem("Undefined",       OutputInterpretationKind_Undefined);
-	outputInterpretationKindComboBox.addItem("ImageNet-1001",   OutputInterpretationKind_ImageNet1001);
-	outputInterpretationKindComboBox.addItem("ImageNet-1000",   OutputInterpretationKind_ImageNet1000);
-	outputInterpretationKindComboBox.addItem("No/Yes",          OutputInterpretationKind_NoYes);
-	outputInterpretationKindComboBox.addItem("Yes/No",          OutputInterpretationKind_YesNo);
-	outputInterpretationKindComboBox.addItem("Per-Pixel",       OutputInterpretationKind_PixelClassification);
+	outputInterpretationKindComboBox.addItem("Undefined",        OutputInterpretationKind_Undefined);
+	outputInterpretationKindComboBox.addItem("ImageNet-1001",    OutputInterpretationKind_ImageNet1001);
+	outputInterpretationKindComboBox.addItem("ImageNet-1000",    OutputInterpretationKind_ImageNet1000);
+	outputInterpretationKindComboBox.addItem("No/Yes",           OutputInterpretationKind_NoYes);
+	outputInterpretationKindComboBox.addItem("Yes/No",           OutputInterpretationKind_YesNo);
+	outputInterpretationKindComboBox.addItem("Per-Pixel",        OutputInterpretationKind_PixelClassification);
+	outputInterpretationKindComboBox.addItem("Image conversion", OutputInterpretationKind_ImageConversion);
 
 	// fonts
 	for (auto widget : {&nnNetworkDescriptionLabel, &nnNetworkComplexityLabel, &nnNetworkFileSizeLabel, &nnNetworkNumberInsOutsLabel, &nnNetworkNumberOperatorsLabel,
@@ -628,7 +631,6 @@ MainWindow::MainWindow()
 		inputNormalizationChanged();
 	});
 	connect(&outputInterpretationKindComboBox, QOverload<int>::of(&QComboBox::activated), [this](int) {
-		PRINT("outputInterpretationKindComboBox: QComboBox::activated")
 		updateResultInterpretation();
 	});
 	connect(&clearComputationResults, &QAbstractButton::pressed, [this]() {
@@ -783,10 +785,6 @@ bool MainWindow::loadModelFile(const QString &filePath) {
 	if (pluginInterface->numModels() != 1)
 		FAIL("multi-model files aren't supported yet")
 	model = pluginInterface->getModel(0);
-
-	// check number of inputs/outputs
-	if (model->numInputs() != 1 || model->numOutputs() != 1)
-		FAIL("model has " << model->numInputs() << " inputs and " << model->numOutputs() << " outputs: models with multiple inputs or multiple inputs aren't supported aren't supported yet")
 
 	// render the model as SVG image
 	nnWidget.open(model);
@@ -1245,6 +1243,8 @@ void MainWindow::updateSourceImageOnScreen() {
 	// set new pixmap
 	sourceImage.setPixmap(pixmap);
 	sourceImage.resize(pixmap.width(), pixmap.height());
+	// resize the stack according to the source image
+	//sourceImageStack.resize(sourceImage.size());
 	// if it had a pixmap previously, keep the center still
 	if (hadPixmap) {
 		QPoint ptCenterCurr = hadPixmap ? sourceImage.mapToGlobal(QPoint(sourceImage.width()/2,sourceImage.height()/2)) : QPoint(0,0);
@@ -1285,7 +1285,7 @@ void MainWindow::updateResultInterpretation() {
 		if (resultShape[1] != idx1-idx0)
 			return false; // failed to interpret it
 
-		// cmpute the likelihood array
+		// compute the likelihood array
 		typedef std::tuple<unsigned/*order num*/,float/*likelihood*/> Likelihood;
 		std::vector<Likelihood> likelihoods;
 		for (unsigned i = 0, ie = resultShape[1]; i<ie; i++)
@@ -1318,7 +1318,46 @@ void MainWindow::updateResultInterpretation() {
 		// TODO
 		return false;
 	};
+	auto interpretAsImageConversion = [&]() {
+		// get tensors and shapes
+		auto inputTensorId = model->getInputs()[0]; // look at the first model input
+		auto outputTensorId = model->getOutputs()[0]; // look at the first model output
+		auto output = (*tensorData)[outputTensorId].get();
+		auto inputShape = model->getTensorShape(inputTensorId);
+		auto outputShape = model->getTensorShape(outputTensorId);
+
+		// can this be an image?
+		if (!Tensor::canBeAnImage(outputShape))
+			return false;
+		// does the image size match the input?
+		if (outputShape[0]!=inputShape[0] || outputShape[1]!=inputShape[1])
+			return false; // we don't support mismatching image sizes for now
+
+		// create the widget
+		interpretationImage.reset(new QLabel(&sourceImageStack));
+		interpretationImage->setAlignment(Qt::AlignHCenter|Qt::AlignVCenter);
+		interpretationImage->setToolTip(tr("Image resulting from the conversion of the NN input image"));
+		interpretationImage->resize(sourceImageStack.size());
+		sourceImageStack.addWidget(interpretationImage.get());
+
+		// resize the image
+		TensorShape resizedShape({{(unsigned)interpretationImage->height(), (unsigned)interpretationImage->width(), outputShape[2]}});
+		std::unique_ptr<float> outputResized(Image::resizeImage(output, outputShape, resizedShape));
+
+		// convert the output to a pixmap and set it in the widget
+		QPixmap pixmap = Image::toQPixmap(outputResized.get(), resizedShape);
+		interpretationImage->setPixmap(pixmap);
+
+		// switch to interpretationImage
+		sourceImageStack.setCurrentIndex(1);
+
+		return true;
+	};
 	auto interpretAs = [&](OutputInterpretationKind kind) {
+		// clear the previous one
+		interpretationImage.reset(nullptr);
+
+		// try to set
 		switch (kind) {
 		case OutputInterpretationKind_Undefined:
 			// no nothing
@@ -1333,14 +1372,17 @@ void MainWindow::updateResultInterpretation() {
 			return interpretAsNoYes(true);
 		case OutputInterpretationKind_PixelClassification:
 			return interpretAsPixelClassification();
+		case OutputInterpretationKind_ImageConversion:
+			return interpretAsImageConversion();
 		}
 	};
 
 	updateResultInterpretationSummaryText(false/*enable*/, tr("n/a"), tr("n/a"));
 
-	if (!computedResultExists)
+	if (!computedResultExists) {
 		makeBlack();
-	else if (interpretAs((OutputInterpretationKind)outputInterpretationKindComboBox.itemData(outputInterpretationKindComboBox.currentIndex()).toInt()))
+		interpretationImage.reset(nullptr);
+	} else if (interpretAs((OutputInterpretationKind)outputInterpretationKindComboBox.itemData(outputInterpretationKindComboBox.currentIndex()).toInt()))
 		makeBlack();
 	else
 		makeRed();

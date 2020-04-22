@@ -89,4 +89,8 @@ float* computeArgMax(const TensorShape &inputShape, const float *input, const st
 	return output.release();
 }
 
+bool canBeAnImage(const TensorShape &shape) {
+	return shape.size() == 3/*HWC*/ && (shape[2]==3 || shape[2]==1);
+}
+
 }

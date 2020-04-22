@@ -12,5 +12,6 @@ TensorShape getLastDims(const TensorShape &shape, unsigned ndims);
 TensorShape stripLeadingOnes(const TensorShape &shape);
 bool isSubset(const TensorShape &shapeLarge, const TensorShape &shapeSmall);
 float* computeArgMax(const TensorShape &inputShape, const float *input, const std::vector<float> &palette);
+bool canBeAnImage(const TensorShape &shape);
 
 }

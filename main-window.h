@@ -103,8 +103,10 @@ private: // fields
 	QComboBox                                  outputInterpretationKindComboBox;
 	QWidget                                    spacer3Widget;
 	QPushButton                                clearComputationResults;
-	QScrollArea                            sourceImageScrollArea;
-	QLabel                                   sourceImage;
+	QStackedWidget                         sourceImageStack;
+	QScrollArea                              sourceImageScrollArea;
+	QLabel                                     sourceImage;       // index#0
+	std::unique_ptr<QLabel>                  interpretationImage; // index#1: only exists when the interpretation image is possible
 	// Rhs/NN details
 	QStackedWidget                       nnDetailsStack;
 	QGroupBox                              nnNetworkDetails;   // page#0: network

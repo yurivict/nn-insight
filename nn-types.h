@@ -41,7 +41,8 @@ enum OutputInterpretationKind {
 	OutputInterpretationKind_ImageNet1000,
 	OutputInterpretationKind_NoYes,
 	OutputInterpretationKind_YesNo,
-	OutputInterpretationKind_PixelClassification
+	OutputInterpretationKind_PixelClassification,
+	OutputInterpretationKind_ImageConversion
 };
 
 typedef std::tuple<InputNormalizationRange,InputNormalizationColorOrder> InputNormalization;

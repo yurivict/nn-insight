@@ -244,6 +244,42 @@ bool compute(
 			unsigned shapeIdx = wh==WIDTH ? 2:1;
 			return std::get<0>(computePaddingValues(stride, dilationRate, inputShape[shapeIdx], filterShape[shapeIdx], outputShape[shapeIdx]));
 		};
+		auto computeDualOperator = [](
+			const float *input1, const TensorShape &input1Shape,
+			const float *input2, const TensorShape &input2Shape,
+			float *output, const TensorShape &outputShape,
+			float(*fn)(float i1, float i2)
+		) {
+			// some values
+			auto input1ShapeSize = Tensor::flatSize(input1Shape);
+			const float *input1e = input1+input1ShapeSize;
+
+			// by type of inputs
+			if (input1Shape==input2Shape) { // 2 streams of the same size produce another stream of the same size
+				// input2 can only be dynamic here
+				for (; input1<input1e; )
+					*output++ = fn(*input1++, *input2++);
+				return true;
+			} else if (input2Shape.size()==1 && input2Shape[0]==1) { // operation with a constant from the model
+				auto Const = input2[0]; // input2 can only be static here
+				for (; input1<input1e; )
+					*output++ = fn(*input1++, Const);
+				return true;
+			} else if (Tensor::isSubset(input1Shape, input2Shape)) { // operation with a smaller vector
+				// input2 can be dynamic or static here
+				auto input1e = input1+input1ShapeSize;
+				auto input2b = input2;
+				auto input2e = input2+Tensor::flatSize(input2Shape);
+				for (; input1<input1e; input1++, output++) {
+					*output = fn(*input1, *input2);
+					if (++input2 >= input2e)
+						input2 = input2b;
+				}
+				return true;
+			} else {
+				return false;
+			}
+		};
 		auto applyActivationFunction = [](size_t size, float *data, PI::ActivationFunction activationFunction) {
 			auto applyRELU = [](float &val) {
 				if (val < 0)
@@ -766,43 +802,19 @@ bool compute(
 			std::unique_ptr<float> outputData(new float[input1ShapeSize]);
 
 			// compute
-			if (input1Shape==input2Shape) { // 2 streams added to each other
-				(operatorKind==PI::KindAdd ? NnOperators::Add : NnOperators::Mul)(
-					model->getTensorShape(inputs[0]), (*tensorData)[inputs[0]].get(), // input1
-					model->getTensorShape(inputs[1]), (*tensorData)[inputs[1]].get(), // input2
-					outputShape, outputData.get() // output
-				);
-			} else if (input2Shape.size()==1 && input2Shape[0]==1) { // operation with a constant from the model
-				auto input = (*tensorData)[inputs[0]].get();
-				auto output = outputData.get();
-				const float *inpute = input+input1ShapeSize;
-				auto Const = model->getTensorData(inputs[1])[0];
-				if (operatorKind==PI::KindAdd)
-					for (; input<inpute; input++, output++)
-						*output = (*input) + Const;
-				else
-					for (; input<inpute; input++, output++)
-						*output = (*input) * Const;
-			} else if (Tensor::isSubset(input1Shape, input2Shape)) { // operation with a smaller computed vector (computed)
-				auto input1 = (*tensorData)[inputs[0]].get(); // only dynamic
-				auto input2 = getTensorDataDynamicOrStatic(inputs[1]); // dynamic or static
-				auto output = outputData.get();
-				auto input1e = input1+input1ShapeSize;
-				auto input2b = input2;
-				auto input2e = input2+Tensor::flatSize(input2Shape);
-				if (operatorKind==PI::KindAdd)
-					for (; input1<input1e; input1++, output++) {
-						*output = (*input1) + (*input2);
-						if (++input2 >= input2e)
-							input2 = input2b;
-					}
-				else
-					for (; input1<input1e; input1++, output++) {
-						*output = (*input1) * (*input2);
-						if (++input2 >= input2e)
-							input2 = input2b;
-					}
-			} else {
+			bool succ = operatorKind==PI::KindAdd ?
+				computeDualOperator( // KindAdd
+					(*tensorData)[inputs[0]].get(), model->getTensorShape(inputs[0]),
+					getTensorDataDynamicOrStatic(inputs[1]), model->getTensorShape(inputs[1]),
+					outputData.get(), outputShape,
+					[](float f1, float f2) {return f1+f2;})
+				:
+				computeDualOperator( // KindMul
+					(*tensorData)[inputs[0]].get(), model->getTensorShape(inputs[0]),
+					getTensorDataDynamicOrStatic(inputs[1]), model->getTensorShape(inputs[1]),
+					outputData.get(), outputShape,
+					[](float f1, float f2) {return f1*f2;});
+			if (!succ) {
 				cbWarningMessage(STR("Computation didn't succeed: operator #" << (oid+1) <<
 				                     ": " << operatorKind << " isn't yet implemented for shapes " << input1Shape << " and " << input2Shape));
 				return false; // failed to compute the model to the end

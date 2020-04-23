@@ -50,18 +50,6 @@ void AveragePool(
 	unsigned filterWidth, unsigned filterHeight
 );
 
-void Add(
-	const TensorShape &input1Shape, const float *input1Data,
-	const TensorShape &input2Shape, const float *input2Data,
-	const TensorShape &outputShape, float *outputData
-);
-
-void Mul(
-	const TensorShape &input1Shape, const float *input1Data,
-	const TensorShape &input2Shape, const float *input2Data,
-	const TensorShape &outputShape, float *outputData
-);
-
 void Softmax(
 	const TensorShape &inputShape, const float *inputData,
 	const TensorShape &outputShape, float *outputData,

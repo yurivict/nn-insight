@@ -15,7 +15,7 @@ if (true) {
 }
 #endif
 
-
+// list is in the alphabetic order
 CASE(ABS, Unknown)
 CASE(ADD, Add)
 CASE(ADD_N, Unknown)
@@ -123,7 +123,7 @@ CASE(SPLIT, Unknown)
 CASE(SPLIT_V, Unknown)
 CASE(SQRT, Unknown)
 CASE(SQUARE, Unknown)
-CASE(SQUARED_DIFFERENCE, Unknown)
+CASE(SQUARED_DIFFERENCE, SquaredDifference)
 CASE(SQUEEZE, Unknown)
 CASE(STRIDED_SLICE, StridedSlice)
 CASE(SUB, Sub)

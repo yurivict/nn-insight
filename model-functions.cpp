@@ -68,6 +68,8 @@ size_t computeOperatorFlops(const PluginInterface::Model *model, PluginInterface
 	  case PluginInterface::KindArgMax:
 	  case PluginInterface::KindArgMin:
 		return Tensor::flatSize(model->getTensorShape(inputs[0]));
+	  case PluginInterface::KindSquaredDifference:
+		return Tensor::flatSize(model->getTensorShape(inputs[0]))*2;
 	  default:
 		return 0; // TODO
 	}

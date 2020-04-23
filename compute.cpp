@@ -922,6 +922,44 @@ bool compute(
 		} case PI::KindArgMin: {
 			doArgMxx(std::numeric_limits<float>::max(), [](float f1,float f2) {return f1<f2;});
 			break;
+		} case PI::KindSquaredDifference: {
+			assert(inputs.size()==2 && outputs.size()==1);
+			assert(opts); // need to have options present
+			assert((*tensorData)[inputs[0]]); // need to have the input data present
+			assert(model->getTensorShape(inputs[0]) == model->getTensorShape(outputs[0])); // produces the same shape as consumes TODO should be in the model validation stage
+
+			assert(opts->size() == 0); // all options are parsed
+
+			PRINT_OPTS(operatorKind << ": have " << opts->size() << " options")
+
+			// tensors
+			auto input1Shape = model->getTensorShape(inputs[0]);
+			auto input2Shape = model->getTensorShape(inputs[1]);
+			auto outputShape = model->getTensorShape(outputs[0]);
+			auto input1ShapeSize = Tensor::flatSize(input1Shape);
+
+			// create output data
+			std::unique_ptr<float> outputData(new float[input1ShapeSize]);
+
+			// compute
+			if (!computeDualOperator(
+					(*tensorData)[inputs[0]].get(), model->getTensorShape(inputs[0]),
+					getTensorDataDynamicOrStatic(inputs[1]), model->getTensorShape(inputs[1]),
+					outputData.get(), outputShape,
+					[](float f1, float f2) {return (f1-f2)*(f1-f2);}))
+			{
+				cbWarningMessage(STR("Computation didn't succeed: operator #" << (oid+1) <<
+				                     ": " << operatorKind << " isn't yet implemented for shapes " << input1Shape << " and " << input2Shape));
+				return false; // failed to compute the model to the end
+			}
+
+			// save the data
+			(*tensorData)[outputs[0]].reset(outputData.release());
+
+			// notify the caller
+			cbTensorComputed(outputs[0]);
+
+			break;
 		} case PI::KindResizeBilinear: {
 			assert(inputs.size()==1 && outputs.size()==1);
 			assert(opts); // need to have options present

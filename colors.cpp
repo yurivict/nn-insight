@@ -42,6 +42,8 @@ QColor getOperatorColor(PluginInterface::OperatorKind okind) {
 	case PluginInterface::KindArgMax:
 	case PluginInterface::KindArgMin:
 		return QColor(128,128,0); // olive
+	case PluginInterface::KindSquaredDifference:
+		return QColor(200,75,214); // violet
 	case PluginInterface::KindResizeBilinear:
 		return QColor(163,62,241);
 	default: // unknown?

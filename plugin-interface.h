@@ -57,6 +57,7 @@ public:
 		// Misc
 		KindArgMax,
 		KindArgMin,
+		KindSquaredDifference,
 		//
 		KindResizeBilinear,
 		//

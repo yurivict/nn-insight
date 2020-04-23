@@ -30,6 +30,7 @@ public:
 		KindConv2D,
 		KindDepthwiseConv2D,
 		KindPad,
+		KindMirrorPad,
 		KindFullyConnected,
 		KindLocalResponseNormalization,
 		KindMaxPool,

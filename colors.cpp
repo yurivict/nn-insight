@@ -11,6 +11,7 @@ QColor getOperatorColor(PluginInterface::OperatorKind okind) {
 	case PluginInterface::KindDepthwiseConv2D:
 		return QColor(100,100,255);
 	case PluginInterface::KindPad:
+	case PluginInterface::KindMirrorPad:
 		return QColor(212,170,11);
 	case PluginInterface::KindFullyConnected:
 		return QColor(50,50,150);

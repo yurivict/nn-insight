@@ -41,6 +41,8 @@ public:
 		KindTanh,
 		KindLogistic,
 		KindHardSwish,
+		// misc math functions
+		KindRSqrt,
 		//
 		KindAdd,
 		KindSub,

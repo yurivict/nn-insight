@@ -244,6 +244,33 @@ bool compute(
 			unsigned shapeIdx = wh==WIDTH ? 2:1;
 			return std::get<0>(computePaddingValues(stride, dilationRate, inputShape[shapeIdx], filterShape[shapeIdx], outputShape[shapeIdx]));
 		};
+		auto computeSingleOperator = [&](float(*fn)(float f)) {
+			assert(inputs.size()==1 && outputs.size()==1);
+			assert(!opts || opts->empty()); // h-swish has no options
+			assert((*tensorData)[inputs[0]]); // need to have the input data present
+
+			// tensors
+			auto inputShape = model->getTensorShape(inputs[0]);
+			auto outputShape = model->getTensorShape(outputs[0]);
+			auto inputShapeSize = Tensor::flatSize(inputShape);
+			assert(inputShape==outputShape);
+			UNUSED(outputShape)
+
+			// create output data
+			std::unique_ptr<float> outputData(new float[inputShapeSize]);
+
+			// compute
+			auto input = (*tensorData)[inputs[0]].get();
+			auto output = outputData.get();
+			for (auto inpute = input+inputShapeSize; input<inpute; input++, output++)
+				*output = fn(*input);
+
+			// save the data
+			(*tensorData)[outputs[0]].reset(outputData.release());
+
+			// notify the caller
+			cbTensorComputed(outputs[0]);
+		};
 		auto computeDualOperator = [](
 			const float *input1, const TensorShape &input1Shape,
 			const float *input2, const TensorShape &input2Shape,
@@ -771,6 +798,9 @@ bool compute(
 			// notify the caller
 			cbTensorComputed(outputs[0]);
 
+			break;
+		} case PI::KindRSqrt: {
+			computeSingleOperator([](float f) -> float {return 1./std::sqrt(f);});
 			break;
 		} case PI::KindAdd:
 		  case PI::KindMul: {

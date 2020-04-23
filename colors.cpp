@@ -26,6 +26,8 @@ QColor getOperatorColor(PluginInterface::OperatorKind okind) {
 	case PluginInterface::KindLogistic:
 	case PluginInterface::KindHardSwish:
 		return QColor(120,14,30); // activation functions
+	case PluginInterface::KindRSqrt:
+		return QColor(240,80,80); // misc math functions
 	case PluginInterface::KindAdd:
 	case PluginInterface::KindSub:
 	case PluginInterface::KindMul:

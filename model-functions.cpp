@@ -63,6 +63,8 @@ size_t computeOperatorFlops(const PluginInterface::Model *model, PluginInterface
 		return 2*Tensor::flatSize(model->getTensorShape(inputs[0])); // compare and multiply
 	  case PluginInterface::KindHardSwish:
 		return 5*Tensor::flatSize(model->getTensorShape(inputs[0])); // variable number of operations, 1..7, depending on value
+	  case PluginInterface::KindRSqrt:
+		return 25*Tensor::flatSize(model->getTensorShape(inputs[0])); // it's very expensive to compute RSqrt
 	  case PluginInterface::KindConcatenation:
 		return Tensor::flatSize(model->getTensorShape(inputs[0])); // unclear how to count flops for concatenation
 	  case PluginInterface::KindArgMax:

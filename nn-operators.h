@@ -62,6 +62,12 @@ void ResizeBilinear(
 	bool alignCorners
 );
 
+void ResizeNearestNeighbor(
+	const TensorShape &inputShape, const float *inputData,
+	const TensorShape &outputShape, float *outputData,
+	bool alignCorners
+);
+
 void LocalResponseNormalization(
 	const TensorShape &inputShape, const float *inputData,
 	const TensorShape &outputShape, float *outputData,

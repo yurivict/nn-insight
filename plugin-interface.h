@@ -63,6 +63,7 @@ public:
 		KindSquaredDifference,
 		//
 		KindResizeBilinear,
+		KindResizeNearestNeighbor,
 		//
 		KindUnknown
 	};

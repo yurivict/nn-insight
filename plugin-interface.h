@@ -57,11 +57,13 @@ public:
 		KindConcatenation,
 		KindStridedSlice,
 		KindMean,
+		// Data manipulations
+		KindDequantize,  // convert any type of qint8, quint8, qint32, qint16, quint16 float
 		// Misc
 		KindArgMax,
 		KindArgMin,
 		KindSquaredDifference,
-		//
+		// Resizes
 		KindResizeBilinear,
 		KindResizeNearestNeighbor,
 		//

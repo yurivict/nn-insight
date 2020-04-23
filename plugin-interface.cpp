@@ -17,6 +17,7 @@ std::ostream& operator<<(std::ostream &os, PluginInterface::OperatorKind okind) 
 	switch (okind) {
   	CASE(Conv2D) CASE(DepthwiseConv2D) CASE(Pad) CASE(MirrorPad) CASE(FullyConnected) CASE(LocalResponseNormalization) CASE(MaxPool) CASE(AveragePool) CASE(Add) CASE(Relu) CASE(Relu6) CASE(LeakyRelu)
 	CASE(Tanh) CASE(Logistic) CASE(HardSwish) CASE(RSqrt) CASE(Sub) CASE(Mul) CASE(Div) CASE(Maximum) CASE(Minimum) CASE(Transpose) CASE(Reshape) CASE(Softmax) CASE(Concatenation)
+	CASE(Dequantize)
 	CASE(StridedSlice) CASE(Mean) CASE(ArgMax) CASE(ArgMin) CASE(SquaredDifference) CASE(ResizeBilinear) CASE(ResizeNearestNeighbor)
 	CASE(Unknown)
 	}

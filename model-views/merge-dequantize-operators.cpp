@@ -13,7 +13,7 @@ MergeDequantizeOperators::MergeDequantizeOperators(const PluginInterface::Model 
 : original(original_)
 {
 	// find all dequantize operators and their tensor outputs
-	unsigned numDequantizeOperagtors = 0;
+	unsigned numDequantizeOperators = 0;
 	tensorIsDequantizeInput .resize(original->numTensors());
 	tensorIsDequantizeOutput.resize(original->numTensors());
 	for (PI::OperatorId oid = 0, oide = original->numOperators(); oid < oide; oid++)
@@ -21,7 +21,7 @@ MergeDequantizeOperators::MergeDequantizeOperators(const PluginInterface::Model 
 			std::vector<PI::TensorId> inputs, outputs;
 			original->getOperatorIo(oid, inputs, outputs);
 			//PRINT("oid=" << oid << " is Dequantize: inputs.size=" << inputs.size() << " outputs.size=" << outputs.size())
-			numDequantizeOperagtors++;
+			numDequantizeOperators++;
 			if (inputs.size() != 1 || outputs.size() != 1)
 				FAIL("MergeDequantizeOperators: Dequantize operator should have 1 input and 1 output,"
 				     " found a Dequantize operator with " << inputs.size() << " input(s) and " << outputs.size() << " output(s)")
@@ -32,7 +32,7 @@ MergeDequantizeOperators::MergeDequantizeOperators(const PluginInterface::Model 
 		} else
 			operatorMap.push_back(oid);
 	// print a notice to the user
-	PRINT("MergeDequantizeOperators: merged " << numDequantizeOperagtors << " operators out of a total of " << original->numOperators() << " operators in a model")
+	PRINT("MergeDequantizeOperators: merged " << numDequantizeOperators << " operators out of a total of " << original->numOperators() << " operators in a model")
 }
 
 unsigned MergeDequantizeOperators::numInputs() const {
@@ -85,7 +85,7 @@ bool MergeDequantizeOperators::getTensorHasData(PI::TensorId tensorId) const {
 	assert(!tensorIsDequantizeInput[tensorId]); // dequantize input can't be queried
 	if (tensorIsDequantizeOutput[tensorId]) {
 		assert(!original->getTensorHasData(tensorId));
-		return true;
+		return true; // Dequantize output is presented as static data
 	} else
 		return original->getTensorHasData(tensorId);
 }

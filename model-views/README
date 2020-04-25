@@ -1,0 +1,5 @@
+Code that provides various views of model interface is here.
+
+View exposes the same interface, but presents the altered
+version of the NN model, or an entirely made-up NN model.
+

@@ -14,6 +14,7 @@
 #include "compute.h"
 #include "svg-graphics-generator.h"
 #include "svg-push-button.h"
+#include "model-views/merge-dequantize-operators.h"
 
 #include <QByteArray>
 #include <QEvent>
@@ -32,6 +33,7 @@
 #include <QSettings>
 
 #include <assert.h>
+#include <stdlib.h> // only for ::getenv
 
 #include <map>
 #include <memory>
@@ -786,6 +788,10 @@ bool MainWindow::loadModelFile(const QString &filePath) {
 	if (pluginInterface->numModels() != 1)
 		FAIL("multi-model files aren't supported yet")
 	model.reset(pluginInterface->getModel(0));
+
+	// add ModelViews::MergeDequantizeOperators
+	if (!::getenv("NN_INSIGHT_NO_MERGE_DEQUANTIZE_OPERATORS")) // XXX TODO need to have a UI-based options screen for such choices
+		model.reset(new ModelViews::MergeDequantizeOperators(model.release()));
 
 	// render the model as SVG image
 	nnWidget.open(model.get());

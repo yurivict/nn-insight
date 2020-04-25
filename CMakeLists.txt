@@ -53,6 +53,9 @@ include_directories(${PROJECT_SOURCE_DIR}/3rdparty) # for avir/avir.h to be foun
 ##
 ## Targets
 ##
+file(GLOB MODE_VIEWS_CPP
+	model-views/*.cpp
+)
 add_executable(nn-insight
 	main.cpp
 	main-window.cpp
@@ -79,6 +82,7 @@ add_executable(nn-insight
 	constant-values.cpp
 	colors.cpp
 	palette.cpp
+	${MODE_VIEWS_CPP}
 	3rdparty/tensorflow/tflite-reference-implementation.cpp
 	resources.qrc
 )

@@ -600,7 +600,7 @@ MainWindow::MainWindow()
 			(InputNormalizationColorOrder)inputNormalizationColorOrderComboBox.currentData().toUInt()
 		};
 
-		bool succ = Compute::compute(model, imageRegion,inputNormalization, sourceTensorDataAsUsed,sourceTensorShape, tensorData, [this](const std::string &msg) {
+		bool succ = Compute::compute(model.get(), imageRegion,inputNormalization, sourceTensorDataAsUsed,sourceTensorShape, tensorData, [this](const std::string &msg) {
 			Util::warningOk(this, S2Q(msg));
 		}, [](PluginInterface::TensorId tensorId) {
 			//PRINT("Tensor DONE: tid=" << tensorId)
@@ -743,6 +743,7 @@ MainWindow::MainWindow()
 
 MainWindow::~MainWindow() {
 	if (model) {
+		model.reset(nullptr);
 		pluginInterface.reset(nullptr);
 		PluginManager::unloadPlugin(plugin);
 	}
@@ -784,22 +785,22 @@ bool MainWindow::loadModelFile(const QString &filePath) {
 		FAIL("failed to load the model '" << Q2S(filePath) << "'")
 	if (pluginInterface->numModels() != 1)
 		FAIL("multi-model files aren't supported yet")
-	model = pluginInterface->getModel(0);
+	model.reset(pluginInterface->getModel(0));
 
 	// render the model as SVG image
-	nnWidget.open(model);
-	nnNetworkOperatorsListWidget.setNnModel(model);
+	nnWidget.open(model.get());
+	nnNetworkOperatorsListWidget.setNnModel(model.get());
 	updateSectionWidgetsVisibility();
 
 	// guess the output interpretation type
-	Util::selectComboBoxItemWithItemData(outputInterpretationKindComboBox, (int)ModelFunctions::guessOutputInterpretationKind(model));
+	Util::selectComboBoxItemWithItemData(outputInterpretationKindComboBox, (int)ModelFunctions::guessOutputInterpretationKind(model.get()));
 
 	// switch NN details to show the whole network info page
 	updateNetworkDetailsPage();
 	nnDetailsStack.setCurrentIndex(/*page#*/0);
 
 	// set window title
-	setWindowTitle(QString("NN Insight: %1 (%2)").arg(filePath).arg(S2Q(Util::formatFlops(ModelFunctions::computeModelFlops(model)))));
+	setWindowTitle(QString("NN Insight: %1 (%2)").arg(filePath).arg(S2Q(Util::formatFlops(ModelFunctions::computeModelFlops(model.get())))));
 
 	return true; // success
 }
@@ -857,7 +858,7 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 			nnOperatorDetailsLayout.addWidget(label,         row,   2/*column*/);
 			// has buffer? is variable?
 			label = makeTextSelectable(
-				new QLabel(QString("<%1>").arg(S2Q(ModelFunctions::tensorKind(model, tensorId))),
+				new QLabel(QString("<%1>").arg(S2Q(ModelFunctions::tensorKind(model.get(), tensorId))),
 				&nnOperatorDetails));
 			label->setToolTip(tr("Tensor type"));
 			label->setAlignment(Qt::AlignCenter|Qt::AlignVCenter);
@@ -943,12 +944,12 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 
 	// set texts
 	nnOperatorTypeValue.setText(S2Q(STR(model->getOperatorKind(operatorId))));
-	nnOperatorComplexityValue.setText(S2Q(Util::formatFlops(ModelFunctions::computeOperatorFlops(model, operatorId))));
+	nnOperatorComplexityValue.setText(S2Q(Util::formatFlops(ModelFunctions::computeOperatorFlops(model.get(), operatorId))));
 	unsigned unused;
 	nnOperatorStaticDataValue.setText(QString("%1 bytes")
-		.arg(S2Q(Util::formatUIntHumanReadable(ModelFunctions::sizeOfOperatorStaticData(model, operatorId, unused)))));
+		.arg(S2Q(Util::formatUIntHumanReadable(ModelFunctions::sizeOfOperatorStaticData(model.get(), operatorId, unused)))));
 	float dataRateIncreaseOboveInput, modelInputToOut;
-	nnOperatorDataRatioValue.setText(S2Q(ModelFunctions::dataRatioOfOperatorStr(model, operatorId, dataRateIncreaseOboveInput, modelInputToOut)));
+	nnOperatorDataRatioValue.setText(S2Q(ModelFunctions::dataRatioOfOperatorStr(model.get(), operatorId, dataRateIncreaseOboveInput, modelInputToOut)));
 	nnOperatorDataRatioValue.setStyleSheet(dataRateIncreaseOboveInput>1 ? "QLabel{color: red;}" : "QLabel{color: black;}");
 }
 
@@ -959,7 +960,7 @@ void MainWindow::showTensorDetails(PluginInterface::TensorId tensorId) {
 void MainWindow::showTensorDetails(PluginInterface::TensorId tensorId, const char *label) {
 	nnDetailsStack.setCurrentIndex(/*page#*/2);
 	nnTensorDetails.setTitle(QString("%1Tensor#%2: %3").arg(label).arg(tensorId).arg(S2Q(model->getTensorName(tensorId))));
-	nnTensorKindValue .setText(S2Q(ModelFunctions::tensorKind(model, tensorId)));
+	nnTensorKindValue .setText(S2Q(ModelFunctions::tensorKind(model.get(), tensorId)));
 	nnTensorShapeValue.setText(S2Q(STR(model->getTensorShape(tensorId))));
 	nnTensorTypeValue .setText("float32"); // TODO types aren't implemented yet
 	// tensor data table
@@ -1173,7 +1174,7 @@ void MainWindow::updateNetworkDetailsPage() {
 	};
 
 	nnNetworkDescriptionText   .setText(S2Q(pluginInterface->modelDescription()));
-	nnNetworkComplexityText    .setText(S2Q(Util::formatFlops(ModelFunctions::computeModelFlops(model))));
+	nnNetworkComplexityText    .setText(S2Q(Util::formatFlops(ModelFunctions::computeModelFlops(model.get()))));
 	nnNetworkFileSizeText      .setText(QString(tr("%1 bytes")).arg(S2Q(Util::formatUIntHumanReadable(Util::getFileSize(S2Q(pluginInterface->filePath()))))));
 	nnNetworkNumberInsOutsText .setText(QString("%1 %2, %3 %4")
 		.arg(model->numInputs())
@@ -1187,7 +1188,7 @@ void MainWindow::updateNetworkDetailsPage() {
 	);
 	unsigned staticDataTensors = 0;
 	size_t   maxStaticDataPerOperator = 0;
-	auto sizeOfStaticData = ModelFunctions::sizeOfModelStaticData(model, staticDataTensors, maxStaticDataPerOperator);
+	auto sizeOfStaticData = ModelFunctions::sizeOfModelStaticData(model.get(), staticDataTensors, maxStaticDataPerOperator);
 	nnNetworkStaticDataText.setText(QString(tr("%1 bytes in %2 %3, average %4 bytes per operator, max %5 bytes per operator"))
 		.arg(S2Q(Util::formatUIntHumanReadable(sizeOfStaticData)))
 		.arg(staticDataTensors)
@@ -1267,7 +1268,7 @@ void MainWindow::updateCurrentRegionText() {
 }
 
 void MainWindow::updateResultInterpretation() {
-	bool computedResultExists = model!=nullptr && (bool)tensorData && (*tensorData)[model->getOutputs()[0]].get();
+	bool computedResultExists = model && (bool)tensorData && (*tensorData)[model->getOutputs()[0]].get();
 
 	// helpers
 	auto makeRed = [&]() {
@@ -1424,7 +1425,7 @@ std::array<unsigned,4> MainWindow::getVisibleImageRegion() const {
 
 void MainWindow::updateSectionWidgetsVisibility() {
 	bool haveImage = (bool)sourceTensorDataAsLoaded;
-	bool haveNn    = model!=nullptr;
+	bool haveNn    = (model.get() != nullptr);
 
 	sourceWidget      .setVisible(haveImage);
 	nnDetailsStack    .setVisible(haveNn);

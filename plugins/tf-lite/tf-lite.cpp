@@ -161,7 +161,6 @@ class TfLitePlugin : public PluginInterface {
 	void*                                 mmappedPtr;
 	const tflite::Model*                  model;
 	std::string                           err;             // error message in case the error occurs
-	std::unique_ptr<Model>                modelObj;        // the model that we own
 
 public:
 	TfLitePlugin()
@@ -233,7 +232,6 @@ public: // interface implementation
 
 		// return
 		modelFileName = modelFileName_;
-		modelObj.reset(new Model(this, model->subgraphs()->Get(0)));
 		return true;
 	}
 
@@ -249,12 +247,8 @@ public: // interface implementation
 			std::cerr << "ERROR only index=1 is available for TF Lite models" << std::endl;
 			return nullptr;
 		}
-		if (modelObj.get() == nullptr) {
-			std::cerr << "ERROR 'open' hasn't been called" << std::endl;
-			return nullptr;
-		}
 
-		return modelObj.get();
+		return new Model(this, model->subgraphs()->Get(0)); // returns the object ownership
 	}
 	void write(const PluginInterface::Model *model, const std::string &fileName) const override {
 		PRINT("TfLite plugin doesn't support model writing yet")
@@ -264,7 +258,6 @@ private:
 	void closeFileReleaseMemory() {
 		// delete the memory object
 		modelFileName.clear();
-		modelObj.reset(nullptr);
 		model = nullptr;
 
 		// unmap

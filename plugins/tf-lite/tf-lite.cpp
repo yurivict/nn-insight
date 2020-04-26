@@ -156,13 +156,16 @@ class TfLitePlugin : public PluginInterface {
 					return false;
 				}
 			}
-			const float* getTensorDataF32(TensorId tensorId) const override {
-				assert(subgraph->tensors()->Get(tensorId)->type() == tflite::TensorType_FLOAT32);
+			const void* getTensorData(TensorId tensorId) const override {
 				auto buffer = subgraph->tensors()->Get(tensorId)->buffer();
 				assert(buffer < plugin->model->buffers()->size());
 				auto data = plugin->model->buffers()->Get(buffer)->data();
 				assert(data!=nullptr && data->size()!=0);
-				return (const float*)data->Data();
+				return data->Data();
+			}
+			const float* getTensorDataF32(TensorId tensorId) const override {
+				assert(subgraph->tensors()->Get(tensorId)->type() == tflite::TensorType_FLOAT32);
+				return static_cast<const float*>(Model::getTensorData(tensorId));
 			}
 			bool getTensorIsVariableFlag(TensorId tensorId) const override {
 				return subgraph->tensors()->Get(tensorId)->is_variable();

@@ -37,6 +37,7 @@ public: // interface implementation
 	PI::DataType                getTensorType(PI::TensorId tensorId) const override;
 	std::string                 getTensorName(PI::TensorId tensorId) const override;
 	bool                        getTensorHasData(PI::TensorId tensorId) const override;
+	const void*                 getTensorData(PI::TensorId tensorId) const override;
 	const float*                getTensorDataF32(PI::TensorId tensorId) const override;
 	bool                        getTensorIsVariableFlag(PI::TensorId tensorId) const override;
 

@@ -242,7 +242,7 @@ if (false) {
 		virtual DataType                getTensorType(TensorId tensorId) const = 0;
 		virtual std::string             getTensorName(TensorId tensorId) const = 0;
 		virtual bool                    getTensorHasData(TensorId tensorId) const = 0;                                  // tensors that are fixed have buffers
-		virtual const float*            getTensorData(TensorId tensorId) const = 0;                                     // can only be called when getTensorHasData()=true
+		virtual const float*            getTensorDataF32(TensorId tensorId) const = 0;                                  // can only be called when getTensorHasData()=true
 		virtual bool                    getTensorIsVariableFlag(TensorId tensorId) const = 0;                           // some tensors are variables that can be altered
 
 	public: // convenience functions

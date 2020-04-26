@@ -1475,7 +1475,7 @@ void MainWindow::showNnTensorData2D() {
 	assert(nnCurrentTensorId >= 0);
 	if (Tensor::numMultiDims(model->getTensorShape(nnCurrentTensorId)) >= 2) {
 		nnTensorData2D.reset(new DataTable2D(model->getTensorShape(nnCurrentTensorId),
-			model->isTensorComputed(nnCurrentTensorId) ? (*tensorData.get())[nnCurrentTensorId].get() : model->getTensorData(nnCurrentTensorId),
+			model->isTensorComputed(nnCurrentTensorId) ? (*tensorData.get())[nnCurrentTensorId].get() : model->getTensorDataF32(nnCurrentTensorId),
 			&nnTensorDetails
 		));
 		nnTensorDetailsLayout.addWidget(nnTensorData2D.get(),   3/*row*/, 0/*col*/,  1/*rowSpan*/, 2/*columnSpan*/);

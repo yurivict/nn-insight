@@ -156,7 +156,8 @@ class TfLitePlugin : public PluginInterface {
 					return false;
 				}
 			}
-			const float* getTensorData(TensorId tensorId) const override {
+			const float* getTensorDataF32(TensorId tensorId) const override {
+				assert(subgraph->tensors()->Get(tensorId)->type() == tflite::TensorType_FLOAT32);
 				auto buffer = subgraph->tensors()->Get(tensorId)->buffer();
 				assert(buffer < plugin->model->buffers()->size());
 				auto data = plugin->model->buffers()->Get(buffer)->data();

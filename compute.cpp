@@ -236,7 +236,7 @@ bool compute(
 			auto &dynamic = (*tensorData)[tensorId];
 			assert(dynamic || model->getTensorHasData(tensorId)); // at least one of dynamic and static should be available
 			assert(!(dynamic && model->getTensorHasData(tensorId))); // both dynamic and static can't be available
-			return dynamic ? dynamic.get() : model->getTensorData(tensorId);
+			return dynamic ? dynamic.get() : model->getTensorDataF32(tensorId);
 		};
 		auto translatePadding = [](unsigned stride, unsigned dilationRate,
 		                           WidthHeight wh, const TensorShape &inputShape, const TensorShape &filterShape, const TensorShape &outputShape) {
@@ -433,8 +433,8 @@ bool compute(
 			// compute
 			NnOperators::Conv2D(
 				inputShape, (*tensorData)[inputs[0]].get(), // input
-				filterShape, model->getTensorData(inputs[1]), // filter - assume that it is always a static tensor
-				model->getTensorShape(inputs[2]), model->getTensorData(inputs[2]), // bias - assume that it is always a static tensor
+				filterShape, model->getTensorDataF32(inputs[1]), // filter - assume that it is always a static tensor
+				model->getTensorShape(inputs[2]), model->getTensorDataF32(inputs[2]), // bias - assume that it is always a static tensor
 				outputShape, outputData.get(), // output
 				translatePadding(strideWidth,  dilationWidth,  WIDTH,  inputShape, filterShape, outputShape),
 				translatePadding(strideHeight, dilationHeight, HEIGHT, inputShape, filterShape, outputShape),
@@ -500,8 +500,8 @@ bool compute(
 			// compute
 			NnOperators::DepthwiseConv2D(
 				inputShape, (*tensorData)[inputs[0]].get(), // input
-				filterShape, model->getTensorData(inputs[1]), // filter
-				model->getTensorShape(inputs[2]), model->getTensorData(inputs[2]), // bias
+				filterShape, model->getTensorDataF32(inputs[1]), // filter
+				model->getTensorShape(inputs[2]), model->getTensorDataF32(inputs[2]), // bias
 				outputShape, outputData.get(), // output
 				translatePadding(strideWidth,  dilationWidth,  WIDTH,  inputShape, filterShape, outputShape),
 				translatePadding(strideHeight, dilationHeight, HEIGHT, inputShape, filterShape, outputShape),
@@ -563,8 +563,8 @@ bool compute(
 			// compute
 			NnOperators::FullyConnected(
 				inputShape, (*tensorData)[inputs[0]].get(), // input
-				filterShape, model->getTensorData(inputs[1]), // filter
-				model->getTensorShape(inputs[2]), model->getTensorData(inputs[2]), // bias
+				filterShape, model->getTensorDataF32(inputs[1]), // filter
+				model->getTensorShape(inputs[2]), model->getTensorDataF32(inputs[2]), // bias
 				outputShape, outputData.get() // output
 			);
 

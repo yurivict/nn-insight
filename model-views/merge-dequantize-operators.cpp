@@ -95,9 +95,9 @@ bool MergeDequantizeOperators::getTensorHasData(PI::TensorId tensorId) const {
 		return original->getTensorHasData(tensorId);
 }
 
-const float* MergeDequantizeOperators::getTensorData(PI::TensorId tensorId) const {
+const float* MergeDequantizeOperators::getTensorDataF32(PI::TensorId tensorId) const {
 	assert(!tensorIsDequantizeInput[tensorId]); // dequantize input can't be queried
-	return original->getTensorData(tensorId);
+	return original->getTensorDataF32(tensorId);
 }
 
 bool MergeDequantizeOperators::getTensorIsVariableFlag(PI::TensorId tensorId) const {

@@ -848,16 +848,16 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
 			nnOperatorDetailsLayout.addWidget(label,         row,   1/*column*/);
 			// tensor shape
-			auto describeShape = [](const TensorShape &shape) {
+			auto describeShape = [](const TensorShape &shape, PluginInterface::DataType dataType) {
 				auto flatSize = Tensor::flatSize(shape);
 				return STR(shape <<
 				         " (" <<
-				             Util::formatUIntHumanReadable(flatSize) << " " << Q2S(tr("floats")) << ", " <<
+				             Util::formatUIntHumanReadable(flatSize) << " " << dataType << " " << Q2S(tr("values")) << ", " <<
 				             Util::formatUIntHumanReadable(flatSize*sizeof(float)) << " " << Q2S(tr("bytes")) <<
 				          ")"
 				);
 			};
-			label = makeTextSelectable(new QLabel(S2Q(describeShape(model->getTensorShape(tensorId))), &nnOperatorDetails));
+			label = makeTextSelectable(new QLabel(S2Q(describeShape(model->getTensorShape(tensorId), model->getTensorType(tensorId))), &nnOperatorDetails));
 			label->setToolTip(tr("Tensor shape and data size"));
 			label->setAlignment(Qt::AlignLeft|Qt::AlignVCenter);
 			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));

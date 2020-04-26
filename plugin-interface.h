@@ -70,6 +70,17 @@ public:
 		KindUnknown
 	};
 
+	enum DataType {
+		DataType_Float16,
+		DataType_Float32,
+		DataType_Int8,
+		DataType_UInt8,
+		DataType_Int16,
+		DataType_Int32,
+		DataType_Int64
+		// TODO? BOOL, STRING, COMPLEX64 are also supported in TfLite specification
+	};
+
 	enum PaddingType {
 		PaddingType_SAME,    // pad with zeros where data isn't available, result has the same shape
 		PaddingType_VALID    // no padding, iterate only when all data is available for the extent of the kernel, result has a smaller shape
@@ -206,6 +217,7 @@ if (false) {
 	typedef std::vector<OperatorOption> OperatorOptionsList;
 
 	friend std::ostream& operator<<(std::ostream &os, OperatorKind okind);
+	friend std::ostream& operator<<(std::ostream &os, DataType dataType);
 	friend std::ostream& operator<<(std::ostream &os, PaddingType paddingType);
 	friend std::ostream& operator<<(std::ostream &os, ActivationFunction afunc);
 	friend std::ostream& operator<<(std::ostream &os, OperatorOptionName optName);
@@ -227,6 +239,7 @@ if (false) {
 		virtual OperatorOptionsList*    getOperatorOptions(unsigned operatorIdx) const = 0;
 		virtual unsigned                numTensors() const = 0;                                                         // number of tensors in this model
 		virtual TensorShape             getTensorShape(TensorId tensorId) const = 0;
+		virtual DataType                getTensorType(TensorId tensorId) const = 0;
 		virtual std::string             getTensorName(TensorId tensorId) const = 0;
 		virtual bool                    getTensorHasData(TensorId tensorId) const = 0;                                  // tensors that are fixed have buffers
 		virtual const float*            getTensorData(TensorId tensorId) const = 0;                                     // can only be called when getTensorHasData()=true

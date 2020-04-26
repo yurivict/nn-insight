@@ -76,6 +76,11 @@ TensorShape MergeDequantizeOperators::getTensorShape(PI::TensorId tensorId) cons
 	return original->getTensorShape(tensorId);
 }
 
+PI::DataType MergeDequantizeOperators::getTensorType(PI::TensorId tensorId) const {
+	assert(!tensorIsDequantizeInput[tensorId]); // dequantize input can't be queried
+	return original->getTensorType(tensorId);
+}
+
 std::string MergeDequantizeOperators::getTensorName(PI::TensorId tensorId) const {
 	assert(!tensorIsDequantizeInput[tensorId]); // dequantize input can't be queried
 	return original->getTensorName(tensorId);

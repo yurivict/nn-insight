@@ -131,6 +131,19 @@ class TfLitePlugin : public PluginInterface {
 					{ } // leave the shape empty: it must be a scalar in such case
 				return shape;
 			}
+			DataType getTensorType(TensorId tensorId) const override {
+				switch (subgraph->tensors()->Get(tensorId)->type()) {
+				case tflite::TensorType_FLOAT16: return DataType_Float16;
+				case tflite::TensorType_FLOAT32: return DataType_Float32;
+				case tflite::TensorType_INT8:    return DataType_Int8;
+				case tflite::TensorType_UINT8:   return DataType_UInt8;
+				case tflite::TensorType_INT16:   return DataType_Int16;
+				case tflite::TensorType_INT32:   return DataType_Int32;
+				case tflite::TensorType_INT64:   return DataType_Int64;
+				default:
+					FAIL("unknown TfLite tensor type code=" << subgraph->tensors()->Get(tensorId)->type())
+				}
+			}
 			std::string getTensorName(TensorId tensorId) const override {
 				return subgraph->tensors()->Get(tensorId)->name()->c_str();
 			}

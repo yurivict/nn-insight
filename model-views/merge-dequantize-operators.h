@@ -34,6 +34,7 @@ public: // interface implementation
 	PI::OperatorOptionsList*    getOperatorOptions(unsigned operatorIdx) const override;
 	unsigned                    numTensors() const override;
 	TensorShape                 getTensorShape(PI::TensorId tensorId) const override;
+	PI::DataType                getTensorType(PI::TensorId tensorId) const override;
 	std::string                 getTensorName(PI::TensorId tensorId) const override;
 	bool                        getTensorHasData(PI::TensorId tensorId) const override;
 	const float*                getTensorData(PI::TensorId tensorId) const override;

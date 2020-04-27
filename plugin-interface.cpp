@@ -28,7 +28,7 @@ std::ostream& operator<<(std::ostream &os, PluginInterface::OperatorKind okind) 
 std::ostream& operator<<(std::ostream &os, PluginInterface::DataType dataType) {
 	switch (dataType) {
 	case PluginInterface::DataType_Float16:   os << "float16"; break;
-	case PluginInterface::DataType_Float32:   os << "float16"; break;
+	case PluginInterface::DataType_Float32:   os << "float32"; break;
 	case PluginInterface::DataType_Int8:      os << "int8";    break;
 	case PluginInterface::DataType_UInt8:     os << "uint8";   break;
 	case PluginInterface::DataType_Int16:     os << "in16";    break;

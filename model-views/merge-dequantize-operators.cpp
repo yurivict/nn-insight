@@ -3,19 +3,23 @@
 #include "merge-dequantize-operators.h"
 
 #include "../misc.h"
+#include "../tensor.h"
 
+#include <half.hpp>
 
 namespace ModelViews {
 
 typedef PluginInterface PI;
 
 MergeDequantizeOperators::MergeDequantizeOperators(const PluginInterface::Model *original_)
-: original(original_)
+: original(original_),
+  tensorData(new std::vector<std::shared_ptr<const float>>)
 {
 	// find all dequantize operators and their tensor outputs
 	unsigned numDequantizeOperators = 0;
-	tensorIsDequantizeInput .resize(original->numTensors());
-	tensorIsDequantizeOutput.resize(original->numTensors());
+	tensorIsDequantizeInput  .resize(original->numTensors());
+	tensorIsDequantizeOutput .resize(original->numTensors());
+	tensorData              ->resize(original->numTensors());
 	for (PI::OperatorId oid = 0, oide = original->numOperators(); oid < oide; oid++)
 		if (original->getOperatorKind(oid) == PI::KindDequantize) {
 			std::vector<PI::TensorId> inputs, outputs;
@@ -29,6 +33,11 @@ MergeDequantizeOperators::MergeDequantizeOperators(const PluginInterface::Model 
 				FAIL("MergeDequantizeOperators: Dequantize operator tensor types aren't consistent with Dequantize definition")
 			tensorIsDequantizeInput[inputs[0]] = true;
 			tensorIsDequantizeOutput[outputs[0]] = true;
+			(*tensorData)[outputs[0]].reset(convertStaticArrayToFloat32(
+				original->getTensorData(inputs[0]),
+				original->getTensorType(inputs[0]),
+				original->getTensorShape(inputs[0])
+			));
 		} else
 			operatorMap.push_back(oid);
 	// print a notice to the user
@@ -78,7 +87,10 @@ TensorShape MergeDequantizeOperators::getTensorShape(PI::TensorId tensorId) cons
 
 PI::DataType MergeDequantizeOperators::getTensorType(PI::TensorId tensorId) const {
 	assert(!tensorIsDequantizeInput[tensorId]); // dequantize input can't be queried
-	return original->getTensorType(tensorId);
+	if (tensorIsDequantizeOutput[tensorId])
+		return PI::DataType_Float32;
+	else
+		return original->getTensorType(tensorId);
 }
 
 std::string MergeDequantizeOperators::getTensorName(PI::TensorId tensorId) const {
@@ -102,12 +114,32 @@ const void* MergeDequantizeOperators::getTensorData(PI::TensorId tensorId) const
 
 const float* MergeDequantizeOperators::getTensorDataF32(PI::TensorId tensorId) const {
 	assert(!tensorIsDequantizeInput[tensorId]); // dequantize input can't be queried
-	return original->getTensorDataF32(tensorId);
+	if (tensorIsDequantizeOutput[tensorId])
+		return (*tensorData)[tensorId].get();
+	else
+		return original->getTensorDataF32(tensorId);
 }
 
 bool MergeDequantizeOperators::getTensorIsVariableFlag(PI::TensorId tensorId) const {
 	assert(!tensorIsDequantizeInput[tensorId]); // dequantize input can't be queried
 	return original->getTensorIsVariableFlag(tensorId);
+}
+
+const float* MergeDequantizeOperators::convertStaticArrayToFloat32(const void *array, PI::DataType dataType, const TensorShape &shape) {
+	auto shapeSize = Tensor::flatSize(shape);
+	assert(dataType != PI::DataType_Float32);
+	switch (dataType) {
+	case PI::DataType_Float16: { // float16->float is performed through the 'half' library for half-precision floating point arithmetic
+		std::unique_ptr<float> f(new float[shapeSize]);
+		float *pf = f.get();
+		for (const uint8_t *p = static_cast<const uint8_t*>(array), *pe = p + 2*shapeSize; p < pe; p += 2)
+			*pf++ = *(const half_float::half*)p;
+		return f.release();
+	}
+	default:
+		FAIL("Unknown data type " << dataType << " in conversion to float32")
+	}
+	return nullptr;
 }
 
 } // ModelViews

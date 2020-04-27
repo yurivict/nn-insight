@@ -19,6 +19,7 @@ class MergeDequantizeOperators : public PluginInterface::Model {
 	std::vector<PI::OperatorId>                   operatorMap; // view operator to original operator mapping
 	std::vector<bool>                             tensorIsDequantizeInput;
 	std::vector<bool>                             tensorIsDequantizeOutput;
+	std::unique_ptr<std::vector<std::shared_ptr<const float>>>   tensorData; // tensors corresponding to the outputs of Dequantize operators
 
 public:
 	MergeDequantizeOperators(const PluginInterface::Model *original_);
@@ -41,6 +42,8 @@ public: // interface implementation
 	const float*                getTensorDataF32(PI::TensorId tensorId) const override;
 	bool                        getTensorIsVariableFlag(PI::TensorId tensorId) const override;
 
+private: // internals
+	static const float* convertStaticArrayToFloat32(const void *array, PI::DataType dataType, const TensorShape &shape);
 }; // MergeDequantize
 
 } // ModelViews

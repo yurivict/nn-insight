@@ -31,6 +31,7 @@
 #include <QMimeData>
 #include <QScrollBar>
 #include <QSettings>
+#include <QVariant>
 
 #include <assert.h>
 #include <stdlib.h> // only for ::getenv
@@ -233,6 +234,7 @@ MainWindow::MainWindow()
 ,          nnTensorShapeValue(&nnTensorDetails)
 ,          nnTensorTypeLabel(tr("Type"), &nnTensorDetails)
 ,          nnTensorTypeValue(&nnTensorDetails)
+,          nnTensorSaveDataButton(&nnTensorDetails)
 ,          nnTensorDataPlaceholder(tr("No Tensor Data Available"), &nnTensorDetails)
 ,          nnTensorDataPlaceholder1DnotImplemented(tr("1D Data View Not Yet Implemented"), &nnTensorDetails)
 ,     noNnIsOpenGroupBox(tr("No Neural Network File is Open"), &rhsWidget)
@@ -329,8 +331,9 @@ MainWindow::MainWindow()
 		nnTensorDetailsLayout .addWidget(&nnTensorShapeValue,             1/*row*/, 1/*col*/);
 		nnTensorDetailsLayout .addWidget(&nnTensorTypeLabel,              2/*row*/, 0/*col*/);
 		nnTensorDetailsLayout .addWidget(&nnTensorTypeValue,              2/*row*/, 1/*col*/);
+		nnTensorDetailsLayout .addWidget(&nnTensorSaveDataButton,         0/*row*/, 2/*col*/,  2/*rowSpan*/, 1/*columnSpan*/);
 		for (auto l : {&nnTensorDataPlaceholder, &nnTensorDataPlaceholder1DnotImplemented})
-			nnTensorDetailsLayout.addWidget(l,                        3/*row*/, 0/*col*/,  1/*rowSpan*/, 2/*columnSpan*/);
+			nnTensorDetailsLayout.addWidget(l,                        3/*row*/, 0/*col*/,  1/*rowSpan*/, 3/*columnSpan*/);
 	nnDetailsStack.addWidget(&nnOperatorDetails);
 	nnDetailsStack.addWidget(&nnTensorDetails);
 
@@ -426,6 +429,7 @@ MainWindow::MainWindow()
 		l->                          setToolTip(tr("Shape of the tensor describes how meny dimensions does it have and sizes in each dimension"));
 	for (auto l : {&nnTensorTypeLabel,&nnTensorTypeValue})
 		l->                          setToolTip(tr("Type of data in this tensor"));
+	nnTensorSaveDataButton              .setToolTip(tr("Press to save the data for this tensor in the json format"));
 
 	// size policies
 	svgScrollArea                        .setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
@@ -650,6 +654,19 @@ MainWindow::MainWindow()
 	});
 	connect(&noNnIsOpenWidget, &NoNnIsOpenWidget::openNeuralNetworkFilePressed, [this]() {
 		onOpenNeuralNetworkFileUserIntent();
+	});
+	connect(&nnTensorSaveDataButton, &QAbstractButton::pressed, [this]() {
+		PluginInterface::TensorId tensorId = nnTensorSaveDataButton.property("tensorId").toUInt();
+		PRINT("Saving data for tensor#" << tensorId)
+		if (model->getTensorHasData(tensorId) || (tensorData && (*tensorData.get())[tensorId])) {
+			Tensor::saveTensorDataAsJson(
+				model->getTensorShape(tensorId),
+				model->getTensorHasData(tensorId) ? model->getTensorDataF32(tensorId) : (*tensorData.get())[tensorId].get(),
+				CSTR("tensor#" << tensorId << ".json")
+			);
+		} else {
+			Util::warningOk(this, QString(tr("Data for tensor#%1 isn't available")).arg(tensorId));
+		}
 	});
 
 	// monitor memory use
@@ -969,6 +986,8 @@ void MainWindow::showTensorDetails(PluginInterface::TensorId tensorId, const cha
 	nnTensorKindValue .setText(S2Q(ModelFunctions::tensorKind(model.get(), tensorId)));
 	nnTensorShapeValue.setText(S2Q(STR(model->getTensorShape(tensorId))));
 	nnTensorTypeValue .setText("float32"); // TODO types aren't implemented yet
+	nnTensorSaveDataButton.setText(QString(tr("Save Tensor #%1 Data")).arg(tensorId));
+	nnTensorSaveDataButton.setProperty("tensorId", QVariant(tensorId));
 	// tensor data table
 	if (tensorId != nnCurrentTensorId) {
 		nnCurrentTensorId = tensorId;

@@ -1,11 +1,15 @@
 // Copyright (C) 2020 by Yuri Victorovich. All rights reserved.
 
+#include "misc.h"
 #include "tensor.h"
 
+#include <functional>
+#include <fstream>
 #include <limits>
 #include <memory>
 
 #include <assert.h>
+#include <nlohmann/json.hpp>
 
 namespace Tensor {
 
@@ -91,6 +95,36 @@ float* computeArgMax(const TensorShape &inputShape, const float *input, const st
 
 bool canBeAnImage(const TensorShape &shape) {
 	return shape.size() == 3/*HWC*/ && (shape[2]==3 || shape[2]==1);
+}
+
+void saveTensorDataAsJson(const TensorShape &shape, const float *data, const char *fileName) {
+	using json = nlohmann::json;
+
+	std::function<json(unsigned,unsigned,const float*)> one;
+	one = [&shape,&one](unsigned level, unsigned step, const float *data) {
+		if (level < shape.size()) {
+			json j = json::array();
+			auto sz = shape[level];
+			step /= sz;
+			for (unsigned i = 0, ie = sz; i < ie; i++, data += step)
+				j.push_back(one(level+1, step, data));
+			return j;
+		} else
+			return json(*data);
+	};
+
+	// convert to json
+	json j = one(0, flatSize(shape), data);
+
+	// save
+	std::ofstream f;
+	f.open(fileName, std::ios_base::out|std::ios_base::trunc);
+	if (!f.good()) {
+		PRINT_ERR("failed to open the json file for writing")
+		return;
+	}
+	f << j;
+	f.close();
 }
 
 }

@@ -148,6 +148,7 @@ private: // fields
 	QLabel                                   nnTensorShapeValue;
 	QLabel                                   nnTensorTypeLabel;
 	QLabel                                   nnTensorTypeValue;
+	QPushButton                              nnTensorSaveDataButton;
 	QLabel                                   nnTensorDataPlaceholder;
 	QLabel                                   nnTensorDataPlaceholder1DnotImplemented;
 	std::unique_ptr<DataTable2D>             nnTensorData2D;

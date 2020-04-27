@@ -946,6 +946,33 @@ bool compute(
 			cbTensorComputed(outputs[0]);
 
 			break;
+		} case PI::KindMean: {
+			assert(inputs.size()==2);
+			assert(outputs.size()==1);
+			assert(model->getTensorType(inputs[1]) == PI::DataType_Int32);
+			assert(opts); // need to have options present
+
+			// tensors
+			auto outputShape = model->getTensorShape(outputs[0]);
+			auto outputShapeSize = Tensor::flatSize(outputShape);
+
+			// create output data
+			std::unique_ptr<float> outputData(new float[outputShapeSize]);
+
+			// compute
+			NnOperators::Mean(
+				model->getTensorShape(inputs[0]), (*tensorData)[inputs[0]].get(), // input
+				outputShape, outputData.get(), // output
+				static_cast<const int32_t*>(model->getTensorData(inputs[1])), Tensor::flatSize(model->getTensorShape(inputs[1]))
+			);
+
+			// save the data
+			(*tensorData)[outputs[0]].reset(outputData.release());
+
+			// notify the caller
+			cbTensorComputed(outputs[0]);
+
+			break;
 		} case PI::KindArgMax: {
 			doArgMxx(std::numeric_limits<float>::lowest(), [](float f1,float f2) {return f1>f2;});
 			break;

@@ -74,4 +74,10 @@ void LocalResponseNormalization(
 	int radius, float alpha, float beta, float bias
 );
 
+void Mean(
+	const TensorShape &inputShape, const float *inputData,
+	const TensorShape &outputShape, float *outputData,
+	const int32_t *axis, unsigned axis_count
+);
+
 }

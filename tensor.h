@@ -14,5 +14,6 @@ bool isSubset(const TensorShape &shapeLarge, const TensorShape &shapeSmall);
 float* computeArgMax(const TensorShape &inputShape, const float *input, const std::vector<float> &palette);
 bool canBeAnImage(const TensorShape &shape);
 void saveTensorDataAsJson(const TensorShape &shape, const float *data, const char *fileName);
+bool readTensorDataAsJson(const char *fileName, const TensorShape &shape, std::shared_ptr<const float> &tensorData);
 
 }

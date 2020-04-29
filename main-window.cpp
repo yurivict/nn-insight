@@ -688,7 +688,7 @@ MainWindow::MainWindow()
 			Tensor::saveTensorDataAsJson(
 				model->getTensorShape(tensorId),
 				model->getTensorHasData(tensorId) ? model->getTensorDataF32(tensorId) : (*tensorData.get())[tensorId].get(),
-				CSTR("tensor#" << tensorId << ".json")
+				CSTR("tensor#" << tensorId << ".json") // match the name with one in compute.cpp
 			);
 		} else {
 			Util::warningOk(this, QString(tr("Data for tensor#%1 isn't available")).arg(tensorId));

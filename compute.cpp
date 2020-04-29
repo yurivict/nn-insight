@@ -67,7 +67,7 @@ bool buildComputeInputs(
 	auto modelInputs = model->getInputs();
 
 	// input tensor is either reused, or reallocated when alterations are needed
-	auto convertInputImage = [&](std::shared_ptr<const float> &inputImage) {
+	auto convertInputImage = [&](PI::TensorId tensorId, TensorShape requiredShape, std::shared_ptr<const float> &inputImage) {
 		inputImage = inputTensor; // initially assign with inputShape, but replace later with a newly allocated one if any transformations are performed
 		float *inputAllocated = nullptr; // keep track of new allocations
 		TensorShape myInputShape = inputShape;
@@ -82,8 +82,6 @@ bool buildComputeInputs(
 		/// resize the source image
 
 		{
-			TensorShape requiredShape = model->getTensorShape(modelInputs[0]);
-
 			// adjust the required shape to the form [H,W,C]
 			if (requiredShape.size() == 4) { // assume [B,H,W,C]
 				if (requiredShape[0] != 1) {
@@ -117,8 +115,7 @@ bool buildComputeInputs(
 		/// normalize input
 
 		if (inputNormalization != InputNormalization{InputNormalizationRange_0_255,InputNormalizationColorOrder_RGB}) { // 0..255/RGB is how images are imported from files
-			auto inputTensorShape = model->getTensorShape(modelInputs[0]);
-			auto inputTensorSize = Tensor::flatSize(inputTensorShape);
+			auto inputTensorSize = Tensor::flatSize(requiredShape);
 
 			const float *src = inputImage.get();
 			if (!inputAllocated) // need to allocate because we change the data, otherwise use the allocated above one
@@ -190,7 +187,7 @@ bool buildComputeInputs(
 				src = inputAllocated;
 				break;
 			case InputNormalizationRange_ImageNet:
-				assert(*inputTensorShape.rbegin()==3);
+				assert(*requiredShape.rbegin()==3);
 				normalizeSub(src, inputAllocated, inputTensorSize, {123.68, 116.78, 103.94});
 				src = inputAllocated;
 				break;
@@ -208,12 +205,39 @@ bool buildComputeInputs(
 
 		return true;
 	};
+	auto convertInputFromJsonFile = [](PI::TensorId tensorId, const TensorShape &requiredShape, std::shared_ptr<const float> &inputTensor) {
+		std::shared_ptr<const float> foundTensor;
+		if (Tensor::readTensorDataAsJson(CSTR("tensor#" << tensorId << ".json"), requiredShape, foundTensor)) { // match the name with one in main-window.cpp
+			inputTensor = foundTensor;
+			return true;
+		}
 
-	if (!convertInputImage(inputs[modelInputs[0]]))
+		return false; // failed to read the tensor with the requested shape
+	};
+
+	/// convert inputs
+
+	bool imageImported = false;
+	for (auto tensorId : modelInputs) {
+		const auto &shape = model->getTensorShape(tensorId);
+
+		// first, try the file
+		if (convertInputFromJsonFile(tensorId, shape, inputs[tensorId])) {
+			cbTensorComputed(tensorId); // notify the caller that the input tensor has been computed
+			continue; // imported
+		}
+		// second, try the supplied image
+		if (!imageImported && convertInputImage(tensorId, shape, inputs[tensorId])) {
+			cbTensorComputed(tensorId); // notify the caller that the input tensor has been computed
+			imageImported = true;
+			continue; // imported
+		}
+
+		// failed to find data for the input tensor
+		cbWarningMessage(STR("couldn't find input data for the tensor#" << tensorId << " with shape=" << shape));
 		return false;
+	}
 
-	// notify the caller that the input tensor has been computed
-	cbTensorComputed(modelInputs[0]);
 
 	return true;
 }

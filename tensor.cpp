@@ -7,6 +7,8 @@
 #include <fstream>
 #include <limits>
 #include <memory>
+#include <streambuf>
+#include <string>
 
 #include <assert.h>
 #include <nlohmann/json.hpp>
@@ -125,6 +127,45 @@ void saveTensorDataAsJson(const TensorShape &shape, const float *data, const cha
 	}
 	f << j;
 	f.close();
+}
+
+bool readTensorDataAsJson(const char *fileName, const TensorShape &shape, std::shared_ptr<const float> &tensorData) {
+	using json = nlohmann::json;
+
+	std::ifstream f(fileName);
+	if (!f)
+		return false;
+
+	std::string str((std::istreambuf_iterator<char>(f)),
+	                 std::istreambuf_iterator<char>());
+
+	auto shapeSize = flatSize(shape);
+	std::unique_ptr<float> data(new float[shapeSize]);
+	float *p = data.get(), *pe = p + shapeSize;
+
+	std::function<bool(const json &j)> one;
+	one = [&p,pe,&one](const json &j) {
+		if (j.is_array()) {
+			for (auto &e : j)
+				if (!one(e))
+					return false; // failed to import data
+			return true;
+		} else if (j.is_number()) {
+			if (p == pe)
+				return false; // no space for the next element: must be a shape mismatch
+			*p++ = j.get<float>();
+			return true;
+		} else
+			return false; // can't be any other JSON object type in the tensor data file
+	};
+
+	if (one(json::parse(str)) && p == pe) {
+		tensorData.reset(data.release());
+		return true;
+	}
+
+	return false;
+
 }
 
 }

@@ -65,150 +65,152 @@ bool buildComputeInputs(
 	/// find the model's input
 
 	auto modelInputs = model->getInputs();
-	if (modelInputs.size() != 1) {
-		cbWarningMessage(STR("We currently only support models with a single input, the current model has " << modelInputs.size() << " inputs"));
-		return false;
-	}
 
 	// input tensor is either reused, or reallocated when alterations are needed
-	auto &sharedPtrInput = inputs[modelInputs[0]];
-	sharedPtrInput = inputTensor; // initially assign with inputShape, but replace later with a newly allocated one if any transformations are performed
-	float *inputAllocated = nullptr; // keep track if new allocations
-	TensorShape myInputShape = inputShape;
+	auto convertInputImage = [&](std::shared_ptr<const float> &inputImage) {
+		inputImage = inputTensor; // initially assign with inputShape, but replace later with a newly allocated one if any transformations are performed
+		float *inputAllocated = nullptr; // keep track of new allocations
+		TensorShape myInputShape = inputShape;
 
-	/// extract the region if required
+		/// extract the region if required
 
-	if (imageRegion[0]!=0 || imageRegion[1]!=0 || imageRegion[2]+1!=myInputShape[1] || imageRegion[3]+1!=myInputShape[0]) {
-		sharedPtrInput.reset((inputAllocated = Image::regionOfImage(sharedPtrInput.get(), myInputShape, imageRegion)));
-		myInputShape = {imageRegion[3]-imageRegion[1]+1, imageRegion[2]-imageRegion[0]+1, myInputShape[2]};
-	}
+		if (imageRegion[0]!=0 || imageRegion[1]!=0 || imageRegion[2]+1!=myInputShape[1] || imageRegion[3]+1!=myInputShape[0]) {
+			inputImage.reset((inputAllocated = Image::regionOfImage(inputImage.get(), myInputShape, imageRegion)));
+			myInputShape = {imageRegion[3]-imageRegion[1]+1, imageRegion[2]-imageRegion[0]+1, myInputShape[2]};
+		}
 
-	/// resize the source image
+		/// resize the source image
 
-	{
-		TensorShape requiredShape = model->getTensorShape(modelInputs[0]);
+		{
+			TensorShape requiredShape = model->getTensorShape(modelInputs[0]);
 
-		// adjust the required shape to the form [H,W,C]
-		if (requiredShape.size() == 4) { // assume [B,H,W,C]
-			if (requiredShape[0] != 1) {
-				cbWarningMessage(STR("Model's required shape " << requiredShape << " has 4 elements but doesn't begin with B=1,"
-				                     " don't know how to adjust the image for it"));
-				return false;
-			}
-			requiredShape = Tensor::getLastDims(requiredShape, 3);
-		} else if (requiredShape.size() == 3) {
-			if (requiredShape[0] == 1) { // assume [B=1,H,W], remove B and add C=1 for monochrome image
-				requiredShape = Tensor::getLastDims(requiredShape, 2);
-				requiredShape.push_back(1);
-			} else { // see if the shape is image-like
-				if (requiredShape[2]!=1 && requiredShape[2]!=3) { // expect C=1 or C=3, otherwise we can't handle it
-					cbWarningMessage(STR("Model's required shape " << requiredShape << " has 3 elements but has C=1 or C=3,"
-					                     " it doesn't look like it describes an image,"
+			// adjust the required shape to the form [H,W,C]
+			if (requiredShape.size() == 4) { // assume [B,H,W,C]
+				if (requiredShape[0] != 1) {
+					cbWarningMessage(STR("Model's required shape " << requiredShape << " has 4 elements but doesn't begin with B=1,"
 					                     " don't know how to adjust the image for it"));
 					return false;
 				}
+				requiredShape = Tensor::getLastDims(requiredShape, 3);
+			} else if (requiredShape.size() == 3) {
+				if (requiredShape[0] == 1) { // assume [B=1,H,W], remove B and add C=1 for monochrome image
+					requiredShape = Tensor::getLastDims(requiredShape, 2);
+					requiredShape.push_back(1);
+				} else { // see if the shape is image-like
+					if (requiredShape[2]!=1 && requiredShape[2]!=3) { // expect C=1 or C=3, otherwise we can't handle it
+						cbWarningMessage(STR("Model's required shape " << requiredShape << " has 3 elements but has C=1 or C=3,"
+						                     " it doesn't look like it describes an image,"
+						                     " don't know how to adjust the image for it"));
+						return false;
+					}
+				}
+			} else {
+				cbWarningMessage(STR("Model's required shape " << requiredShape << " isn't standard, don't know how to adjust the image for it"));
+				return false;
 			}
-		} else {
-			cbWarningMessage(STR("Model's required shape " << requiredShape << " isn't standard, don't know how to adjust the image for it"));
-			return false;
+
+			// now we have requiredShape=[H,W,C], resize the image if needed
+			if (myInputShape != requiredShape)
+				inputImage.reset((inputAllocated = Image::resizeImage(inputImage.get(), myInputShape, requiredShape)));
 		}
 
-		// now we have requiredShape=[H,W,C], resize the image if needed
-		if (myInputShape != requiredShape)
-			sharedPtrInput.reset((inputAllocated = Image::resizeImage(sharedPtrInput.get(), myInputShape, requiredShape)));
-	}
+		/// normalize input
 
-	/// normalize input
+		if (inputNormalization != InputNormalization{InputNormalizationRange_0_255,InputNormalizationColorOrder_RGB}) { // 0..255/RGB is how images are imported from files
+			auto inputTensorShape = model->getTensorShape(modelInputs[0]);
+			auto inputTensorSize = Tensor::flatSize(inputTensorShape);
 
-	if (inputNormalization != InputNormalization{InputNormalizationRange_0_255,InputNormalizationColorOrder_RGB}) { // 0..255/RGB is how images are imported from files
-		auto inputTensorShape = model->getTensorShape(modelInputs[0]);
-		auto inputTensorSize = Tensor::flatSize(inputTensorShape);
+			const float *src = inputImage.get();
+			if (!inputAllocated) // need to allocate because we change the data, otherwise use the allocated above one
+				inputImage.reset((inputAllocated = new float[inputTensorSize]));
 
-		const float *src = sharedPtrInput.get();
-		if (!inputAllocated) // need to allocate because we change the data, otherwise use the allocated above one
-			sharedPtrInput.reset((inputAllocated = new float[inputTensorSize]));
+			// helpers
+			auto normalizeRange = [](const float *src, float *dst, size_t sz, float min, float max) {
+				float m = (max-min)/256.; // XXX or 255.?
+				for (auto srce = src+sz; src<srce; )
+					*dst++ = min + (*src++)*m;
+			};
+			auto normalizeSub = [](const float *src, float *dst, size_t sz, const std::vector<float> &sub) {
+				unsigned i = 0;
+				for (auto srce = src+sz; src<srce; ) {
+					*dst++ = *src++ - sub[i];
+					if (++i == sub.size())
+						i = 0;
+				}
+			};
+			auto reorderArrays = [](const float *src, float *dst, size_t sz, const std::vector<unsigned> &permutation) {
+				float tmp[permutation.size()];
+				for (auto srce = src+sz; src<srce; src+=permutation.size()) {
+					float *ptmp = tmp;
+					for (auto idx : permutation)
+						*ptmp++ = src[idx];
+					for (auto t : tmp)
+						*dst++ = t;
+				}
+			};
 
-		// helpers
-		auto normalizeRange = [](const float *src, float *dst, size_t sz, float min, float max) {
-			float m = (max-min)/256.; // XXX or 255.?
-			for (auto srce = src+sz; src<srce; )
-				*dst++ = min + (*src++)*m;
-		};
-		auto normalizeSub = [](const float *src, float *dst, size_t sz, const std::vector<float> &sub) {
-			unsigned i = 0;
-			for (auto srce = src+sz; src<srce; ) {
-				*dst++ = *src++ - sub[i];
-				if (++i == sub.size())
-					i = 0;
+			// normalize value range
+			switch (std::get<0>(inputNormalization)) {
+			case InputNormalizationRange_0_1:
+				normalizeRange(src, inputAllocated, inputTensorSize, 0, 1);
+				src = inputAllocated;
+				break;
+			case InputNormalizationRange_0_255:
+				break; // already at 0..255
+			case InputNormalizationRange_0_128:
+				normalizeRange(src, inputAllocated, inputTensorSize, 0, 128);
+				src = inputAllocated;
+				break;
+			case InputNormalizationRange_0_64:
+				normalizeRange(src, inputAllocated, inputTensorSize, 0, 64);
+				src = inputAllocated;
+				break;
+			case InputNormalizationRange_0_32:
+				normalizeRange(src, inputAllocated, inputTensorSize, 0, 32);
+				src = inputAllocated;
+				break;
+			case InputNormalizationRange_0_16:
+				normalizeRange(src, inputAllocated, inputTensorSize, 0, 16);
+				src = inputAllocated;
+				break;
+			case InputNormalizationRange_0_8:
+				normalizeRange(src, inputAllocated, inputTensorSize, 0, 8);
+				src = inputAllocated;
+				break;
+			case InputNormalizationRange_M1_P1:
+				normalizeRange(src, inputAllocated, inputTensorSize, -1, 1);
+				src = inputAllocated;
+				break;
+			case InputNormalizationRange_M05_P05:
+				normalizeRange(src, inputAllocated, inputTensorSize, -0.5, 0.5);
+				src = inputAllocated;
+				break;
+			case InputNormalizationRange_14_34:
+				normalizeRange(src, inputAllocated, inputTensorSize, 0.25, 0.75);
+				src = inputAllocated;
+				break;
+			case InputNormalizationRange_ImageNet:
+				assert(*inputTensorShape.rbegin()==3);
+				normalizeSub(src, inputAllocated, inputTensorSize, {123.68, 116.78, 103.94});
+				src = inputAllocated;
+				break;
 			}
-		};
-		auto reorderArrays = [](const float *src, float *dst, size_t sz, const std::vector<unsigned> &permutation) {
-			float tmp[permutation.size()];
-			for (auto srce = src+sz; src<srce; src+=permutation.size()) {
-				float *ptmp = tmp;
-				for (auto idx : permutation)
-					*ptmp++ = src[idx];
-				for (auto t : tmp)
-					*dst++ = t;
-			}
-		};
 
-		// normalize value range
-		switch (std::get<0>(inputNormalization)) {
-		case InputNormalizationRange_0_1:
-			normalizeRange(src, inputAllocated, inputTensorSize, 0, 1);
-			src = inputAllocated;
-			break;
-		case InputNormalizationRange_0_255:
-			break; // already at 0..255
-		case InputNormalizationRange_0_128:
-			normalizeRange(src, inputAllocated, inputTensorSize, 0, 128);
-			src = inputAllocated;
-			break;
-		case InputNormalizationRange_0_64:
-			normalizeRange(src, inputAllocated, inputTensorSize, 0, 64);
-			src = inputAllocated;
-			break;
-		case InputNormalizationRange_0_32:
-			normalizeRange(src, inputAllocated, inputTensorSize, 0, 32);
-			src = inputAllocated;
-			break;
-		case InputNormalizationRange_0_16:
-			normalizeRange(src, inputAllocated, inputTensorSize, 0, 16);
-			src = inputAllocated;
-			break;
-		case InputNormalizationRange_0_8:
-			normalizeRange(src, inputAllocated, inputTensorSize, 0, 8);
-			src = inputAllocated;
-			break;
-		case InputNormalizationRange_M1_P1:
-			normalizeRange(src, inputAllocated, inputTensorSize, -1, 1);
-			src = inputAllocated;
-			break;
-		case InputNormalizationRange_M05_P05:
-			normalizeRange(src, inputAllocated, inputTensorSize, -0.5, 0.5);
-			src = inputAllocated;
-			break;
-		case InputNormalizationRange_14_34:
-			normalizeRange(src, inputAllocated, inputTensorSize, 0.25, 0.75);
-			src = inputAllocated;
-			break;
-		case InputNormalizationRange_ImageNet:
-			assert(*inputTensorShape.rbegin()==3);
-			normalizeSub(src, inputAllocated, inputTensorSize, {123.68, 116.78, 103.94});
-			src = inputAllocated;
-			break;
+			// normalize color order
+			switch (std::get<1>(inputNormalization)) {
+			case InputNormalizationColorOrder_RGB:
+				break; // already RGB
+			case InputNormalizationColorOrder_BGR:
+				reorderArrays(src, inputAllocated, inputTensorSize, {2,1,0});
+				break;
+			}
 		}
 
-		// normalize color order
-		switch (std::get<1>(inputNormalization)) {
-		case InputNormalizationColorOrder_RGB:
-			break; // already RGB
-		case InputNormalizationColorOrder_BGR:
-			reorderArrays(src, inputAllocated, inputTensorSize, {2,1,0});
-			break;
-		}
-	}
+		return true;
+	};
+
+	if (!convertInputImage(inputs[modelInputs[0]]))
+		return false;
 
 	// notify the caller that the input tensor has been computed
 	cbTensorComputed(modelInputs[0]);

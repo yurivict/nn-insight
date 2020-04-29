@@ -51,23 +51,16 @@ public:
 // exported functions
 //
 
-bool compute(
+bool buildComputeInputs(
 	const PI::Model *model,
 	std::array<unsigned,4> imageRegion,
 	std::tuple<InputNormalizationRange,InputNormalizationColorOrder> inputNormalization,
 	std::shared_ptr<float> &inputTensor, const TensorShape &inputShape,
-	std::unique_ptr<std::vector<std::shared_ptr<const float>>> &tensorData,
-	std::function<void(const std::string&)> cbWarningMessage,
-	std::function<void(PI::TensorId)> cbTensorComputed)
+	std::map<PI::TensorId, std::shared_ptr<const float>> &inputs, // output the set of inputs
+	std::function<void(PI::TensorId)> cbTensorComputed,
+	std::function<void(const std::string&)> cbWarningMessage)
 {
 	assert(inputShape.size()==3);
-
-	/// allocate tensors array
-
-	if (!tensorData) {
-		tensorData.reset(new std::vector<std::shared_ptr<const float>>);
-		tensorData->resize(model->numTensors());
-	}
 
 	/// find the model's input
 
@@ -78,7 +71,7 @@ bool compute(
 	}
 
 	// input tensor is either reused, or reallocated when alterations are needed
-	auto &sharedPtrInput = (*tensorData.get())[modelInputs[0]];
+	auto &sharedPtrInput = inputs[modelInputs[0]];
 	sharedPtrInput = inputTensor; // initially assign with inputShape, but replace later with a newly allocated one if any transformations are performed
 	float *inputAllocated = nullptr; // keep track if new allocations
 	TensorShape myInputShape = inputShape;
@@ -218,9 +211,26 @@ bool compute(
 	}
 
 	// notify the caller that the input tensor has been computed
-
 	cbTensorComputed(modelInputs[0]);
 
+	return true;
+}
+
+void fillInputs(
+	std::map<PI::TensorId, std::shared_ptr<const float>> &inputs,
+	std::unique_ptr<std::vector<std::shared_ptr<const float>>> &tensorData)
+{
+	for (auto it : inputs)
+		(*tensorData)[it.first] = it.second;
+		
+}
+
+bool compute(
+	const PI::Model *model,
+	std::unique_ptr<std::vector<std::shared_ptr<const float>>> &tensorData,
+	std::function<void(PI::TensorId)> cbTensorComputed,
+	std::function<void(const std::string&)> cbWarningMessage)
+{
 	/// compute operators
 
 	for (PI::OperatorId oid = 0, oide = (PI::OperatorId)model->numOperators(); oid<oide; oid++) {
@@ -397,7 +407,7 @@ bool compute(
 			int strideWidth=0, strideHeight=0;
 			int dilationWidth=0, dilationHeight=0;
 			PI::PaddingType paddingType;
-			PI::ActivationFunction activationFunction = PluginInterface::ActivationFunction_NONE;
+			PI::ActivationFunction activationFunction = PI::ActivationFunction_NONE;
 
 			// parse the operator options supplied by the model into the above variables
 			unsigned numParsed =
@@ -462,7 +472,7 @@ bool compute(
 			int strideWidth=0, strideHeight=0;
 			int dilationWidth=0, dilationHeight=0;
 			PI::PaddingType paddingType;
-			PI::ActivationFunction activationFunction = PluginInterface::ActivationFunction_NONE;
+			PI::ActivationFunction activationFunction = PI::ActivationFunction_NONE;
 
 			// parse the operator options supplied by the model into the above variables
 			unsigned numParsed =
@@ -528,7 +538,7 @@ bool compute(
 			// operator options required to run this operator
 			bool keepNumDims = false;
 			int  weightsFormat = 0;
-			PI::ActivationFunction activationFunction = PluginInterface::ActivationFunction_NONE;
+			PI::ActivationFunction activationFunction = PI::ActivationFunction_NONE;
 
 			// parse the operator options supplied by the model into the above variables
 			unsigned numParsed =
@@ -631,7 +641,7 @@ bool compute(
 			int strideWidth=0, strideHeight=0;
 			int filterWidth=0, filterHeight=0;
 			PI::PaddingType paddingType;
-			PI::ActivationFunction activationFunction = PluginInterface::ActivationFunction_NONE;
+			PI::ActivationFunction activationFunction = PI::ActivationFunction_NONE;
 
 			// parse the operator options supplied by the model into the above variables
 			unsigned numParsed =
@@ -810,7 +820,7 @@ bool compute(
 			assert(model->getTensorShape(inputs[0]) == model->getTensorShape(outputs[0])); // produces the same shape as consumes TODO should be in the model validation stage
 
 			// operator options required to run this operator
-			PI::ActivationFunction activationFunction = PluginInterface::ActivationFunction_NONE;
+			PI::ActivationFunction activationFunction = PI::ActivationFunction_NONE;
 
 			unsigned numParsed =
 				OperatorOptions::GetOption1<PI::OperatorOption_FUSED_ACTIVATION_FUNCTION,
@@ -900,7 +910,7 @@ bool compute(
 
 			// operator options required to run this operator
 			int axis = 0;
-			PI::ActivationFunction activationFunction = PluginInterface::ActivationFunction_NONE;
+			PI::ActivationFunction activationFunction = PI::ActivationFunction_NONE;
 
 			// parse the operator options supplied by the model into the above variables
 			unsigned numParsed =

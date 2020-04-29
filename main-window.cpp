@@ -598,6 +598,12 @@ MainWindow::MainWindow()
 		QElapsedTimer timer;
 		timer.start();
 
+		// allocate tensors array
+		if (!tensorData) {
+			tensorData.reset(new std::vector<std::shared_ptr<const float>>);
+			tensorData->resize(model->numTensors());
+		}
+
 		// computation arguments
 		bool doVisibleRegion = computeRegionComboBox.currentIndex()==0;
 		std::array<unsigned,4> imageRegion = doVisibleRegion ? getVisibleImageRegion() : std::array<unsigned,4>{0,0, sourceTensorShape[1]-1,sourceTensorShape[0]-1};
@@ -605,16 +611,36 @@ MainWindow::MainWindow()
 			(InputNormalizationRange)inputNormalizationRangeComboBox.currentData().toUInt(),
 			(InputNormalizationColorOrder)inputNormalizationColorOrderComboBox.currentData().toUInt()
 		};
-
-		bool succ = Compute::compute(model.get(), imageRegion,inputNormalization, sourceTensorDataAsUsed,sourceTensorShape, tensorData, [this](const std::string &msg) {
-			Util::warningOk(this, S2Q(msg));
-		}, [](PluginInterface::TensorId tensorId) {
+		auto cbTensorComputed = [](PluginInterface::TensorId tensorId) {
 			//PRINT("Tensor DONE: tid=" << tensorId)
-		});
+		};
+		auto cbWarningMessage = [this](const std::string &msg) {
+			Util::warningOk(this, S2Q(msg));
+		};
 
-		if (!succ)
+		// find input data and convert it to the required format
+		std::map<PluginInterface::TensorId, std::shared_ptr<const float>> modelInputs;
+		bool succ = Compute::buildComputeInputs(model.get(),
+			imageRegion, inputNormalization,
+			sourceTensorDataAsUsed, sourceTensorShape,
+			modelInputs,
+			cbTensorComputed,cbWarningMessage);
+		if (!succ) {
+			PRINT("WARNING couldn't prepare arguments for the computation")
+			return;
+		}
+
+		// fill the input data into tensors
+		Compute::fillInputs(modelInputs, tensorData);
+
+		// compute
+		succ = Compute::compute(model.get(), tensorData, cbTensorComputed,cbWarningMessage);
+		if (!succ) {
 			PRINT("WARNING computation didn't succeed")
+			return;
+		}
 
+		// computation succeeded
 		if (nnCurrentTensorId!=-1 && model->isTensorComputed(nnCurrentTensorId)) {
 			if (!nnTensorData2D) {
 				showNnTensorData2D();

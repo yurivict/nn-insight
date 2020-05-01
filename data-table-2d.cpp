@@ -17,8 +17,18 @@
 
 #include <assert.h>
 
+/// DataTable2DBase
+
+DataTable2DBase::DataTable2DBase(QWidget *parent)
+: QWidget(parent)
+{ }
+
+DataTable2DBase::~DataTable2DBase()
+{ }
+
 /// local helper classes
 
+template<typename T>
 class DataSource {
 	unsigned numRows;
 	unsigned numColumns;
@@ -37,12 +47,12 @@ public: // iface: data access
 	unsigned ncols() const {
 		return numColumns;
 	}
-	virtual float value(unsigned r, unsigned c) const = 0;
+	virtual T value(unsigned r, unsigned c) const = 0;
 
 public: // iface: data computations
-	std::tuple<float,float> computeMinMax() const {
-		float dmin = std::numeric_limits<float>::max();
-		float dmax = std::numeric_limits<float>::lowest();
+	std::tuple<T,T> computeMinMax() const {
+		T dmin = std::numeric_limits<T>::max();
+		T dmax = std::numeric_limits<T>::lowest();
 		for (unsigned r = 0, re = nrows(); r < re; r++)
 			for (unsigned c = 0, ce = ncols(); c < ce; c++) {
 				auto d = value(r,c);
@@ -51,20 +61,21 @@ public: // iface: data computations
 				if (d > dmax)
 					dmax = d;
 			}
-		return std::tuple<float,float>(dmin, dmax);
+		return std::tuple<T,T>(dmin, dmax);
 	}
 };
 
-class TensorSliceDataSource : public DataSource {
+template<typename T>
+class TensorSliceDataSource : public DataSource<T> {
 	const TensorShape               shape;
-	const float*                   &data; // shares data pointer with the DataTable2D instance
+	const T*                       &data; // shares data pointer with the DataTable2D instance
 	unsigned                        idxVertical;
 	unsigned                        idxHorizontal;
 	mutable std::vector<unsigned>   fixedIdxs;
 
 public:
-	TensorSliceDataSource(const TensorShape &shape_, unsigned idxVertical_, unsigned idxHorizontal_, const std::vector<unsigned> &fixedIdxs_, const float *&data_)
-	: DataSource(shape_[idxVertical_], shape_[idxHorizontal_])
+	TensorSliceDataSource(const TensorShape &shape_, unsigned idxVertical_, unsigned idxHorizontal_, const std::vector<unsigned> &fixedIdxs_, const T *&data_)
+	: DataSource<T>(shape_[idxVertical_], shape_[idxHorizontal_])
 	, shape(shape_)
 	, data(data_)
 	, idxVertical(idxVertical_)
@@ -73,7 +84,7 @@ public:
 	{
 	}
 
-	float value(unsigned r, unsigned c) const override {
+	T value(unsigned r, unsigned c) const override {
 		fixedIdxs[idxVertical] = r;
 		fixedIdxs[idxHorizontal] = c;
 		return data[offset(fixedIdxs, shape)];
@@ -192,11 +203,12 @@ static const BaseColorSchema* createColorSchema(ColorSchemaEnum colorSchema, flo
 #undef W
 }
 
+template<typename T>
 class DataModel : public QAbstractTableModel {
-	std::unique_ptr<const DataSource>      dataSource;
+	std::unique_ptr<const DataSource<T>>   dataSource;
 	std::unique_ptr<const BaseColorSchema> colorSchema;
 public:
-	DataModel(const DataSource *dataSource_, const BaseColorSchema *colorSchema_, QObject *parent)
+	DataModel(const DataSource<T> *dataSource_, const BaseColorSchema *colorSchema_, QObject *parent)
 	: QAbstractTableModel(parent)
 	, dataSource(dataSource_)
 	, colorSchema(colorSchema_)
@@ -224,7 +236,7 @@ public: // QAbstractTableModel interface implementation
 	}
 
 public: // custom interface
-	void setDataSource(const DataSource *dataSource_) {
+	void setDataSource(const DataSource<T> *dataSource_) {
 		beginResetModel();
 		dataSource.reset(dataSource_);
 		endResetModel();
@@ -234,7 +246,7 @@ public: // custom interface
 		colorSchema.reset(colorSchema_);
 		endResetModel();
 	}
-	const DataSource* getDataSource() const {
+	const DataSource<T>* getDataSource() const {
 		return dataSource.get();
 	}
 	void beginResetModel() {
@@ -247,8 +259,9 @@ public: // custom interface
 
 /// DataTable2D
 
-DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget *parent)
-: QWidget(parent)
+template<typename T>
+DataTable2D<T>::DataTable2D(const TensorShape &shape_, const T *data_, QWidget *parent)
+: DataTable2DBase(parent)
 , shape(shape_)
 , data(data_)
 , dimVertical(0)
@@ -318,7 +331,7 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 					dimMy = dimOther;
 					dimOther = dim;
 					shapeDimensionsComboBoxes[otherDim]->setCurrentIndex(iAmY ? 1/*Y*/ : 0/*X*/);
-					(static_cast<DataModel*>(tableModel.get()))->setDataSource(new TensorSliceDataSource(shape, dimVertical, dimHorizontal, mkIdxs(), data));
+					(static_cast<DataModel<T>*>(tableModel.get()))->setDataSource(new TensorSliceDataSource(shape, dimVertical, dimHorizontal, mkIdxs(), data));
 				};
 				auto changeXYtoIndex = [this](unsigned &dimChanged, bool iAmY) {
 					// choose another X/Y
@@ -328,15 +341,15 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 							shapeDimensionsComboBoxes[dim]->setCurrentIndex(iAmY ? 1/*Y*/ : 0/*X*/);
 							break;
 						}
-					(static_cast<DataModel*>(tableModel.get()))->setDataSource(new TensorSliceDataSource(shape, dimVertical, dimHorizontal, mkIdxs(), data));
+					(static_cast<DataModel<T>*>(tableModel.get()))->setDataSource(new TensorSliceDataSource(shape, dimVertical, dimHorizontal, mkIdxs(), data));
 				};
 				auto changeIndexToXY = [this,dim](unsigned &dimChanged) {
 					shapeDimensionsComboBoxes[dimChanged]->setCurrentIndex(2/*index=1*/);
 					dimChanged = dim;
-					(static_cast<DataModel*>(tableModel.get()))->setDataSource(new TensorSliceDataSource(shape, dimVertical, dimHorizontal, mkIdxs(), data));
+					(static_cast<DataModel<T>*>(tableModel.get()))->setDataSource(new TensorSliceDataSource(shape, dimVertical, dimHorizontal, mkIdxs(), data));
 				};
 				auto changeIndexToIndex = [this]() {
-					(static_cast<DataModel*>(tableModel.get()))->setDataSource(new TensorSliceDataSource(shape, dimVertical, dimHorizontal, mkIdxs(), data));
+					(static_cast<DataModel<T>*>(tableModel.get()))->setDataSource(new TensorSliceDataSource(shape, dimVertical, dimHorizontal, mkIdxs(), data));
 				};
 				switch (index) {
 				case 0: // change to X
@@ -429,7 +442,7 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 	dataRangeLabel.setText(QString(tr("Data Range: %1..%2")).arg(std::get<0>(dataRange)).arg(std::get<1>(dataRange)));
 
 	// create the model
-	tableModel.reset(new DataModel(new TensorSliceDataSource(shape, dimVertical, dimHorizontal, mkIdxs(), data), nullptr, &tableView));
+	tableModel.reset(new DataModel<T>(new TensorSliceDataSource(shape, dimVertical, dimHorizontal, mkIdxs(), data), nullptr, &tableView));
 	tableView.setModel(tableModel.get());
 
 	// combobox values
@@ -459,7 +472,7 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 
 	// connect signals
 	connect(&colorSchemaComboBox, QOverload<int>::of(&QComboBox::activated), [this,dataRange](int index) {
-		(static_cast<DataModel*>(tableModel.get()))->setColorSchema(createColorSchema(
+		(static_cast<DataModel<T>*>(tableModel.get()))->setColorSchema(createColorSchema(
 			(ColorSchemaEnum)colorSchemaComboBox.itemData(index).toInt(),
 			std::get<0>(dataRange),
 			std::get<1>(dataRange)
@@ -489,19 +502,26 @@ DataTable2D::DataTable2D(const TensorShape &shape_, const float *data_, QWidget 
 
 /// interface
 
-void DataTable2D::dataChanged(const float *data_) {
+template<typename T>
+void DataTable2D<T>::dataChanged(const void *data) {
+	dataChangedTyped(static_cast<const T*>(data));
+}
+
+/// internals
+
+template<typename T>
+void DataTable2D<T>::dataChangedTyped(const T *data_) {
 	// update the numeric table
-	(static_cast<DataModel*>(tableModel.get()))->beginResetModel();
+	(static_cast<DataModel<T>*>(tableModel.get()))->beginResetModel();
 	data = data_;
-	(static_cast<DataModel*>(tableModel.get()))->endResetModel();
+	(static_cast<DataModel<T>*>(tableModel.get()))->endResetModel();
 	// update XRay-style view if it is enabled
 	if (viewDataAsBwImageCheckBox.isChecked())
 		updateBwImageView(false/*initialUpdate*/);
 }
 
-/// internals
-
-std::vector<unsigned> DataTable2D::mkIdxs() const {
+template<typename T>
+std::vector<unsigned> DataTable2D<T>::mkIdxs() const {
 	std::vector<unsigned> idxs;
 	unsigned i = 0;
 	for (auto d : shape) {
@@ -514,13 +534,14 @@ std::vector<unsigned> DataTable2D::mkIdxs() const {
 	return idxs;
 }
 
-void DataTable2D::updateBwImageView(bool initialUpdate) {
+template<typename T>
+void DataTable2D<T>::updateBwImageView(bool initialUpdate) {
 	// helpers
-	auto dataSourceToBwImage = [](const DataSource *dataSource, unsigned scaleFactor, std::tuple<float,float> &minMax) {
+	auto dataSourceToBwImage = [](const DataSource<T> *dataSource, unsigned scaleFactor, std::tuple<T,T> &minMax) {
 		std::unique_ptr<uchar> data(new uchar[dataSource->ncols()*dataSource->nrows()*scaleFactor*scaleFactor]);
 		minMax = dataSource->computeMinMax();
 		auto minMaxRange = std::get<1>(minMax)-std::get<0>(minMax);
-		auto normalize = [minMax,minMaxRange](float d) {
+		auto normalize = [minMax,minMaxRange](T d) {
 			return 255.*(d-std::get<0>(minMax))/minMaxRange;
 		};
 		auto *p = data.get();
@@ -592,8 +613,8 @@ void DataTable2D::updateBwImageView(bool initialUpdate) {
 	const unsigned numColumns = 16; // TODO should be based on width()/cell.width // TODO scaling coefficient initial value should also be adaptable
 	const unsigned numRows = (indexes.size()+numColumns-1)/numColumns;
 	imageView.setSizesAndData(numColumns/*width*/, numRows/*height*/, numColumns - (numRows*numColumns - indexes.size()), [&](unsigned x, unsigned y) {
-		std::unique_ptr<DataSource> dataSource(new TensorSliceDataSource(shape, dimVertical, dimHorizontal, indexes[y*numColumns+x], data));
-		std::tuple<float,float> minMax;
+		std::unique_ptr<DataSource<T>> dataSource(new TensorSliceDataSource<T>(shape, dimVertical, dimHorizontal, indexes[y*numColumns+x], data));
+		std::tuple<T,T> minMax;
 		auto imageWithData = dataSourceToBwImage(dataSource.get(), scaleBwImageSpinBox.value()/*scale 1+*/, minMax);
 		return ImageGridWidget::ImageData(
 			QString("%1\n%2 .. %3")
@@ -606,7 +627,8 @@ void DataTable2D::updateBwImageView(bool initialUpdate) {
 	});
 }
 
-void DataTable2D::setShowImageViewMode(bool showImageView) {
+template<typename T>
+void DataTable2D<T>::setShowImageViewMode(bool showImageView) {
 	// switch the view
 	dataViewStackWidget.setCurrentIndex(showImageView ? 1/*imageView*/ : 0/*tableView*/);
 	// update the screen
@@ -627,3 +649,7 @@ void DataTable2D::setShowImageViewMode(bool showImageView) {
 	scaleBwImageLabel.setVisible(showImageView);
 	scaleBwImageSpinBox.setVisible(showImageView);
 }
+
+// template instantiation
+template class DataTable2D<float>;
+template class DataTable2D<int32_t>;

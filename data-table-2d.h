@@ -20,11 +20,19 @@
 #include <vector>
 #include <memory>
 
-class DataTable2D : public QWidget {
-	Q_OBJECT
+// non-template base so that non-templated class can be used
+class DataTable2DBase : public QWidget {
+public:
+	DataTable2DBase(QWidget *parent);
+	virtual ~DataTable2DBase();
+public: // interface
+	virtual void dataChanged(const void *data) = 0; // notify the widget that the data changed (only the data itself, not the array shape)
+};
 
+template<typename T>
+class DataTable2D : public DataTable2DBase {
 	TensorShape      shape;
-	const float*     data;
+	const T*         data;
 	unsigned         dimVertical;
 	unsigned         dimHorizontal;
 	bool             self;   // to prevent signals from programmatically changed values
@@ -53,12 +61,13 @@ class DataTable2D : public QWidget {
 	bool                                     imageViewInitialized;
 
 public: // constructor
-	DataTable2D(const TensorShape &shape_, const float *data_, QWidget *parent);
+	DataTable2D(const TensorShape &shape_, const T *data_, QWidget *parent);
 
 public: // interface
-	void dataChanged(const float *data_); // notify the widget that the data changed (only the data itself, not the array shape)
+	void dataChanged(const void *data) override; // notify the widget that the data changed (only the data itself, not the array shape)
 
 private: // internals
+	void dataChangedTyped(const T *data_); // notify the widget that the data changed (only the data itself, not the array shape)
 	std::vector<unsigned> mkIdxs() const;
 	void updateBwImageView(bool initialUpdate);
 	void setShowImageViewMode(bool showImageView);

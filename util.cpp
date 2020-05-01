@@ -83,18 +83,6 @@ std::string formatFlops(size_t flops) {
 	return STR(formatUIntHumanReadableSuffixed(flops) << "flops");
 }
 
-std::tuple<float,float> arrayMinMax(const float *arr, size_t len) {
-	float amin = std::numeric_limits<float>::max();
-	float amax = std::numeric_limits<float>::lowest();
-	for (const float *ae = arr + len; arr < ae; arr++) {
-		if (*arr < amin)
-			amin = *arr;
-		if (*arr > amax)
-			amax = *arr;
-	}
-	return std::tuple<float,float>(amin, amax);
-}
-
 float* copyFpArray(const float *a, size_t sz) {
 	auto n = new float[sz];
 	std::memcpy(n, a, sz*sizeof(float));

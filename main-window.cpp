@@ -1011,7 +1011,7 @@ void MainWindow::showTensorDetails(PluginInterface::TensorId tensorId, const cha
 	nnTensorDetails.setTitle(QString("%1Tensor#%2: %3").arg(label).arg(tensorId).arg(S2Q(model->getTensorName(tensorId))));
 	nnTensorKindValue .setText(S2Q(ModelFunctions::tensorKind(model.get(), tensorId)));
 	nnTensorShapeValue.setText(S2Q(STR(model->getTensorShape(tensorId))));
-	nnTensorTypeValue .setText("float32"); // TODO types aren't implemented yet
+	nnTensorTypeValue .setText(S2Q(STR(model->getTensorType(tensorId))));
 	nnTensorSaveDataButton.setText(QString(tr("Save Tensor #%1 Data")).arg(tensorId));
 	nnTensorSaveDataButton.setProperty("tensorId", QVariant(tensorId));
 	// tensor data table
@@ -1519,11 +1519,26 @@ QLabel* MainWindow::makeTextSelectable(QLabel *label) {
 void MainWindow::showNnTensorData2D() {
 	assert(nnCurrentTensorId >= 0);
 	if (Tensor::numMultiDims(model->getTensorShape(nnCurrentTensorId)) >= 2) {
-		nnTensorData2D.reset(new DataTable2D(model->getTensorShape(nnCurrentTensorId),
-			model->isTensorComputed(nnCurrentTensorId) ? (*tensorData.get())[nnCurrentTensorId].get() : model->getTensorDataF32(nnCurrentTensorId),
-			&nnTensorDetails
-		));
-		nnTensorDetailsLayout.addWidget(nnTensorData2D.get(),   3/*row*/, 0/*col*/,  1/*rowSpan*/, 2/*columnSpan*/);
+		switch (model->getTensorType(nnCurrentTensorId)) {
+		case PluginInterface::DataType_Float32:
+			nnTensorData2D.reset(new DataTable2D<float>(
+				model->getTensorShape(nnCurrentTensorId),
+				model->isTensorComputed(nnCurrentTensorId) ? (*tensorData.get())[nnCurrentTensorId].get() : model->getTensorDataF32(nnCurrentTensorId),
+				&nnTensorDetails
+			));
+			break;
+		case PluginInterface::DataType_Int32:
+			assert(!model->isTensorComputed(nnCurrentTensorId));
+			nnTensorData2D.reset(new DataTable2D<int32_t>(
+				model->getTensorShape(nnCurrentTensorId),
+				static_cast<const int32_t*>(model->getTensorData(nnCurrentTensorId)),
+				&nnTensorDetails
+			));
+			break;
+		default:
+			FAIL("unsupported tensor data type " << model->getTensorType(nnCurrentTensorId))
+		}
+		nnTensorDetailsLayout.addWidget(nnTensorData2D.get(), 3/*row*/, 0/*col*/,  1/*rowSpan*/, 2/*columnSpan*/);
 		nnTensorData2D.get()->setSizePolicy(QSizePolicy::Minimum,   QSizePolicy::Minimum);
 	} else {
 		nnTensorDataPlaceholder1DnotImplemented.show();

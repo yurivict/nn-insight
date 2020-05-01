@@ -31,7 +31,19 @@ QPoint getGlobalMousePos();
 std::string formatUIntHumanReadable(size_t u);
 std::string formatUIntHumanReadableSuffixed(size_t u);
 std::string formatFlops(size_t flops);
-std::tuple<float,float> arrayMinMax(const float *arr, size_t len);
+template<typename T>
+std::tuple<T,T> arrayMinMax(const T *arr, size_t len) {
+	T amin = std::numeric_limits<T>::max();
+	T amax = std::numeric_limits<T>::lowest();
+	for (const T *ae = arr + len; arr < ae; arr++) {
+		if (*arr < amin)
+			amin = *arr;
+		if (*arr > amax)
+			amax = *arr;
+	}
+	return std::tuple<T,T>(amin, amax);
+}
+
 float* copyFpArray(const float *a, size_t sz);
 size_t getFileSize(const QString &fileName);
 QPixmap getScreenshot(bool hideOurWindows);

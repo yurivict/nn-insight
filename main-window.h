@@ -151,7 +151,7 @@ private: // fields
 	QPushButton                              nnTensorSaveDataButton;
 	QLabel                                   nnTensorDataPlaceholder;
 	QLabel                                   nnTensorDataPlaceholder1DnotImplemented;
-	std::unique_ptr<DataTable2D>             nnTensorData2D;
+	std::unique_ptr<DataTable2DBase>         nnTensorData2D;
 	QGroupBox                            noNnIsOpenGroupBox; // optionally visible
 	QVBoxLayout                            noNnIsOpenLayout;
 	NoNnIsOpenWidget                       noNnIsOpenWidget;

@@ -18,6 +18,19 @@
 #include <assert.h>
 #include <half.hpp> // to instantiate DataTable2D with the float16 type
 
+/// template helpers
+
+namespace Helpers {
+template<typename T>
+struct CTypeToQtType {
+	static T C2Qt(T t) {return t;}
+};
+template<>
+struct CTypeToQtType<int64_t> {
+	static qlonglong C2Qt(int64_t t) {return (qlonglong)t;}
+};
+}
+
 /// DataTable2DBase
 
 DataTable2DBase::DataTable2DBase(QWidget *parent)
@@ -226,7 +239,7 @@ public: // QAbstractTableModel interface implementation
 	QVariant data(const QModelIndex &index, int role) const override {
 		switch (role) {
 		case Qt::DisplayRole: // text
-			return QVariant(dataSource->value(index.row(), index.column()));
+			return QVariant(Helpers::CTypeToQtType<T>::C2Qt(dataSource->value(index.row(), index.column())));
 		case Qt::BackgroundRole: // background
 			return colorSchema ? colorSchema->color(dataSource->value(index.row(), index.column())) : QVariant();
 		case Qt::ForegroundRole: // text color
@@ -652,6 +665,11 @@ void DataTable2D<T>::setShowImageViewMode(bool showImageView) {
 }
 
 // template instantiation
-template class DataTable2D<float>;
-template class DataTable2D<int32_t>;
-template class DataTable2D<half_float::half>;
+template class DataTable2D<half_float::half>; // for float16
+template class DataTable2D<float>;            // for float32
+template class DataTable2D<double>;           // for float64
+template class DataTable2D<int8_t>;           // for int8
+template class DataTable2D<uint8_t>;          // for uint8
+template class DataTable2D<int16_t>;          // for int16
+template class DataTable2D<int32_t>;          // for int32
+template class DataTable2D<int64_t>;          // for int64

@@ -1522,7 +1522,7 @@ void MainWindow::showNnTensorData2D() {
 	if (Tensor::numMultiDims(model->getTensorShape(nnCurrentTensorId)) >= 2) {
 		switch (model->getTensorType(nnCurrentTensorId)) {
 		case PluginInterface::DataType_Float16:
-			assert(!model->isTensorComputed(nnCurrentTensorId)); // we don't support computed tensors of size float16 because tensorData always has float32
+			assert(!model->isTensorComputed(nnCurrentTensorId)); // we don't yet support computed tensors of type float16 because tensorData always has float32
 			nnTensorData2D.reset(new DataTable2D<half_float::half>(
 				model->getTensorShape(nnCurrentTensorId),
 				(const half_float::half*)model->getTensorData(nnCurrentTensorId),
@@ -1536,11 +1536,51 @@ void MainWindow::showNnTensorData2D() {
 				&nnTensorDetails
 			));
 			break;
+		case PluginInterface::DataType_Float64:
+			assert(!model->isTensorComputed(nnCurrentTensorId)); // we don't yet support computed tensors of the type float64 because tensorData always has float32
+			nnTensorData2D.reset(new DataTable2D<double>(
+				model->getTensorShape(nnCurrentTensorId),
+				static_cast<const double*>(model->getTensorData(nnCurrentTensorId)),
+				&nnTensorDetails
+			));
+			break;
+		case PluginInterface::DataType_Int8:
+			assert(!model->isTensorComputed(nnCurrentTensorId)); // we don't yet support computed tensors of the type int8 because tensorData always has float32
+			nnTensorData2D.reset(new DataTable2D<int8_t>(
+				model->getTensorShape(nnCurrentTensorId),
+				static_cast<const int8_t*>(model->getTensorData(nnCurrentTensorId)),
+				&nnTensorDetails
+			));
+			break;
+		case PluginInterface::DataType_UInt8:
+			assert(!model->isTensorComputed(nnCurrentTensorId)); // we don't yet support computed tensors of the type uint8 because tensorData always has float32
+			nnTensorData2D.reset(new DataTable2D<uint8_t>(
+				model->getTensorShape(nnCurrentTensorId),
+				static_cast<const uint8_t*>(model->getTensorData(nnCurrentTensorId)),
+				&nnTensorDetails
+			));
+			break;
+		case PluginInterface::DataType_Int16:
+			assert(!model->isTensorComputed(nnCurrentTensorId)); // we don't yet support computed tensors of the type int16 because tensorData always has float32
+			nnTensorData2D.reset(new DataTable2D<int16_t>(
+				model->getTensorShape(nnCurrentTensorId),
+				static_cast<const int16_t*>(model->getTensorData(nnCurrentTensorId)),
+				&nnTensorDetails
+			));
+			break;
 		case PluginInterface::DataType_Int32:
-			assert(!model->isTensorComputed(nnCurrentTensorId));
+			assert(!model->isTensorComputed(nnCurrentTensorId)); // we don't yet support computed tensors of the type int32 because tensorData always has float32
 			nnTensorData2D.reset(new DataTable2D<int32_t>(
 				model->getTensorShape(nnCurrentTensorId),
 				static_cast<const int32_t*>(model->getTensorData(nnCurrentTensorId)),
+				&nnTensorDetails
+			));
+			break;
+		case PluginInterface::DataType_Int64:
+			assert(!model->isTensorComputed(nnCurrentTensorId)); // we don't yet support computed tensors of the type int64 because tensorData always has float32
+			nnTensorData2D.reset(new DataTable2D<int64_t>(
+				model->getTensorShape(nnCurrentTensorId),
+				static_cast<const int64_t*>(model->getTensorData(nnCurrentTensorId)),
 				&nnTensorDetails
 			));
 			break;

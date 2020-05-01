@@ -73,6 +73,7 @@ public:
 	enum DataType {
 		DataType_Float16,
 		DataType_Float32,
+		DataType_Float64,
 		DataType_Int8,
 		DataType_UInt8,
 		DataType_Int16,

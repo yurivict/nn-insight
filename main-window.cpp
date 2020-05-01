@@ -34,6 +34,7 @@
 #include <QVariant>
 
 #include <assert.h>
+#include <half.hpp> // to instantiate DataTable2D with the float16 type
 #include <stdlib.h> // only for ::getenv
 
 #include <map>
@@ -1520,6 +1521,14 @@ void MainWindow::showNnTensorData2D() {
 	assert(nnCurrentTensorId >= 0);
 	if (Tensor::numMultiDims(model->getTensorShape(nnCurrentTensorId)) >= 2) {
 		switch (model->getTensorType(nnCurrentTensorId)) {
+		case PluginInterface::DataType_Float16:
+			assert(!model->isTensorComputed(nnCurrentTensorId)); // we don't support computed tensors of size float16 because tensorData always has float32
+			nnTensorData2D.reset(new DataTable2D<half_float::half>(
+				model->getTensorShape(nnCurrentTensorId),
+				(const half_float::half*)model->getTensorData(nnCurrentTensorId),
+				&nnTensorDetails
+			));
+			break;
 		case PluginInterface::DataType_Float32:
 			nnTensorData2D.reset(new DataTable2D<float>(
 				model->getTensorShape(nnCurrentTensorId),

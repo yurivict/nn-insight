@@ -16,6 +16,7 @@
 #include <tuple>
 
 #include <assert.h>
+#include <half.hpp> // to instantiate DataTable2D with the float16 type
 
 /// DataTable2DBase
 
@@ -653,3 +654,4 @@ void DataTable2D<T>::setShowImageViewMode(bool showImageView) {
 // template instantiation
 template class DataTable2D<float>;
 template class DataTable2D<int32_t>;
+template class DataTable2D<half_float::half>;

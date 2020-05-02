@@ -10,6 +10,7 @@
 #include <assert.h>
 
 #include <array>
+#include <chrono>
 #include <vector>
 #include <string>
 
@@ -117,11 +118,19 @@ void Graphviz_CGraph::setEdgeLabel(Edge edge, const char *label) {
 }
 
 void Graphviz_CGraph::render() {
+	// time begin
+	auto tmStart = std::chrono::high_resolution_clock::now();
+
 	int err = gvLayout(gvc, GRAPH, S("dot"));
 	if (err)
 		FAIL("GraphViz failed to render the graph")
 
 	attach_attrs(GRAPH);
+
+	{ // time end
+		auto tmStop = std::chrono::high_resolution_clock::now();
+		PRINT("graph was rendered in " << std::chrono::duration_cast<std::chrono::milliseconds>(tmStop - tmStart).count() << " milliseconds")
+	}
 }
 
 // getting information

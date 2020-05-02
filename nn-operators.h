@@ -4,6 +4,8 @@
 
 #include "tensor.h"
 
+#include <array>
+
 namespace NnOperators {
 
 void Conv2D(
@@ -78,6 +80,12 @@ void Mean(
 	const TensorShape &inputShape, const float *inputData,
 	const TensorShape &outputShape, float *outputData,
 	const int32_t *axis, unsigned axis_count
+);
+
+void Pad(
+	const std::array<int32_t,2>* paddings,
+	const TensorShape &inputShape, const float *inputData,
+	const TensorShape &outputShape, float *outputData
 );
 
 }

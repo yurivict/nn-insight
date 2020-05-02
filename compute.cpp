@@ -556,6 +556,39 @@ bool compute(
 			cbTensorComputed(outputs[0]);
 
 			break;
+		} case PI::KindPad: {
+			// tensors
+			auto inputDataShape = model->getTensorShape(inputs[0]);
+			auto inputPaddingsShape = model->getTensorShape(inputs[1]);
+			auto filterShape = model->getTensorShape(inputs[1]);
+			auto outputShape = model->getTensorShape(outputs[0]);
+			auto outputShapeSize = Tensor::flatSize(outputShape);
+
+			// check that shapes are consistent
+			assert(inputDataShape.size() <= 4); // TfLite has max=4 hardcoded in PadParams
+			assert(inputPaddingsShape.size()==2 && inputPaddingsShape[0]==inputDataShape.size() && inputPaddingsShape[1]==2);
+
+			// inputs
+			assert(model->getTensorType(inputs[1]) == PI::DataType_Int32);
+			auto paddings = static_cast<const std::array<int32_t,2>*>(model->getTensorData(inputs[2]));
+
+			// create output data
+			std::unique_ptr<float> outputData(new float[outputShapeSize]);
+
+			// compute
+			NnOperators::Pad(
+				paddings,
+				inputDataShape, (*tensorData)[inputs[0]].get(), // input
+				outputShape, outputData.get() // output
+			);
+
+			// save the data
+			(*tensorData)[outputs[0]].reset(outputData.release());
+
+			// notify the caller
+			cbTensorComputed(outputs[0]);
+
+			break;
 		} case PI::KindFullyConnected: {
 			assert(inputs.size()==3 && outputs.size()==1);
 			assert(opts); // need to have options present

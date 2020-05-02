@@ -4,6 +4,7 @@
 // tflite-reference-implementation.cpp contains portions of the Apache 2.0 licensed code from the TensorFlow source tree
 //
 
+#include <array>
 #include <algorithm>
 #include <cstdint>
 #include <vector>
@@ -305,6 +306,22 @@ struct LocalResponseNormalizationParams {
 struct MeanParams {
   int8 axis_count;
   int16 axis[4];
+};
+
+// from tensorflow/lite/kernels/internal/types.h
+
+enum class ResizingCategory : uint8 {
+  kNone,
+  kImageStyle,  // 4D, operating on inner dimensions, say {0, a, b, 0}.
+  kGenericResize,
+};
+
+struct PadParams {
+  int8 left_padding_count;
+  int32 left_padding[4];
+  int8 right_padding_count;
+  int32 right_padding[4];
+  ResizingCategory resizing_category; // unused
 };
 
 
@@ -847,6 +864,151 @@ inline void Mean(const tflite::MeanParams& op_params,
   }
 }
 
+// from tensorflow/lite/kernels/internal/types.h
+
+// from tensorflow/lite/kernels/internal/reference/pad.h (TF V2)
+
+// TFLite Pad supports activation tensors with up to 4 dimensions.
+constexpr int PadKernelMaxDimensionCount() { return 4; }
+
+template <typename T, typename P>
+inline void PadImpl(const tflite::PadParams& op_params,
+                    const RuntimeShape& input_shape, const T* input_data,
+                    const P* pad_value_ptr, const RuntimeShape& output_shape,
+                    T* output_data) {
+  const RuntimeShape ext_input_shape =
+      RuntimeShape::ExtendedShape(PadKernelMaxDimensionCount(), input_shape);
+  const RuntimeShape ext_output_shape =
+      RuntimeShape::ExtendedShape(PadKernelMaxDimensionCount(), output_shape);
+  TFLITE_DCHECK_LE(op_params.left_padding_count, PadKernelMaxDimensionCount());
+  TFLITE_DCHECK_LE(op_params.right_padding_count, PadKernelMaxDimensionCount());
+
+  // Runtime calls are currently fixed at 4 dimensions. Copy inputs so we can
+  // pad them to 4 dims (yes, we are "padding the padding").
+  int left_padding_copy[PadKernelMaxDimensionCount()];
+  for (int i = 0; i < PadKernelMaxDimensionCount(); i++) {
+    left_padding_copy[i] = 0;
+  }
+  for (int i = 0; i < op_params.left_padding_count; ++i) {
+    left_padding_copy[i + PadKernelMaxDimensionCount() -
+                      op_params.left_padding_count] = op_params.left_padding[i];
+  }
+  int right_padding_copy[PadKernelMaxDimensionCount()];
+  for (int i = 0; i < PadKernelMaxDimensionCount(); i++) {
+    right_padding_copy[i] = 0;
+  }
+  for (int i = 0; i < op_params.right_padding_count; ++i) {
+    right_padding_copy[i + PadKernelMaxDimensionCount() -
+                       op_params.right_padding_count] =
+        op_params.right_padding[i];
+  }
+
+  const int output_batch = ext_output_shape.Dims(0);
+  const int output_height = ext_output_shape.Dims(1);
+  const int output_width = ext_output_shape.Dims(2);
+  const int output_depth = ext_output_shape.Dims(3);
+
+  const int left_b_padding = left_padding_copy[0];
+  const int left_h_padding = left_padding_copy[1];
+  const int left_w_padding = left_padding_copy[2];
+  const int left_d_padding = left_padding_copy[3];
+
+  const int right_b_padding = right_padding_copy[0];
+  const int right_h_padding = right_padding_copy[1];
+  const int right_w_padding = right_padding_copy[2];
+  const int right_d_padding = right_padding_copy[3];
+
+  const T pad_value = *pad_value_ptr;
+
+  const T* in_ptr = input_data;
+  T* out_ptr = output_data;
+  for (int out_b = 0; out_b < output_batch; ++out_b) {
+    for (int out_h = 0; out_h < output_height; ++out_h) {
+      for (int out_w = 0; out_w < output_width; ++out_w) {
+        for (int out_d = 0; out_d < output_depth; ++out_d) {
+          if (out_b < left_b_padding ||
+              out_b >= output_batch - right_b_padding ||
+              out_h < left_h_padding ||
+              out_h >= output_height - right_h_padding ||
+              out_w < left_w_padding ||
+              out_w >= output_width - right_w_padding ||
+              out_d < left_d_padding ||
+              out_d >= output_depth - right_d_padding) {
+            *out_ptr++ = pad_value;
+          } else {
+            *out_ptr++ = *in_ptr++;
+          }
+        }
+      }
+    }
+  }
+}
+
+template <typename T, typename P>
+inline void Pad(const tflite::PadParams& op_params,
+                const RuntimeShape& input_shape, const T* input_data,
+                const P* pad_value_ptr, const RuntimeShape& output_shape,
+                T* output_data) {
+  PadImpl(op_params, input_shape, input_data, pad_value_ptr, output_shape,
+          output_data);
+}
+
+template <typename T>
+inline void Pad(const tflite::PadParams& op_params,
+                const RuntimeShape& input_shape, const T* input_data,
+                const int32* pad_value_ptr, const RuntimeShape& output_shape,
+                T* output_data) {
+  const T converted_pad_value = static_cast<T>(*pad_value_ptr);
+  PadImpl(op_params, input_shape, input_data, &converted_pad_value,
+          output_shape, output_data);
+}
+
+template <>
+inline void Pad(const tflite::PadParams& op_params,
+                const RuntimeShape& input_shape, const int32* input_data,
+                const int32* pad_value_ptr, const RuntimeShape& output_shape,
+                int32* output_data) {
+  PadImpl(op_params, input_shape, input_data, pad_value_ptr, output_shape,
+          output_data);
+}
+
+template <typename T, typename P>
+inline void PadImageStyle(const tflite::PadParams& op_params,
+                          const RuntimeShape& input_shape, const T* input_data,
+                          const P* pad_value_ptr,
+                          const RuntimeShape& output_shape, T* output_data) {
+  //TFLITE_ASSERT_FALSE;
+}
+
+template <typename P>
+inline void PadImageStyle(const tflite::PadParams& op_params,
+                          const RuntimeShape& input_shape,
+                          const uint8* input_data, const P* pad_value_ptr,
+                          const RuntimeShape& output_shape,
+                          uint8* output_data) {
+  Pad(op_params, input_shape, input_data, pad_value_ptr, output_shape,
+      output_data);
+}
+
+template <typename P>
+inline void PadImageStyle(const tflite::PadParams& op_params,
+                          const RuntimeShape& input_shape,
+                          const int8_t* input_data, const P* pad_value_ptr,
+                          const RuntimeShape& output_shape,
+                          int8_t* output_data) {
+  Pad(op_params, input_shape, input_data, pad_value_ptr, output_shape,
+      output_data);
+}
+
+template <typename P>
+inline void PadImageStyle(const tflite::PadParams& op_params,
+                          const RuntimeShape& input_shape,
+                          const float* input_data, const P* pad_value_ptr,
+                          const RuntimeShape& output_shape,
+                          float* output_data) {
+  Pad(op_params, input_shape, input_data, pad_value_ptr, output_shape,
+      output_data);
+}
 
 }
 
@@ -1050,6 +1212,28 @@ void Mean(
 
 	tflite::Mean<float>(params,
 		tflite::RuntimeShape(inputShape),  inputData,
+		tflite::RuntimeShape(outputShape), outputData
+	);
+}
+
+void Pad(
+	const std::array<int32_t,2>* paddings,
+	const TensorShape &inputShape, const float *inputData,
+	const TensorShape &outputShape, float *outputData
+) {
+	tflite::PadParams params;
+	params.left_padding_count = inputShape.size();
+	params.right_padding_count = params.left_padding_count;
+	for (unsigned i = 0; i < params.left_padding_count; i++, paddings++) {
+		params.left_padding[i] = (*paddings)[0];
+		params.right_padding[i] = (*paddings)[1];
+	}
+
+	float padValue = 0;
+
+	tflite::Pad(params,
+		tflite::RuntimeShape(inputShape),  inputData,
+		&padValue,
 		tflite::RuntimeShape(outputShape), outputData
 	);
 }

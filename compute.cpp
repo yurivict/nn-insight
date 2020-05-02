@@ -560,9 +560,7 @@ bool compute(
 			// tensors
 			auto inputDataShape = model->getTensorShape(inputs[0]);
 			auto inputPaddingsShape = model->getTensorShape(inputs[1]);
-			auto filterShape = model->getTensorShape(inputs[1]);
 			auto outputShape = model->getTensorShape(outputs[0]);
-			auto outputShapeSize = Tensor::flatSize(outputShape);
 
 			// check that shapes are consistent
 			assert(inputDataShape.size() <= 4); // TfLite has max=4 hardcoded in PadParams
@@ -570,10 +568,10 @@ bool compute(
 
 			// inputs
 			assert(model->getTensorType(inputs[1]) == PI::DataType_Int32);
-			auto paddings = static_cast<const std::array<int32_t,2>*>(model->getTensorData(inputs[2]));
+			auto paddings = static_cast<const std::array<int32_t,2>*>(model->getTensorData(inputs[1]));
 
 			// create output data
-			std::unique_ptr<float> outputData(new float[outputShapeSize]);
+			std::unique_ptr<float> outputData(new float[Tensor::flatSize(outputShape)]);
 
 			// compute
 			NnOperators::Pad(

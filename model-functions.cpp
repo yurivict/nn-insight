@@ -128,8 +128,8 @@ float dataRatioOfOperatorModelInputToIns(const PluginInterface::Model *model, Pl
 			cntInputs++;
 		}
 
-	//assert(model->numInputs()==1);
-	return float(sizeOfInputs)/cntInputs/float(Tensor::flatSize(model->getTensorShape(model->getInputs()[0])));
+	// XXX the below is incorrect for unbalanced operators (data use isn't equal between branches)
+	return float(sizeOfInputs)/float(Tensor::flatSize(model->getTensorShape(model->getInputs()[0])));
 }
 
 float dataRatioOfOperatorModelInputToOuts(const PluginInterface::Model *model, PluginInterface::OperatorId operatorId) {

@@ -128,7 +128,7 @@ float dataRatioOfOperatorModelInputToIns(const PluginInterface::Model *model, Pl
 			cntInputs++;
 		}
 
-	assert(model->numInputs()==1);
+	//assert(model->numInputs()==1);
 	return float(sizeOfInputs)/cntInputs/float(Tensor::flatSize(model->getTensorShape(model->getInputs()[0])));
 }
 
@@ -142,7 +142,7 @@ float dataRatioOfOperatorModelInputToOuts(const PluginInterface::Model *model, P
 		cntOutputs++;
 	}
 
-	assert(model->numInputs()==1);
+	//assert(model->numInputs()==1);
 	return float(sizeOfOutputs)/cntOutputs/float(Tensor::flatSize(model->getTensorShape(model->getInputs()[0])));
 }
 

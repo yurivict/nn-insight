@@ -188,6 +188,12 @@ std::string getOperatorExtraInfoString(const PluginInterface::Model *model, Plug
 		auto filterShape = model->getTensorShape(inputs[1]);
 		assert(filterShape.size()==4);
 		return Util::stringToSubscript(STR(filterShape[1] << "x" << filterShape[2]));
+	} case PI::KindFullyConnected: {
+		std::vector<PI::TensorId> inputs, outputs;
+		model->getOperatorIo(operatorId, inputs, outputs);
+		auto filterShape = model->getTensorShape(inputs[1]);
+		assert(filterShape.size()==2);
+		return Util::stringToSubscript(STR(filterShape[0] << "x" << filterShape[1]));
 	} case PI::KindMaxPool:
 	  case PI::KindAveragePool: {
 		int filterWidth=0, filterHeight=0;

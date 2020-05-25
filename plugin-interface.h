@@ -55,6 +55,7 @@ public:
 		KindReshape,
 		KindSoftmax,
 		KindConcatenation,
+		KindSplit,
 		KindStridedSlice,
 		KindMean,
 		// Data manipulations

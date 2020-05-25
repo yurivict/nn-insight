@@ -39,6 +39,7 @@ QColor getOperatorColor(PluginInterface::OperatorKind okind) {
 	case PluginInterface::KindSoftmax:
 		return QColor(170,32,170);
 	case PluginInterface::KindConcatenation:
+	case PluginInterface::KindSplit:
 		return QColor(32,170,170);
 	case PluginInterface::KindMean:
 		return QColor(130,11,212);

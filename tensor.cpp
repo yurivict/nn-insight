@@ -22,6 +22,13 @@ size_t flatSize(const TensorShape &shape) {
 	return sz;
 }
 
+size_t sizeBetweenDims(const TensorShape &shape, int dim1, int dim2) {
+	size_t sz = 1;
+	for (int d = dim1; d <= dim2; d++)
+		sz *= shape[d];
+	return sz;
+}
+
 unsigned numMultiDims(const TensorShape &shape) {
 	unsigned numMultiDims = 0;
 	for (auto d : shape)

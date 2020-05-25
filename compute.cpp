@@ -971,7 +971,7 @@ bool compute(
 
 			// parse the operator options supplied by the model into the above variables
 			unsigned numParsed =
-				OperatorOptions::GetOption1<PI::OperatorOption_AXIS,            PI::OperatorOption_TypeInt,int>(*opts, &axis)
+				OperatorOptions::GetOption1<PI::OperatorOption_AXIS, PI::OperatorOption_TypeInt,int>(*opts, &axis)
 				+ OperatorOptions::GetOption1<PI::OperatorOption_FUSED_ACTIVATION_FUNCTION,
 					PI::OperatorOption_TypeActivationFunction,PI::ActivationFunction>(*opts, &activationFunction);
 			assert(numParsed==2); // need to have 2 options
@@ -1011,6 +1011,63 @@ bool compute(
 
 			// notify the caller
 			cbTensorComputed(outputs[0]);
+
+			break;
+		} case PI::KindSplit: {
+			assert(inputs.size()==2);
+			assert(opts); // need to have options present
+
+			// operator options required to run this operator
+			int num_splits = 0;
+
+			// parse the operator options supplied by the model into the above variables
+			unsigned numParsed = OperatorOptions::GetOption1<PI::OperatorOption_NUM_SPLITS, PI::OperatorOption_TypeInt,int>(*opts, &num_splits);
+			PRINT("numParsed=" << numParsed)
+			assert(numParsed==1); // need to have 1 option
+			assert(numParsed==opts->size()); // all options are parsed
+			UNUSED(numParsed)
+
+			// checks
+			assert(num_splits == outputs.size()); // runtime check should be in the model verifier
+
+			// argument1 has the axis index
+			assert(model->getTensorShape(inputs[0]) == TensorShape({1}));
+			const int axis = model->getTensorDataF32(inputs[0])[0];
+
+			// compute inside and outside tensor sizes
+			TensorShape inputShape = model->getTensorShape(inputs[1]);
+			unsigned outsideTensorSize = Tensor::sizeBetweenDims(inputShape, 0, axis-1);
+			unsigned insideTensorSize  = Tensor::sizeBetweenDims(inputShape, axis+1, inputShape.size()-1);
+
+			// create output data
+			unsigned outputsSize = outputs.size();
+			std::shared_ptr<float> outputData[outputsSize];
+			float* outputDataPtr[outputsSize];
+			unsigned outputSliceSize[outputsSize];
+			for (unsigned o = 0; o < outputsSize; o++) {
+				TensorShape outputShape = model->getTensorShape(outputs[o]);
+				outputSliceSize[o] = outputShape[axis]*insideTensorSize;
+				outputData[o].reset(new float[Tensor::flatSize(outputShape)]);
+				outputDataPtr[o] = outputData[o].get();
+			}
+
+			// compute
+			auto copyFloats = [](const float* &src, float* &dst, unsigned num) {
+				std::memcpy(dst, src, num*sizeof(float));
+				src += num;
+				dst += num;
+			};
+			const float *in0 = (*tensorData)[inputs[1]].get(), *in = in0;
+			for (unsigned io = 0; io < outsideTensorSize; io++)
+				for (unsigned o = 0; o < outputsSize; o++)
+					copyFloats(in, outputDataPtr[o], outputSliceSize[o]);
+			assert(in == in0+Tensor::flatSize(inputShape));
+
+			// save the data and notify the caller
+			for (unsigned o = 0, oe = outputs.size(); o < oe; o++) {
+				(*tensorData)[outputs[o]] = outputData[o];
+				cbTensorComputed(outputs[o]);
+			}
 
 			break;
 		} case PI::KindMean: {

@@ -1034,38 +1034,45 @@ bool compute(
 			assert(model->getTensorShape(inputs[0]) == TensorShape({1}));
 			const int axis = model->getTensorDataF32(inputs[0])[0];
 
-			// compute inside and outside tensor sizes
-			TensorShape inputShape = model->getTensorShape(inputs[1]);
-			unsigned outsideTensorSize = Tensor::sizeBetweenDims(inputShape, 0, axis-1);
-			unsigned insideTensorSize  = Tensor::sizeBetweenDims(inputShape, axis+1, inputShape.size()-1);
-
 			// create output data
-			unsigned outputsSize = outputs.size();
-			std::shared_ptr<float> outputData[outputsSize];
-			float* outputDataPtr[outputsSize];
-			unsigned outputSliceSize[outputsSize];
-			for (unsigned o = 0; o < outputsSize; o++) {
-				TensorShape outputShape = model->getTensorShape(outputs[o]);
-				outputSliceSize[o] = outputShape[axis]*insideTensorSize;
-				outputData[o].reset(new float[Tensor::flatSize(outputShape)]);
-				outputDataPtr[o] = outputData[o].get();
-			}
+			std::shared_ptr<float> outputTensorData[outputs.size()];
+			for (unsigned o = 0, oe = sizeof(outputTensorData)/sizeof(outputTensorData[0]); o < oe; o++)
+				outputTensorData[o].reset(new float[Tensor::flatSize(model->getTensorShape(outputs[o]))]);
 
 			// compute
-			auto copyFloats = [](const float* &src, float* &dst, unsigned num) {
-				std::memcpy(dst, src, num*sizeof(float));
-				src += num;
-				dst += num;
+			auto copyTensorSlices = [model,&tensorData](PI::TensorId one, const std::vector<PI::TensorId> &many, std::shared_ptr<float> *manyTensorData, int axis) {
+				// compute inside and outside tensor sizes
+				TensorShape oneShape = model->getTensorShape(one);
+				unsigned outsideTensorSize = Tensor::sizeBetweenDims(oneShape, 0, axis-1);
+				unsigned insideTensorSize  = Tensor::sizeBetweenDims(oneShape, axis+1, oneShape.size()-1);
+
+				// create output data
+				unsigned manySize = many.size();
+				float* manyDataPtr[manySize];
+				unsigned outputSliceSize[manySize];
+				for (unsigned o = 0; o < manySize; o++) {
+					TensorShape manyShape = model->getTensorShape(many[o]);
+					outputSliceSize[o] = manyShape[axis]*insideTensorSize;
+					manyDataPtr[o] = manyTensorData[o].get();
+				}
+
+				auto copyFloats = [](const float* &src, float* &dst, unsigned num) {
+					std::memcpy(dst, src, num*sizeof(float));
+					src += num;
+					dst += num;
+				};
+
+				const float *oneDataPtr0 = (*tensorData)[one].get(), *oneDataPtr = oneDataPtr0;
+				for (unsigned io = 0; io < outsideTensorSize; io++)
+					for (unsigned o = 0; o < manySize; o++)
+						copyFloats(oneDataPtr, manyDataPtr[o], outputSliceSize[o]);
+				assert(oneDataPtr == oneDataPtr0+Tensor::flatSize(oneShape));
 			};
-			const float *in0 = (*tensorData)[inputs[1]].get(), *in = in0;
-			for (unsigned io = 0; io < outsideTensorSize; io++)
-				for (unsigned o = 0; o < outputsSize; o++)
-					copyFloats(in, outputDataPtr[o], outputSliceSize[o]);
-			assert(in == in0+Tensor::flatSize(inputShape));
+			copyTensorSlices(inputs[1], outputs, outputTensorData, axis);
 
 			// save the data and notify the caller
 			for (unsigned o = 0, oe = outputs.size(); o < oe; o++) {
-				(*tensorData)[outputs[o]] = outputData[o];
+				(*tensorData)[outputs[o]] = outputTensorData[o];
 				cbTensorComputed(outputs[o]);
 			}
 

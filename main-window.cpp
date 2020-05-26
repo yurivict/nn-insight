@@ -1245,7 +1245,7 @@ void MainWindow::updateNetworkDetailsPage() {
 		.arg(S2Q(Util::formatUIntHumanReadable(sizeOfStaticData)))
 		.arg(staticDataTensors)
 		.arg(numInPlural(staticDataTensors, tr("tensor"), tr("tensors")))
-		.arg(S2Q(Util::formatUIntHumanReadable(sizeOfStaticData/model->numOperators())))
+		.arg(model->numOperators()!=0 ? S2Q(Util::formatUIntHumanReadable(sizeOfStaticData/model->numOperators())) : tr("n/a"))
 		.arg(S2Q(Util::formatUIntHumanReadable(maxStaticDataPerOperator)))
 	);
 }

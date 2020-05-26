@@ -45,19 +45,20 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 
 	// map tensors to operators
 	std::vector<int/*PluginInterface::OperatorId or -1*/> tensorProducers;
+	const int NoOperator = -1;
 	tensorProducers.resize(model->numTensors());
-	std::vector<std::set<PluginInterface::OperatorId>> tensorConsumers;
+	std::vector<std::vector<PluginInterface::OperatorId>> tensorConsumers;
 	tensorConsumers.resize(model->numTensors());
 	{
 		for (auto &p : tensorProducers)
-			p = -1;
+			p = NoOperator;
 		for (PluginInterface::OperatorId oid = 0, oide = (PluginInterface::OperatorId)model->numOperators(); oid < oide; oid++) {
 			std::vector<PluginInterface::TensorId> oinputs, ooutputs;
 			model->getOperatorIo(oid, oinputs, ooutputs);
 			for (auto o : ooutputs)
 				tensorProducers[o] = oid;
 			for (auto i : oinputs)
-				tensorConsumers[i].insert(oid);
+				tensorConsumers[i].push_back(oid);
 		}
 	}
 
@@ -76,7 +77,7 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 	// add operators as nodes
 	std::vector<Graphviz_CGraph::Node> operatorNodes;
 	for (PluginInterface::OperatorId oid = 0, oide = model->numOperators(); oid < oide; oid++) {
-		auto node = graph.addNode(CSTR("Op_" << oid));
+		auto node = graph.addNode(CSTR("Op_" << oid)); // operator
 		auto szBox = operatorBoxFn(oid);
 		graph.setNodeSize(node,
 			operatorBoxMargins.left() + szBox.width() + operatorBoxMargins.right(),
@@ -89,9 +90,9 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 	std::vector<std::vector<Graphviz_CGraph::Node>> tensorEdges;
 	tensorEdges.resize(model->numTensors());
 	for (PluginInterface::TensorId tid = 0, tide = model->numTensors(); tid < tide; tid++)
-		if (tensorProducers[tid] != -1 && !tensorConsumers[tid].empty())
-			for (auto oidConsumer : tensorConsumers[tid]) {
-				auto edge = graph.addEdge(operatorNodes[tensorProducers[tid]], operatorNodes[oidConsumer], CSTR("edge#" << edgeNo++)/*name(key)*/);
+		if (tensorProducers[tid] != NoOperator) // operator->operator
+			for (auto oidConsumer : tensorConsumers[tid]) { // tensorConsumers can be empty (a corner case of a dangling operator output in a broken model)
+				auto edge = graph.addEdge(operatorNodes[tensorProducers[tid]], operatorNodes[oidConsumer], CSTR("edge#" << edgeNo++)/*name(key)*/); // operator->operator
 				graph.setEdgeLabel(edge, CSTR(model->getTensorShape(tid)));
 				tensorEdges[tid].push_back(edge);
 			}
@@ -99,7 +100,7 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 	// add inputs
 	std::map<PluginInterface::TensorId, Graphviz_CGraph::Node> inputNodes;
 	for (auto i : model->getInputs()) {
-		auto node = graph.addNode(CSTR("Src_" << i));
+		auto node = graph.addNode(CSTR("In_" << i)); // input
 		auto szBox = inputBoxFn(i);
 		graph.setNodeSize(node,
 			operatorBoxMargins.left() + szBox.width() + operatorBoxMargins.right(),
@@ -108,7 +109,7 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 		inputNodes[i] = node;
 		// edges
 		for (auto oidConsumer : tensorConsumers[i]) {
-			auto edge = graph.addEdge(node, operatorNodes[oidConsumer], CSTR("edge#" << edgeNo++)/*name(key)*/);
+			auto edge = graph.addEdge(node, operatorNodes[oidConsumer], CSTR("edge#" << edgeNo++)/*name(key)*/); // input->operator
 			graph.setEdgeLabel(edge, CSTR(model->getTensorShape(i)));
 			tensorEdges[i].push_back(edge);
 		}
@@ -117,7 +118,7 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 	// add outputs
 	std::map<PluginInterface::TensorId, Graphviz_CGraph::Node> outputNodes;
 	for (auto o : model->getOutputs()) {
-		auto node = graph.addNode(CSTR("Dst_" << o));
+		auto node = graph.addNode(CSTR("Out_" << o)); // output
 		auto szBox = outputBoxFn(o);
 		graph.setNodeSize(node,
 			operatorBoxMargins.left() + szBox.width() + operatorBoxMargins.right(),
@@ -125,13 +126,18 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 		);
 		outputNodes[o] = node;
 		// edge
-		auto edge = graph.addEdge(operatorNodes[tensorProducers[o]], node, CSTR("edge#" << edgeNo++)/*name(key)*/);
+		Graphviz_CGraph::Edge edge;
+		if (tensorProducers[o] != NoOperator) // operator->output
+			edge = graph.addEdge(operatorNodes[tensorProducers[o]], node, CSTR("edge#" << edgeNo++)/*name(key)*/); // operator->output
+		else { // input->output (the corner case of the output connected directly to the input)
+			assert(inputNodes.find(o) != inputNodes.end());
+			edge = graph.addEdge(inputNodes[o], node, CSTR("edge#" << edgeNo++)/*name(key)*/); // input->output
+		}
 		graph.setEdgeLabel(edge, CSTR(model->getTensorShape(o)));
 		tensorEdges[o].push_back(edge);
 	}
 
 	/// render the graph
-
 	graph.render();
 
 	// bbox
@@ -143,7 +149,7 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 	// inputs (nodes)
 	for (auto it : inputNodes)
 		inputBoxes[it.first] = Box2{{graph.getNodePos(it.second), graph.getNodeSize(it.second)}};
-	// putputs (nodes)
+	// outputs (nodes)
 	for (auto it : outputNodes)
 		outputBoxes[it.first] = Box2{{graph.getNodePos(it.second), graph.getNodeSize(it.second)}};
 

@@ -780,6 +780,14 @@ MainWindow::MainWindow()
 		QApplication::quit();
 	})->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_Q));
 
+	auto viewMenu = menuBar.addMenu(tr("&View"));
+	viewMenu->addAction(tr("Full Screen"), [this]() {
+		if (isFullScreen())
+			showNormal();
+		else
+			showFullScreen();
+	})->setShortcut(QKeySequence(Qt::Key_F11));
+
 	// icon
 	setWindowIcon(QPixmap::fromImage(Util::svgToImage(SvgGraphics::generateNnAppIcon(), QSize(128,128), QPainter::CompositionMode_SourceOver)));
 

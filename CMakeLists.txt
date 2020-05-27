@@ -104,8 +104,10 @@ target_link_libraries(nn-insight
 endif()
 
 if (NOT ${CMAKE_BUILD_TYPE} STREQUAL "Release")
-	add_definitions(-DDEBUG) # -DNDEBUG is turned on by cmake, but only for some compilers (?)
+	add_definitions(-DDEBUG)
 	add_definitions(-DWITH_ASSERTS) # to be able to clearly enable code related to asserts
+else()
+	add_definitions(-DNDEBUG)
 endif()
 
 ##

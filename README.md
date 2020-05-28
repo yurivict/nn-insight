@@ -4,7 +4,7 @@ NN Insight is a program that visualizes neural network's structure and computati
 
 ## Features
 * Visually shows all objects and data that neural network contains: operators, tensors, static arrays, operator options.
-* Allows to run neural networks on images and see results immediately.
+* Allows to run neural networks on images and other data kinds and see results immediately.
 * Shows all intermediate layers, both as tables with numbers and as black-and-white images.
 * Performs analytics on neural networks, shows how relatively expensive different operators are, and how much data they generate or operate on.
 * Allows to easily run on any image region selected visually.

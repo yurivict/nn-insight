@@ -1,6 +1,6 @@
 # NN Insight
 
-NN Insight is a program that visualizes neural network's structure and computation results.
+NN Insight is a program that visualizes neural network's structure and computation results. NN Insight is currently a in its alpha stage, and is under development.
 
 ## Features
 * Visually shows all objects and data that neural network contains: operators, tensors, static arrays, operator options.

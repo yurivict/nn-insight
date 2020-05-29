@@ -14,7 +14,9 @@
 #include "compute.h"
 #include "svg-graphics-generator.h"
 #include "svg-push-button.h"
+#include "transformation-quantize-dialog.h"
 #include "model-views/merge-dequantize-operators.h"
+#include "copy-model.h"
 
 #include <QByteArray>
 #include <QEvent>
@@ -139,6 +141,8 @@ static const std::map<ConvolutionEffect, std::tuple<TensorShape,std::vector<floa
 #undef S02
 #undef S04
 #undef TTT
+
+std::set<MainWindow*> MainWindow::allWindows;
 
 MainWindow::MainWindow()
 : mainSplitter(this)
@@ -780,6 +784,32 @@ MainWindow::MainWindow()
 		QApplication::quit();
 	})->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_Q));
 
+	auto transformationsMenu = menuBar.addMenu(tr("&Transformations"));
+	transformationsMenu->addAction(tr("Copy model"), [this]() {
+		auto w = new MainWindow;
+		w->loadInMemoryModel(ModelFunctions::copyModel(model.get()), "Model copy");
+		w->show();
+	});
+	transformationsMenu->addAction(tr("Quantize"), [this]() {
+		TransformationQuantizeDialog dialog(this);
+		if (dialog.exec()) {
+			// copy and quantize the model
+			std::unique_ptr<PluginInterface::Model> quantized(ModelFunctions::copyModel(model.get()));
+			ModelFunctions::quantize(quantized.get(),
+				dialog.doWeightsQuantization(), dialog.getWeightsQuantizationSegments(),
+				dialog.doBiasesQuantization(), dialog.getBiasesQuantizationSegments()
+			);
+
+			// show the quantized model in a new window
+			auto w = new MainWindow;
+			w->loadInMemoryModel(quantized.release(), "Quantized model");
+			w->show();
+		}
+
+	})->setShortcut(QKeySequence(Qt::SHIFT + Qt::Key_Q));
+
+	windowsMenu = menuBar.addMenu(tr("&Windows")); // filled dynamically
+
 	auto viewMenu = menuBar.addMenu(tr("&View"));
 	viewMenu->addAction(tr("Full Screen"), [this]() {
 		if (isFullScreen())
@@ -793,17 +823,26 @@ MainWindow::MainWindow()
 
 	// restore geometry
 	restoreGeometry(appSettings.value("MainWindow.geometry", QByteArray()).toByteArray());
+
+	// add to the registry
+	allWindows.insert(this);
+	updateWindowsLists();
 }
 
 MainWindow::~MainWindow() {
 	if (model) {
-		model.reset(nullptr);
+		model = nullptr;
 		pluginInterface.reset(nullptr);
-		PluginManager::unloadPlugin(plugin);
+		if (plugin) // can be null for non-plugin-based models
+			PluginManager::unloadPlugin(plugin);
 	}
 
 	// save geometry
 	appSettings.setValue("MainWindow.geometry", saveGeometry());
+
+	// remove from the registry
+	allWindows.insert(this);
+	updateWindowsLists();
 }
 
 bool MainWindow::loadModelFile(const QString &filePath) {
@@ -859,8 +898,31 @@ bool MainWindow::loadModelFile(const QString &filePath) {
 
 	// set window title
 	setWindowTitle(QString("NN Insight: %1 (%2)").arg(filePath).arg(S2Q(Util::formatFlops(ModelFunctions::computeModelFlops(model.get())))));
+	updateWindowsLists();
 
 	return true; // success
+}
+
+void MainWindow::loadInMemoryModel(PluginInterface::Model *inMemoryModel, const char *name) { // accepts ownership
+	// save the model
+	model.reset(inMemoryModel);
+
+	// render the model as SVG image
+	nnWidget.open(model.get());
+	nnNetworkOperatorsListWidget.setNnModel(model.get());
+	updateSectionWidgetsVisibility();
+
+	// guess the output interpretation type
+	Util::selectComboBoxItemWithItemData(outputInterpretationKindComboBox, (int)ModelFunctions::guessOutputInterpretationKind(model.get()));
+
+	// switch NN details to show the whole network info page
+	updateNetworkDetailsPage();
+	nnDetailsStack.setCurrentIndex(/*page#*/0);
+
+	// set window title
+	static std::map<std::string,unsigned> modelWinNo;
+	setWindowTitle(QString("NN Insight: %1 #%2 (%3)").arg(name).arg(++modelWinNo[name]).arg(S2Q(Util::formatFlops(ModelFunctions::computeModelFlops(model.get())))));
+	updateWindowsLists();
 }
 
 /// private methods
@@ -1233,9 +1295,9 @@ void MainWindow::updateNetworkDetailsPage() {
 		return (num%10==1) ? strSingle : strPlural;
 	};
 
-	nnNetworkDescriptionText   .setText(S2Q(pluginInterface->modelDescription()));
+	nnNetworkDescriptionText   .setText(pluginInterface ? S2Q(pluginInterface->modelDescription()) : tr("n/a"));
 	nnNetworkComplexityText    .setText(S2Q(Util::formatFlops(ModelFunctions::computeModelFlops(model.get()))));
-	nnNetworkFileSizeText      .setText(QString(tr("%1 bytes")).arg(S2Q(Util::formatUIntHumanReadable(Util::getFileSize(S2Q(pluginInterface->filePath()))))));
+	nnNetworkFileSizeText      .setText(pluginInterface ? QString(tr("%1 bytes")).arg(S2Q(Util::formatUIntHumanReadable(Util::getFileSize(S2Q(pluginInterface->filePath()))))) : tr("n/a"));
 	nnNetworkNumberInsOutsText .setText(QString("%1 %2, %3 %4")
 		.arg(model->numInputs())
 		.arg(numInPlural(model->numInputs(), tr("input"), tr("inputs")))
@@ -1607,4 +1669,17 @@ void MainWindow::clearNnTensorData2D() {
 	nnTensorData2D.reset(nullptr);
 	nnTensorDataPlaceholder.show();
 	nnTensorDataPlaceholder1DnotImplemented.hide();
+}
+
+void MainWindow::updateWindowsLists() {
+	for (auto w : allWindows)
+		w->windowsListChanged();
+}
+
+void MainWindow::windowsListChanged() {
+	windowsMenu->clear();
+	for (auto w : allWindows)
+		windowsMenu->addAction(w==this ? tr("Self") : w->windowTitle(), [w]() {
+			w->raise();
+		});
 }

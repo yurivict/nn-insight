@@ -47,4 +47,6 @@ std::string getOperatorExtraInfoString(const PluginInterface::Model *model, Plug
 std::string dataRatioOfOperatorStr(const PluginInterface::Model *model, PluginInterface::OperatorId operatorId,
 	float &outIncreaseAboveInput, float &outModelInputToOut);
 
+void quantize(PluginInterface::Model *model, bool quantizeWeights, unsigned weightsQuantizationSegments, bool quantizeBiases, unsigned biasesQuantizationSegments);
+
 }

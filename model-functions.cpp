@@ -8,6 +8,50 @@
 #include "util.h"
 
 #include <assert.h>
+#include <half.hpp>
+
+#include <limits>
+#include <memory>
+#include <string>
+#include <vector>
+
+/// templetized helpers
+
+template<typename T>
+void BufferQuantizer(const TensorShape &shape, T *data, unsigned quantizationSegments) {
+	// size
+	auto flatSize = Tensor::flatSize(shape);
+	if (flatSize <= 2)
+		return; // can't quantize two or fewer numbers
+
+	// find min/max
+	T min = std::numeric_limits<T>::max();
+	T max = std::numeric_limits<T>::lowest();
+	T *de = data+flatSize;
+	for (T *d = data; d < de; d++) {
+		if (*d < min)
+			min = *d;
+		if (*d > max)
+			max = *d;
+	}
+	if (min == max)
+		return;
+
+	// delta
+	T delta = (max - min)/(T)quantizationSegments;
+	if (delta == 0)
+		return;
+
+	// quantize
+	auto one = [&min,&delta](T &val) {
+		unsigned slot = (val-min)/delta;
+                val = min + slot*delta;
+	};
+	for (T *d = data; d < de; d++)
+		one(*d);
+}
+
+/// implementations
 
 namespace ModelFunctions {
 
@@ -223,6 +267,61 @@ std::string dataRatioOfOperatorStr(const PluginInterface::Model *model, PluginIn
 	return STR(ModelFunctions::dataRatioOfOperator(model, operatorId) <<
 	           ", model-input-to-ins: " << modelInputToIns <<
 	           ", model-input-to-outs: " << modelInputToOuts);
+}
+
+void quantize(PluginInterface::Model *model, bool quantizeWeights, unsigned weightsQuantizationSegments, bool quantizeBiases, unsigned biasesQuantizationSegments) {
+	std::vector<bool> doneTensors; // this is needed because some tensors can be shared
+	doneTensors.resize(model->numTensors());
+
+	auto quantizeTensor = [](const TensorShape &shape, PluginInterface::DataType type, void *data, unsigned quantizationSegments) {
+		assert(data != nullptr);
+		switch (type) {
+		case PluginInterface::DataType_Float16:
+			BufferQuantizer<half_float::half>(shape, (half_float::half*)data, quantizationSegments);
+			break;
+		case PluginInterface::DataType_Float32:
+			BufferQuantizer<float>(shape, (float*)data, quantizationSegments);
+			break;
+		case PluginInterface::DataType_Float64:
+			BufferQuantizer<double>(shape, (double*)data, quantizationSegments);
+			break;
+		case PluginInterface::DataType_Int8:
+			BufferQuantizer<int32_t>(shape, (int32_t*)data, quantizationSegments);
+			break;
+		case PluginInterface::DataType_UInt8:
+			BufferQuantizer<uint32_t>(shape, (uint32_t*)data, quantizationSegments);
+			break;
+		case PluginInterface::DataType_Int16:
+			BufferQuantizer<int16_t>(shape, (int16_t*)data, quantizationSegments);
+			break;
+		case PluginInterface::DataType_Int32:
+			BufferQuantizer<int32_t>(shape, (int32_t*)data, quantizationSegments);
+			break;
+		case PluginInterface::DataType_Int64:
+			BufferQuantizer<int64_t>(shape, (int64_t*)data, quantizationSegments);
+			break;
+		}
+	};
+	for (unsigned o = 0, oe = model->numOperators(); o < oe; o++)
+		switch (model->getOperatorKind(o)) {
+		case PluginInterface::KindConv2D:
+		case PluginInterface::KindFullyConnected: {
+			std::vector<PluginInterface::TensorId> inputs, outputs;
+			model->getOperatorIo(o, inputs, outputs);
+			assert(inputs.size() == 3);
+			auto wtid = inputs[1], btid = inputs[2];
+			if (quantizeWeights && !doneTensors[wtid]) {
+				quantizeTensor(model->getTensorShape(wtid), model->getTensorType(wtid), model->getTensorDataWr(wtid), weightsQuantizationSegments);
+				doneTensors[wtid] = true;
+			}
+			if (quantizeBiases && !doneTensors[btid]) {
+				quantizeTensor(model->getTensorShape(btid), model->getTensorType(btid), model->getTensorDataWr(btid), biasesQuantizationSegments);
+				doneTensors[btid] = true;
+			}
+			break;
+		} default:
+			; // do nothing
+		}
 }
 
 }

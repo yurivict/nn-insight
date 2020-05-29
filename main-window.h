@@ -3,6 +3,7 @@
 #pragma once
 
 #include <QMainWindow>
+#include <QMenu>
 #include <QSplitter>
 #include <QScrollArea>
 #include <QStackedWidget>
@@ -34,6 +35,7 @@
 #include <vector>
 #include <array>
 #include <memory>
+#include <set>
 
 class MainWindow : public QMainWindow {
 	Q_OBJECT
@@ -43,6 +45,7 @@ public:
 	~MainWindow();
 
 	bool loadModelFile(const QString &filePath);
+	void loadInMemoryModel(PluginInterface::Model *inMemoryModel, const char *name); // accepts ownership
 
 private: // fields
 	// widgets
@@ -158,11 +161,13 @@ private: // fields
 
 	QMenuBar                         menuBar;
 	QStatusBar                       statusBar;
+	QMenu*                           windowsMenu;
 #if defined(USE_PERFTOOLS)
 	QLabel                           memoryUseLabel;
 	QTimer                           memoryUseTimer;
 #endif
 
+	static std::set<MainWindow*>                   allWindows; // registry of all top-level windows
 	const PluginManager::Plugin*                   plugin;    // plugin in use for the model
 	std::unique_ptr<PluginInterface>               pluginInterface; // the file is opened through this handle
 	std::unique_ptr<const PluginInterface::Model>  model;     // the model from the file that is currently open
@@ -214,5 +219,7 @@ private: // private methods
 	static QLabel* makeTextSelectable(QLabel *label);
 	void showNnTensorData2D();
 	void clearNnTensorData2D();
+	void updateWindowsLists();
+	void windowsListChanged();
 };
 

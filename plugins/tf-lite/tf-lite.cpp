@@ -163,6 +163,9 @@ class TfLitePlugin : public PluginInterface {
 				assert(data!=nullptr && data->size()!=0);
 				return data->Data();
 			}
+			void* getTensorDataWr(TensorId tensorId) const override {
+				return nullptr; // until we implement in-place writability it isn't writable
+			}
 			const float* getTensorDataF32(TensorId tensorId) const override {
 				assert(subgraph->tensors()->Get(tensorId)->type() == tflite::TensorType_FLOAT32);
 				return static_cast<const float*>(Model::getTensorData(tensorId));

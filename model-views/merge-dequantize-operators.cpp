@@ -112,6 +112,10 @@ const void* MergeDequantizeOperators::getTensorData(PI::TensorId tensorId) const
 	return original->getTensorData(tensorId);
 }
 
+void* MergeDequantizeOperators::getTensorDataWr(PI::TensorId tensorId) const {
+	return original->getTensorDataWr(tensorId);
+}
+
 const float* MergeDequantizeOperators::getTensorDataF32(PI::TensorId tensorId) const {
 	assert(!tensorIsDequantizeInput[tensorId]); // dequantize input can't be queried
 	if (tensorIsDequantizeOutput[tensorId])

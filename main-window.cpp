@@ -6,8 +6,8 @@
 #include "model-functions.h"
 
 #include "compute.h"
-#include "copy-model.h"
 #include "image.h"
+#include "in-memory-model.h"
 #include "misc.h"
 #include "model-views/merge-dequantize-operators.h"
 #include "nn-operators.h"
@@ -15,6 +15,7 @@
 #include "svg-graphics-generator.h"
 #include "svg-push-button.h"
 #include "tensor.h"
+#include "training.h"
 #include "transformation-quantize-dialog.h"
 #include "util.h"
 
@@ -787,14 +788,14 @@ MainWindow::MainWindow()
 	auto transformationsMenu = menuBar.addMenu(tr("&Transformations"));
 	transformationsMenu->addAction(tr("Copy model"), [this]() {
 		auto w = new MainWindow;
-		w->loadInMemoryModel(ModelFunctions::copyModel(model.get()), "Model copy");
+		w->loadInMemoryModel(new InMemoryModel(model.get()), "Model copy");
 		w->show();
 	});
 	transformationsMenu->addAction(tr("Quantize"), [this]() {
 		TransformationQuantizeDialog dialog(this);
 		if (dialog.exec()) {
 			// copy and quantize the model
-			std::unique_ptr<PluginInterface::Model> quantized(ModelFunctions::copyModel(model.get()));
+			std::unique_ptr<PluginInterface::Model> quantized(new InMemoryModel(model.get()));
 			ModelFunctions::quantize(quantized.get(),
 				dialog.doWeightsQuantization(), dialog.getWeightsQuantizationSegments(),
 				dialog.doBiasesQuantization(), dialog.getBiasesQuantizationSegments()
@@ -807,6 +808,11 @@ MainWindow::MainWindow()
 		}
 
 	})->setShortcut(QKeySequence(Qt::SHIFT + Qt::Key_Q));
+	transformationsMenu->addAction(tr("To training model"), [this]() {
+		auto w = new MainWindow;
+		w->loadInMemoryModel(Training::convertToTrainingModel(model.get(), PluginInterface::KindLossCrossEntropy), "Training model");
+		w->show();
+	});
 
 	windowsMenu = menuBar.addMenu(tr("&Windows")); // filled dynamically
 

@@ -53,6 +53,8 @@ QColor getOperatorColor(PluginInterface::OperatorKind okind) {
 	case PluginInterface::KindResizeBilinear:
 	case PluginInterface::KindResizeNearestNeighbor:
 		return QColor(163,62,241);
+	case PluginInterface::KindLossCrossEntropy:
+		return QColor(173, 216, 230);
 	default: // unknown?
 		return Qt::red;
 	}

@@ -67,6 +67,8 @@ public:
 		// Resizes
 		KindResizeBilinear,
 		KindResizeNearestNeighbor,
+		// Loss functions
+		KindLossCrossEntropy, // CE(P,T) = -1/N Σᵢ(Tᵢ*log(Pᵢ) + (1-Tᵢ)*log(1-Pᵢ))
 		//
 		KindUnknown
 	};

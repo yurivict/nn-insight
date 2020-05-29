@@ -71,7 +71,6 @@ add_executable(nn-insight
 	fonts.cpp
 	nn-types.cpp
 	model-functions.cpp
-	copy-model.cpp
 	render-model.cpp
 	svg-graphics-generator.cpp
 	nn-widget.cpp
@@ -80,6 +79,8 @@ add_executable(nn-insight
 	data-table-2d.cpp
 	image-grid-widget.cpp
 	scale-image-widget.cpp
+	in-memory-model.cpp
+	training.cpp
 	transformation-quantize-dialog.cpp
 	svg-push-button.cpp
 	image.cpp

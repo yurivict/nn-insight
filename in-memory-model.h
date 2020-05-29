@@ -1,11 +1,11 @@
 // Copyright (C) 2020 by Yuri Victorovich. All rights reserved.
 
-#include "copy-model.h"
-
 #include "plugin-interface.h"
 #include "misc.h"
 
 #include <memory>
+#include <string>
+#include <vector>
 
 class InMemoryModel : public PluginInterface::Model {
 
@@ -30,7 +30,7 @@ class InMemoryModel : public PluginInterface::Model {
 	std::vector<OperatorInfo>           operators;
 
 public:
-	InMemoryModel(const PluginInterface::Model *other)
+	InMemoryModel(const PI::Model *other)
 	: inputs(other->getInputs())
 	, outputs(other->getOutputs())
 	{
@@ -100,7 +100,7 @@ public: // interface implementation
 		return operators[operatorId].kind;
 	}
 	PI::OperatorOptionsList* getOperatorOptions(PI::OperatorId operatorId) const override {
-		return new PluginInterface::OperatorOptionsList(*operators[operatorId].options);
+		return new PI::OperatorOptionsList(*operators[operatorId].options);
 	}
 	unsigned numTensors() const override {
 		return tensors.size();
@@ -130,12 +130,12 @@ public: // interface implementation
 	bool getTensorIsVariableFlag(PI::TensorId tensorId) const override {
 		return false; // TODO?
 	}
-};
 
-namespace ModelFunctions {
-
-PluginInterface::Model* copyModel(const PluginInterface::Model *model) {
-	return new InMemoryModel(model);
-}
-
+public: // iface for changing the model
+	void addInput(PI::TensorId tid);
+	void removeInput(PI::TensorId tid);
+	void addOutput(PI::TensorId tid);
+	void removeOutput(PI::TensorId tid);
+	PI::TensorId addTensor(const std::string &name, TensorShape shape, PI::DataType type, uint8_t *staticTensorData);
+	void addOperator(PluginInterface::OperatorKind kind, std::vector<PI::TensorId> inputs, std::vector<PI::TensorId> outputs, PI::OperatorOptionsList *options); // consumes options
 };

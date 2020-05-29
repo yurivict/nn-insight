@@ -253,6 +253,24 @@ std::string getOperatorExtraInfoString(const PluginInterface::Model *model, Plug
 	}
 }
 
+void indexOperatorsByTensors(const PluginInterface::Model *model, std::vector<int/*PluginInterface::OperatorId or -1*/> &tensorProducers, std::vector<std::vector<PluginInterface::OperatorId>> &tensorConsumers) {
+	const int NoOperator = -1;
+	tensorProducers.resize(model->numTensors());
+	tensorConsumers.resize(model->numTensors());
+	{
+		for (auto &p : tensorProducers)
+			p = NoOperator;
+		for (PluginInterface::OperatorId oid = 0, oide = (PluginInterface::OperatorId)model->numOperators(); oid < oide; oid++) {
+			std::vector<PluginInterface::TensorId> oinputs, ooutputs;
+			model->getOperatorIo(oid, oinputs, ooutputs);
+			for (auto o : ooutputs)
+				tensorProducers[o] = oid;
+			for (auto i : oinputs)
+				tensorConsumers[i].push_back(oid);
+		}
+	}
+}
+
 /// string-returting aggretgate versions
 
 std::string dataRatioOfOperatorStr(const PluginInterface::Model *model, PluginInterface::OperatorId operatorId,

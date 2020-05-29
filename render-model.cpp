@@ -45,22 +45,9 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 
 	// map tensors to operators
 	std::vector<int/*PluginInterface::OperatorId or -1*/> tensorProducers;
-	const int NoOperator = -1;
-	tensorProducers.resize(model->numTensors());
 	std::vector<std::vector<PluginInterface::OperatorId>> tensorConsumers;
-	tensorConsumers.resize(model->numTensors());
-	{
-		for (auto &p : tensorProducers)
-			p = NoOperator;
-		for (PluginInterface::OperatorId oid = 0, oide = (PluginInterface::OperatorId)model->numOperators(); oid < oide; oid++) {
-			std::vector<PluginInterface::TensorId> oinputs, ooutputs;
-			model->getOperatorIo(oid, oinputs, ooutputs);
-			for (auto o : ooutputs)
-				tensorProducers[o] = oid;
-			for (auto i : oinputs)
-				tensorConsumers[i].push_back(oid);
-		}
-	}
+	const int NoOperator = -1;
+	ModelFunctions::indexOperatorsByTensors(model, tensorProducers, tensorConsumers);
 
 	/// build the graphviz graph
 

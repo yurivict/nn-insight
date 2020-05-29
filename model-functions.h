@@ -4,11 +4,11 @@
 
 #include "plugin-interface.h"
 
-#include <vector>
-#include <map>
 #include <array>
 #include <functional>
+#include <map>
 #include <memory>
+#include <vector>
 
 #include <QMarginsF>
 #include <QSizeF>

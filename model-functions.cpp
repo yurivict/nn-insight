@@ -1,10 +1,10 @@
 // Copyright (C) 2020 by Yuri Victorovich. All rights reserved.
 
-#include "model-functions.h"
-#include "plugin-interface.h"
-#include "nn-types.h"
-#include "tensor.h"
 #include "misc.h"
+#include "model-functions.h"
+#include "nn-types.h"
+#include "plugin-interface.h"
+#include "tensor.h"
 #include "util.h"
 
 #include <assert.h>
@@ -45,7 +45,7 @@ void BufferQuantizer(const TensorShape &shape, T *data, unsigned quantizationSeg
 	// quantize
 	auto one = [&min,&delta](T &val) {
 		unsigned slot = (val-min)/delta;
-                val = min + slot*delta;
+		val = min + slot*delta;
 	};
 	for (T *d = data; d < de; d++)
 		one(*d);

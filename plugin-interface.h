@@ -6,10 +6,10 @@
 // PluginInterface is the interface of all plugins, common for all NN model types
 //
 
+#include <functional>
+#include <ostream>
 #include <string>
 #include <vector>
-#include <ostream>
-#include <functional>
 
 #include "nn-types.h"
 #include "tensor.h"

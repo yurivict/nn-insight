@@ -2,40 +2,41 @@
 
 #pragma once
 
+#include <QCheckBox>
+#include <QComboBox>
+#include <QGridLayout>
+#include <QGroupBox>
+#include <QLabel>
+#include <QLineEdit>
 #include <QMainWindow>
 #include <QMenu>
-#include <QSplitter>
+#include <QMenuBar>
+#include <QPixmap>
+#include <QPushButton>
+#include <QRectF>
 #include <QScrollArea>
+#include <QSplitter>
 #include <QStackedWidget>
-#include <QGroupBox>
+#include <QStatusBar>
+#if defined(USE_PERFTOOLS)
+#include <QTimer>
+#endif
+#include <QVBoxLayout>
+
+#include "data-table-2d.h"
 #include "nn-widget.h"
 #include "no-nn-is-open-widget.h"
 #include "operators-list-widget.h"
 #include "scale-image-widget.h"
-#include "data-table-2d.h"
-#include <QLabel>
-#include <QPushButton>
-#include <QCheckBox>
-#include <QComboBox>
-#include <QLineEdit>
-#include <QVBoxLayout>
-#include <QGridLayout>
-#include <QMenuBar>
-#include <QStatusBar>
-#include <QPixmap>
-#include <QRectF>
-#if defined(USE_PERFTOOLS)
-#include <QTimer>
-#endif
 
+#include "nn-types.h"
 #include "plugin-manager.h"
 #include "plugin-interface.h"
-#include "nn-types.h"
 
-#include <vector>
 #include <array>
 #include <memory>
 #include <set>
+#include <vector>
 
 class MainWindow : public QMainWindow {
 	Q_OBJECT

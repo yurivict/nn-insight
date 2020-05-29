@@ -5,43 +5,43 @@
 #include "plugin-manager.h"
 #include "model-functions.h"
 
-#include "util.h"
-#include "misc.h"
-#include "nn-types.h"
-#include "tensor.h"
-#include "nn-operators.h"
-#include "image.h"
 #include "compute.h"
+#include "copy-model.h"
+#include "image.h"
+#include "misc.h"
+#include "model-views/merge-dequantize-operators.h"
+#include "nn-operators.h"
+#include "nn-types.h"
 #include "svg-graphics-generator.h"
 #include "svg-push-button.h"
+#include "tensor.h"
 #include "transformation-quantize-dialog.h"
-#include "model-views/merge-dequantize-operators.h"
-#include "copy-model.h"
+#include "util.h"
 
-#include <QByteArray>
-#include <QEvent>
-#include <QWheelEvent>
-#include <QDebug>
-#include <QPushButton>
-#include <QFontMetrics>
-#include <QDesktopWidget>
 #include <QApplication>
-#include <QFileDialog>
-#include <QPixmap>
-#include <QElapsedTimer>
+#include <QByteArray>
 #include <QClipboard>
+#include <QDebug>
+#include <QDesktopWidget>
+#include <QElapsedTimer>
+#include <QEvent>
+#include <QFileDialog>
+#include <QFontMetrics>
 #include <QMimeData>
-#include <QScrollBar>
+#include <QPixmap>
+#include <QPushButton>
 #include <QSettings>
+#include <QScrollBar>
 #include <QVariant>
+#include <QWheelEvent>
 
 #include <assert.h>
 #include <half.hpp> // to instantiate DataTable2D with the float16 type
 #include <stdlib.h> // only for ::getenv
 
+#include <algorithm>
 #include <map>
 #include <memory>
-#include <algorithm>
 
 #if defined(USE_PERFTOOLS)
 #include <gperftools/malloc_extension.h>

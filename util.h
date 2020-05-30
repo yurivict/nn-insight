@@ -16,6 +16,7 @@ class QComboBox;
 #include <string>
 #include <vector>
 #include <ostream>
+#include <memory>
 #include <sstream>
 #include <tuple>
 #include <algorithm>
@@ -42,6 +43,13 @@ std::tuple<T,T> arrayMinMax(const T *arr, size_t len) {
 			amax = *arr;
 	}
 	return std::tuple<T,T>(amin, amax);
+}
+template<typename T>
+T* arrayOfOnes(unsigned sz) {
+	std::unique_ptr<T> arr(new T[sz]);
+	for (T *a = arr.get(), *ae = a+sz; a<ae; a++)
+		*a = 1;
+	return arr.release();
 }
 
 float* copyFpArray(const float *a, size_t sz);

@@ -70,25 +70,29 @@ PI::Model* convertToTrainingModel(const PI::Model *model, PI::OperatorKind lossF
 		auto onesTid = training->addTensor(tname(STR("ones-vector-for-" << outputInfo[0].name)), outputInfo[0].shape, outputInfo[0].type, (uint8_t*)Util::arrayOfOnes<float>(outputInfo[0].shape[1]));
 
 		auto derivativeOfLoss = Dual(
-			PI::KindSub,
+			PI::KindMul,
 			Dual(
-				PI::KindDiv,
-				outputInfo[0].lossInput/*=O*/,
-				outputInfo[0].lossLabel/*=L*/
-			),
-			Dual(
-				PI::KindDiv,
+				PI::KindSub,
 				Dual(
-					PI::KindSub,
-					onesTid,
-					outputInfo[0].lossInput/*=O*/
+					PI::KindDiv,
+					outputInfo[0].lossInput/*=O*/,
+					outputInfo[0].lossLabel/*=L*/
 				),
 				Dual(
-					PI::KindSub,
-					onesTid,
-					outputInfo[0].lossLabel/*=L*/
+					PI::KindDiv,
+					Dual(
+						PI::KindSub,
+						onesTid,
+						outputInfo[0].lossInput/*=O*/
+					),
+					Dual(
+						PI::KindSub,
+						onesTid,
+						outputInfo[0].lossLabel/*=L*/
+					)
 				)
-			)
+			),
+			outputInfo[0].lossOutput
 		);
 		training->addOutput(derivativeOfLoss);
 

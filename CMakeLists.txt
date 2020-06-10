@@ -9,16 +9,23 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 ##
-## C++ standard that we use is the highest possible
-##
-set(CMAKE_CXX_FLAGS "-std=c++2a -Wall -fstrict-enums")
-
-##
 ## Build type
 ##
 if (NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE Release)
 endif()
+
+##
+## C++ standard that we use is the highest possible, no extensions
+##
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+##
+## Additional build options
+##
+set(CMAKE_CXX_FLAGS "-Wall -fstrict-enums")
 
 ##
 ## Optimizations

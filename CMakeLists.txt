@@ -30,7 +30,7 @@ set(CMAKE_CXX_FLAGS "-Wall -fstrict-enums")
 ##
 ## Optimizations
 ##
-option(ENABLE_NATIVE_OPTIMIZATIONS "Build with -march-native" ON)
+option(ENABLE_NATIVE_OPTIMIZATIONS "Build with -march=native" ON)
 if(ENABLE_NATIVE_OPTIMIZATIONS)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
 endif()

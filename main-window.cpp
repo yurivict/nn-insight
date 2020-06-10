@@ -810,7 +810,7 @@ MainWindow::MainWindow()
 	})->setShortcut(QKeySequence(Qt::SHIFT + Qt::Key_Q));
 	transformationsMenu->addAction(tr("To training model"), [this]() {
 		auto w = new MainWindow;
-		w->loadInMemoryModel(Training::convertToTrainingModel(model.get(), PluginInterface::KindLossCrossEntropy), "Training model");
+		w->loadInMemoryModel(Training::convertToTrainingModel(model.get(), PluginInterface::KindLossMeanSquareError), "Training model");
 		w->show();
 	});
 

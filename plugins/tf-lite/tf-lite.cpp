@@ -65,7 +65,7 @@ namespace Helpers {
 #include "operator-options.cpp" // generated from schema.fbs
 		default:
 			// no nothing: no options for this operator
-			;
+			ourOpts.reset(nullptr); // no options - no array
 		}
 
 		return ourOpts.release();

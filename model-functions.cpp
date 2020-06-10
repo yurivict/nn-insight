@@ -242,6 +242,7 @@ std::string getOperatorExtraInfoString(const PluginInterface::Model *model, Plug
 	  case PI::KindAveragePool: {
 		int filterWidth=0, filterHeight=0;
 		std::unique_ptr<PI::OperatorOptionsList> opts(model->getOperatorOptions(operatorId));
+		assert(opts); // Pool operstors have to have options
 		for (auto &o : *opts)
 			if (o.name == PI::OperatorOption_FILTER_WIDTH)
 				filterWidth = o.value.as<int>();

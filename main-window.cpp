@@ -1020,29 +1020,31 @@ void MainWindow::showOperatorDetails(PluginInterface::OperatorId operatorId) {
 	nnOperatorDetailsLayout.addWidget(&nnOperatorOptionsLabel,       row,   0/*column*/);
 	{
 		std::unique_ptr<PluginInterface::OperatorOptionsList> opts(model->getOperatorOptions(operatorId));
-		for (auto &opt : *opts) {
-			row++;
-			// option name
-			auto label = makeTextSelectable(new QLabel(S2Q(STR(opt.name)), &nnOperatorDetails));
-			label->setToolTip("Option name");
-			label->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
-			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
-			nnOperatorDetailsLayout.addWidget(label,               row,   0/*column*/);
-			// option type
-			label = makeTextSelectable(new QLabel(S2Q(STR("<" << opt.value.type << ">")), &nnOperatorDetails));
-			label->setToolTip(tr("Option type"));
-			label->setAlignment(Qt::AlignLeft|Qt::AlignVCenter);
-			label->setStyleSheet("font: italic");
-			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
-			nnOperatorDetailsLayout.addWidget(label,               row,   1/*column*/);
-			// option value
-			label = makeTextSelectable(new QLabel(S2Q(STR(opt.value)), &nnOperatorDetails));
-			label->setToolTip(tr("Option value"));
-			label->setAlignment(Qt::AlignLeft|Qt::AlignVCenter);
-			tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
-			nnOperatorDetailsLayout.addWidget(label,               row,   2/*column*/);
-		}
-		if (opts->empty()) {
+		if (opts) {
+			assert(!opts->empty());
+			for (auto &opt : *opts) {
+				row++;
+				// option name
+				auto label = makeTextSelectable(new QLabel(S2Q(STR(opt.name)), &nnOperatorDetails));
+				label->setToolTip("Option name");
+				label->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
+				tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
+				nnOperatorDetailsLayout.addWidget(label,               row,   0/*column*/);
+				// option type
+				label = makeTextSelectable(new QLabel(S2Q(STR("<" << opt.value.type << ">")), &nnOperatorDetails));
+				label->setToolTip(tr("Option type"));
+				label->setAlignment(Qt::AlignLeft|Qt::AlignVCenter);
+				label->setStyleSheet("font: italic");
+				tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
+				nnOperatorDetailsLayout.addWidget(label,               row,   1/*column*/);
+				// option value
+				label = makeTextSelectable(new QLabel(S2Q(STR(opt.value)), &nnOperatorDetails));
+				label->setToolTip(tr("Option value"));
+				label->setAlignment(Qt::AlignLeft|Qt::AlignVCenter);
+				tempDetailWidgets.push_back(std::unique_ptr<QWidget>(label));
+				nnOperatorDetailsLayout.addWidget(label,               row,   2/*column*/);
+			}
+		} else {
 			row++;
 			auto label = makeTextSelectable(new QLabel("-none-", &nnOperatorDetails));
 			label->setAlignment(Qt::AlignRight|Qt::AlignVCenter);

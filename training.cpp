@@ -237,7 +237,7 @@ PI::Model* constructTrainingModel(const PI::Model *model, PI::OperatorKind lossF
 			// find input tensors
 			auto inputTids = GetOperatorThreeInputs(model, oid);
 			// FC(x,W,B) = Wx+B
-			{ // ∂FC(x,W,B)/∂x = W'
+			{ // ∂FC(x,W,B)/∂x = W', ∂Loss/∂x = W'⋅∂FC(x,W,B)/∂x
 				auto weightsShape = model->getTensorShape(inputTids[1]);
 				assert(weightsShape.size() == 2);
 				auto weightsData = model->getTensorData(inputTids[1]);
@@ -255,7 +255,7 @@ PI::Model* constructTrainingModel(const PI::Model *model, PI::OperatorKind lossF
 				derivatives[inputTids[0]] = derivativeOverFcInput;
 				tensorsToDo.insert(inputTids[0]);
 			}
-			{ // ∂FC(x,W,B)/∂W = x
+			{ // ∂FC(x,W,B)/∂W = x, ∂Loss/∂W = ∂FC(x,W,B)/∂x⊗x
 				auto weightsShape = model->getTensorShape(inputTids[1]);
 				assert(weightsShape.size() == 2);
 				auto weightsData = model->getTensorData(inputTids[1]);
@@ -272,7 +272,7 @@ PI::Model* constructTrainingModel(const PI::Model *model, PI::OperatorKind lossF
 				derivatives[inputTids[1]] = derivativeOverFcWeights;
 				training->addOutput(derivativeOverFcWeights);
 			}
-			{ // ∂FC(x,W,B)/∂B = 1
+			{ // ∂FC(x,W,B)/∂B = 1, ∂Loss/∂B = ∂FC(x,W,B)/∂x
 				auto derivativeOverFcBias = derivatives[tid];
 				PRINT("derivative of bias " << inputTids[2] << " is " << derivativeOverFcBias)
 				assert(derivatives[inputTids[2]] == -1);

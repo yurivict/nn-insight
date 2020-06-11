@@ -19,7 +19,7 @@ std::ostream& operator<<(std::ostream &os, PluginInterface::OperatorKind okind) 
 	CASE(Tanh) CASE(Logistic) CASE(HardSwish) CASE(RSqrt) CASE(Sub) CASE(Mul) CASE(Div) CASE(Maximum) CASE(Minimum) CASE(Transpose) CASE(Reshape) CASE(Softmax) CASE(Concatenation) CASE(Split)
 	CASE(Dequantize)
 	CASE(StridedSlice) CASE(Mean) CASE(ArgMax) CASE(ArgMin) CASE(SquaredDifference) CASE(ResizeBilinear) CASE(ResizeNearestNeighbor)
-	CASE(LossCrossEntropy)
+	CASE(LossMeanSquareError) CASE(LossCrossEntropy)
 	CASE(Unknown)
 	}
 #undef CASE

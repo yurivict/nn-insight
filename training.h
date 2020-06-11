@@ -6,6 +6,6 @@
 
 namespace Training {
 
-PluginInterface::Model* convertToTrainingModel(const PluginInterface::Model *model, PluginInterface::OperatorKind lossFunction); // returns ownership
+PluginInterface::Model* constructTrainingModel(const PluginInterface::Model *model, PluginInterface::OperatorKind lossFunction); // returns ownership
 
 }

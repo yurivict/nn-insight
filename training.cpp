@@ -19,7 +19,7 @@ namespace Training {
 
 typedef PluginInterface PI;
 
-PI::Model* convertToTrainingModel(const PI::Model *model, PI::OperatorKind lossFunction) { // returns ownership
+PI::Model* constructTrainingModel(const PI::Model *model, PI::OperatorKind lossFunction) { // returns ownership
 	// index model
 	std::vector<int/*PluginInterface::OperatorId or -1*/> tensorProducers;
 	std::vector<std::vector<PluginInterface::OperatorId>> tensorConsumers;

@@ -100,7 +100,7 @@ public: // interface implementation
 		return operators[operatorId].kind;
 	}
 	PI::OperatorOptionsList* getOperatorOptions(PI::OperatorId operatorId) const override {
-		return new PI::OperatorOptionsList(*operators[operatorId].options);
+		return operators[operatorId].options ? new PI::OperatorOptionsList(*operators[operatorId].options) : nullptr;
 	}
 	unsigned numTensors() const override {
 		return tensors.size();

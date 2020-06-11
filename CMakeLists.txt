@@ -63,6 +63,10 @@ if (USE_PERFTOOLS)
 	pkg_check_modules(libtcmalloc REQUIRED IMPORTED_TARGET libtcmalloc)
 add_definitions(-DUSE_PERFTOOLS)
 endif()
+option(USE_EXTERNAL_EXPRTK "Use external ExprTk" OFF)
+if (NOT ${USE_EXTERNAL_EXPRTK})
+	include_directories(${PROJECT_SOURCE_DIR}/3rdparty/exprtk) # for exprtk.hpp to be found
+endif()
 
 message(STATUS "PNG++ found: includes ${png++_INCLUDE_DIRS}, libs ${png++_LIBRARIES}")
 

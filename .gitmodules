@@ -1,3 +1,6 @@
 [submodule "3rdparty/avir"]
 	path = 3rdparty/avir
 	url = https://github.com/avaneev/avir.git
+[submodule "exprtk"]
+	path = 3rdparty/exprtk
+	url = https://github.com/ArashPartow/exprtk.git

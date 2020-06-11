@@ -111,6 +111,9 @@ private: // fields
 	QScrollArea                              sourceImageScrollArea;
 	QLabel                                     sourceImage;       // index#0
 	std::unique_ptr<QLabel>                  interpretationImage; // index#1: only exists when the interpretation image is possible
+	QGroupBox                            trainingWidget; // optionally visible
+	QHBoxLayout                            trainingLayout;
+	std::unique_ptr<QWidget>               trainingDetails;
 	// Rhs/NN details
 	QStackedWidget                       nnDetailsStack;
 	QGroupBox                              nnNetworkDetails;   // page#0: network

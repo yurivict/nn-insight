@@ -96,6 +96,7 @@ add_executable(nn-insight
 	scale-image-widget.cpp
 	in-memory-model.cpp
 	training.cpp
+	training-widget.cpp
 	transformation-quantize-dialog.cpp
 	svg-push-button.cpp
 	image.cpp

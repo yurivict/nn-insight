@@ -16,6 +16,7 @@
 #include "svg-push-button.h"
 #include "tensor.h"
 #include "training.h"
+#include "training-widget.h"
 #include "transformation-quantize-dialog.h"
 #include "util.h"
 
@@ -200,6 +201,8 @@ MainWindow::MainWindow()
 ,        sourceImageStack(&sourceWidget)
 ,          sourceImageScrollArea(&sourceImageStack)
 ,            sourceImage(&sourceImageScrollArea)
+,      trainingWidget(tr("Training"), &rhsWidget)
+,        trainingLayout(&trainingWidget)
 ,      nnDetailsStack(&rhsWidget)
 ,        nnNetworkDetails(tr("Neural Network Details"), &nnDetailsStack)
 ,          nnNetworkDetailsLayout(&nnNetworkDetails)
@@ -313,6 +316,7 @@ MainWindow::MainWindow()
 	  sourceLayout.addWidget(&sourceImageStack);
 	    sourceImageStack.addWidget(&sourceImageScrollArea);
 	      sourceImageScrollArea.setWidget(&sourceImage);
+	rhsLayout.addWidget(&trainingWidget);
 	rhsLayout.addWidget(&nnDetailsStack);
 	rhsLayout.addWidget(&noNnIsOpenGroupBox);
 	  noNnIsOpenLayout.addWidget(&noNnIsOpenWidget);
@@ -475,6 +479,7 @@ MainWindow::MainWindow()
 	                &nnOperatorComplexityLabel, &nnOperatorComplexityValue, &nnOperatorStaticDataLabel, &nnOperatorStaticDataValue, &nnOperatorDataRatioLabel, &nnOperatorDataRatioValue,
 	                &nnTensorKindLabel, &nnTensorKindValue, &nnTensorShapeLabel, &nnTensorShapeValue, &nnTensorTypeLabel})
 		w->                           setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+	trainingWidget                       .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 	nnNetworkOperatorsListWidget         .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
 	nnOperatorDetailsSpacer              .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
 	for (auto l : {&nnTensorDataPlaceholder, &nnTensorDataPlaceholder1DnotImplemented})
@@ -493,6 +498,7 @@ MainWindow::MainWindow()
 
 	// widget options and flags
 	updateSectionWidgetsVisibility();
+	trainingWidget.setVisible(false); // not visible by default
 	sourceEffectConvolutionCountComboBox.setEnabled(false); // is only enabled when some convoulution is chosen
 	nnNetworkStaticDataText.setWordWrap(true); // allow word wrap because text is long in this label
 	outputInterpretationSummaryLineEdit.setWordWrap(true);
@@ -812,6 +818,21 @@ MainWindow::MainWindow()
 		auto w = new MainWindow;
 		w->loadInMemoryModel(Training::constructTrainingModel(model.get(), PluginInterface::KindLossMeanSquareError), "Training model");
 		w->show();
+	});
+
+	auto actionsMenu = menuBar.addMenu(tr("&Actions"));
+	actionsMenu->addAction(tr("Train Model"), [this]() {
+		if (trainingWidget.isVisible())
+			return; // already
+		trainingDetails.reset(new TrainingWidget(&trainingWidget));
+		trainingLayout.addWidget(trainingDetails.get());
+		trainingWidget.show();
+	});
+	actionsMenu->addAction(tr("Close Training"), [this]() {
+		if (!trainingWidget.isVisible())
+			return; // already
+		trainingDetails.reset(nullptr);
+		trainingWidget.hide();
 	});
 
 	windowsMenu = menuBar.addMenu(tr("&Windows")); // filled dynamically

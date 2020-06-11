@@ -102,6 +102,25 @@ float* computeArgMax(const TensorShape &inputShape, const float *input, const st
 	return output.release();
 }
 
+void transposeMatrixIndices1and2of2(const TensorShape &shape, float *src, float *dst) { // transposes the matrix M[a,b] in regard of its a and b indices
+	assert(shape.size() == 2);
+	auto N1 = shape[0];
+	auto N2 = shape[1];
+	auto get = [](unsigned n1, unsigned N1, unsigned n2, unsigned N2, float *data) -> float& {
+		return data[n1*N2 + n2];
+	};
+                        
+	for (unsigned n1 = 0; n1 < N1; n1++)
+		for (unsigned n2 = 0; n2 < N2; n2++)
+			get(n2, N2, n1, N1, dst) = get(n1, N1, n2, N2, src);
+}
+
+float* transposeMatrixIndices1and2of2(const TensorShape &shape, float *src) { // returns ownership
+	std::unique_ptr<float> dst(new float[flatSize(shape)]);
+	transposeMatrixIndices1and2of2(shape, src, dst.get());
+	return dst.release();
+}
+
 bool canBeAnImage(const TensorShape &shape) {
 	return shape.size() == 3/*HWC*/ && (shape[2]==3 || shape[2]==1);
 }

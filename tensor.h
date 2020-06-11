@@ -13,6 +13,8 @@ TensorShape getLastDims(const TensorShape &shape, unsigned ndims);
 TensorShape stripLeadingOnes(const TensorShape &shape);
 bool isSubset(const TensorShape &shapeLarge, const TensorShape &shapeSmall);
 float* computeArgMax(const TensorShape &inputShape, const float *input, const std::vector<float> &palette);
+void transposeMatrixIndices1and2of2(const TensorShape &shape, float *src, float *dst);
+float* transposeMatrixIndices1and2of2(const TensorShape &shape, float *src); // returns ownership
 bool canBeAnImage(const TensorShape &shape);
 void saveTensorDataAsJson(const TensorShape &shape, const float *data, const char *fileName);
 bool readTensorDataAsJson(const char *fileName, const TensorShape &shape, std::shared_ptr<const float> &tensorData);

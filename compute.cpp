@@ -903,6 +903,7 @@ bool compute(
 			computeSingleOperator([](float f) -> float {return 1./std::sqrt(f);});
 			break;
 		} case PI::KindAdd:
+		  case PI::KindSub:
 		  case PI::KindMul: {
 			assert(inputs.size()==2 && outputs.size()==1);
 			assert(opts); // need to have options present
@@ -938,6 +939,12 @@ bool compute(
 					getTensorDataDynamicOrStatic(inputs[1]), model->getTensorShape(inputs[1]),
 					outputData.get(), outputShape,
 					[](float f1, float f2) {return f1+f2;})
+				: operatorKind==PI::KindSub ?
+				computeDualOperator( // KindSub
+					(*tensorData)[inputs[0]].get(), model->getTensorShape(inputs[0]),
+					getTensorDataDynamicOrStatic(inputs[1]), model->getTensorShape(inputs[1]),
+					outputData.get(), outputShape,
+					[](float f1, float f2) {return f1-f2;})
 				:
 				computeDualOperator( // KindMul
 					(*tensorData)[inputs[0]].get(), model->getTensorShape(inputs[0]),

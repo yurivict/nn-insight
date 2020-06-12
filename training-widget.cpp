@@ -47,7 +47,7 @@ private: // types
 		: QWidget(parent)
 		, argName(argName_)
 		, layout(this)
-		, minLabel(QString(tr("arg %1 min:")).arg(S2Q(argName)))
+		, minLabel(QString(tr("Arg %1 min:")).arg(S2Q(argName)))
 		, minEdit(this)
 		, maxLabel(tr("max:"))
 		, maxEdit(this)
@@ -73,6 +73,12 @@ private: // types
 			// values
 			minEdit.setText(appSettings.value(QString("TrainingWidget.DataSet_FunctionApproximationByFormulaWidget.arg-%1.min").arg(S2Q(argName)), QVariant(0.)).toString());
 			maxEdit.setText(appSettings.value(QString("TrainingWidget.DataSet_FunctionApproximationByFormulaWidget.arg-%1.max").arg(S2Q(argName)), QVariant(1.)).toString());
+
+			// margins
+			minEdit.setContentsMargins(0,0,0,0);
+			maxEdit.setContentsMargins(0,0,0,0);
+			setContentsMargins(0,0,0,0);
+			layout.setContentsMargins(0,0,0,0);
 		}
 		~ArgDescriptionWidget() {
 			appSettings.setValue(QString("TrainingWidget.DataSet_FunctionApproximationByFormulaWidget.arg-%1.min").arg(S2Q(argName)), minEdit.text());
@@ -114,10 +120,11 @@ public:
 		layout.addWidget(&formulaErrorExcl,      0,   2/*column*/);
 		layout.addWidget(&argumentCountLabel,    0,   3/*column*/);
 		layout.addWidget(&argumentCountSpinBox,  0,   4/*column*/);
-		layout.addWidget(&argDescriptionsWidget, 1,   0/*column*/, 1/*rowSpan*/, 4/*columnSpan*/);
+		layout.addWidget(&argDescriptionsWidget, 1,   0/*column*/, 1/*rowSpan*/, 5/*columnSpan*/);
 
 		// spacing
-		layout.setSpacing(0);
+		argDescriptionsLayout.setSpacing(0);
+		argDescriptionsLayout.setContentsMargins(0,0,0,0);
 
 		// alignment
 		formulaLabel      .setAlignment(Qt::AlignRight|Qt::AlignVCenter);

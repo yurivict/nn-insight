@@ -3,9 +3,12 @@
 #include "misc.h"
 #include "training-widget.h"
 #include "util.h"
+#include "3rdparty/flowlayout/flowlayout.h"
 
 #include <QLineEdit>
+#include <QDoubleValidator>
 #include <QGridLayout>
+#include <QHBoxLayout>
 #include <QLabel>
 #include <QSettings>
 #include <QSpinBox>
@@ -32,13 +35,61 @@ private: // types
 	typedef exprtk::expression<T>     expression_t;
 	typedef exprtk::parser<T>             parser_t;
 
+	class ArgDescriptionWidget : public QWidget {
+		std::string          argName;
+		QHBoxLayout          layout;
+		QLabel               minLabel;
+		QLineEdit            minEdit;
+		QLabel               maxLabel;
+		QLineEdit            maxEdit;
+	public:
+		ArgDescriptionWidget(const std::string &argName_, QWidget *parent)
+		: QWidget(parent)
+		, argName(argName_)
+		, layout(this)
+		, minLabel(QString(tr("arg %1 min:")).arg(S2Q(argName)))
+		, minEdit(this)
+		, maxLabel(tr("max:"))
+		, maxEdit(this)
+		{
+			// add widgets to layouts
+			layout.addWidget(&minLabel);
+			layout.addWidget(&minEdit);
+			layout.addWidget(&maxLabel);
+			layout.addWidget(&maxEdit);
+
+			// policies
+			for (auto w : {(QWidget*)&minLabel,(QWidget*)&minEdit,(QWidget*)&maxLabel,(QWidget*)&maxEdit})
+				w->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+
+			// alignment
+			minLabel.setAlignment(Qt::AlignRight|Qt::AlignVCenter);
+			maxLabel.setAlignment(Qt::AlignRight|Qt::AlignVCenter);
+
+			// validators
+			minEdit.setValidator(new QDoubleValidator(this));
+			maxEdit.setValidator(new QDoubleValidator(this));
+
+			// values
+			minEdit.setText(appSettings.value(QString("TrainingWidget.DataSet_FunctionApproximationByFormulaWidget.arg-%1.min").arg(S2Q(argName)), QVariant(0.)).toString());
+			maxEdit.setText(appSettings.value(QString("TrainingWidget.DataSet_FunctionApproximationByFormulaWidget.arg-%1.max").arg(S2Q(argName)), QVariant(1.)).toString());
+		}
+		~ArgDescriptionWidget() {
+			appSettings.setValue(QString("TrainingWidget.DataSet_FunctionApproximationByFormulaWidget.arg-%1.min").arg(S2Q(argName)), minEdit.text());
+			appSettings.setValue(QString("TrainingWidget.DataSet_FunctionApproximationByFormulaWidget.arg-%1.max").arg(S2Q(argName)), maxEdit.text());
+		}
+	};
+
 private: // data
-	QGridLayout        layout;
-	QLabel             formulaLabel;
-	QLineEdit          formulaEdit;
-	QLabel             formulaErrorExcl;
-	QLabel             argumentCountLabel;
-	QSpinBox           argumentCountSpinBox;
+	QGridLayout                  layout;
+	QLabel                       formulaLabel;
+	QLineEdit                    formulaEdit;
+	QLabel                       formulaErrorExcl;
+	QLabel                       argumentCountLabel;
+	QSpinBox                     argumentCountSpinBox;
+	QWidget                      argDescriptionsWidget;
+	FlowLayout                     argDescriptionsLayout;
+	std::vector<std::unique_ptr<ArgDescriptionWidget>> argDescriptionWidgets;
 
 	symbol_table_t           symbolTable;
 	std::vector<std::string> symbolNames;
@@ -54,16 +105,23 @@ public:
 	, formulaErrorExcl("‼", this)
 	, argumentCountLabel(tr("Num. Args"), this)
 	, argumentCountSpinBox(this)
+	, argDescriptionsWidget(this)
+	,   argDescriptionsLayout(&argDescriptionsWidget)
 	{
 		// add widgets to layouts
-		layout.addWidget(&formulaLabel,         0,   0/*column*/);
-		layout.addWidget(&formulaEdit,          0,   1/*column*/);
-		layout.addWidget(&formulaErrorExcl,     0,   2/*column*/);
-		layout.addWidget(&argumentCountLabel,   0,   3/*column*/);
-		layout.addWidget(&argumentCountSpinBox, 0,   4/*column*/);
+		layout.addWidget(&formulaLabel,          0,   0/*column*/);
+		layout.addWidget(&formulaEdit,           0,   1/*column*/);
+		layout.addWidget(&formulaErrorExcl,      0,   2/*column*/);
+		layout.addWidget(&argumentCountLabel,    0,   3/*column*/);
+		layout.addWidget(&argumentCountSpinBox,  0,   4/*column*/);
+		layout.addWidget(&argDescriptionsWidget, 1,   0/*column*/, 1/*rowSpan*/, 4/*columnSpan*/);
+
+		// spacing
+		layout.setSpacing(0);
 
 		// alignment
-		formulaLabel.setAlignment(Qt::AlignRight|Qt::AlignVCenter);
+		formulaLabel      .setAlignment(Qt::AlignRight|Qt::AlignVCenter);
+		argumentCountLabel.setAlignment(Qt::AlignRight|Qt::AlignVCenter);
 
 		// widget states
 		formulaEdit.setText(appSettings.value("TrainingWidget.DataSet_FunctionApproximationByFormulaWidget.formula", QVariant("sin(a*b)+tan(a-b)*cos(a-b)")).toString());
@@ -115,6 +173,15 @@ private:
 			symbolTable.add_variable(argNameStr.c_str(), symbolValues[i]);
 		}
 		expression.register_symbol_table(symbolTable);
+
+		// update argument widgets
+		argDescriptionWidgets.clear();
+		argDescriptionWidgets.resize(numArgs);
+		for (unsigned i = 0; i < numArgs; i++, argName++) {
+			argDescriptionWidgets[i].reset(new ArgDescriptionWidget(symbolNames[i], &argDescriptionsWidget));
+			argDescriptionsLayout.addWidget(argDescriptionWidgets[i].get());
+			argDescriptionWidgets[i]->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+		}
 	}
 };
 

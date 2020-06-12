@@ -110,6 +110,7 @@ add_executable(nn-insight
 	colors.cpp
 	palette.cpp
 	${MODE_VIEWS_CPP}
+	3rdparty/flowlayout/flowlayout.cpp
 	3rdparty/tensorflow/tflite-reference-implementation.cpp
 	resources.qrc
 )

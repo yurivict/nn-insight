@@ -14,6 +14,8 @@
 #include <QSettings>
 #include <QSpinBox>
 
+#include <array>
+#include <functional>
 #include <vector>
 #include <string>
 
@@ -40,7 +42,10 @@ private: // types
 		QLabel               maxLabel;
 		QLineEdit            maxEdit;
 	public:
-		ArgDescriptionWidget(const std::string &argName_, QWidget *parent)
+		ArgDescriptionWidget(
+			const std::string &argName_,
+			float minVal, float maxVal, std::function<void(float)> onMinValChange, std::function<void(float)> onMaxValChange,
+			QWidget *parent)
 		: QWidget(parent)
 		, argName(argName_)
 		, layout(this)
@@ -68,18 +73,24 @@ private: // types
 			maxEdit.setValidator(new QDoubleValidator(this));
 
 			// values
-			minEdit.setText(appSettings.value(QString("TrainingWidget.DataSet_FunctionApproximationByFormulaWidget.arg-%1.min").arg(S2Q(argName)), QVariant(0.)).toString());
-			maxEdit.setText(appSettings.value(QString("TrainingWidget.DataSet_FunctionApproximationByFormulaWidget.arg-%1.max").arg(S2Q(argName)), QVariant(1.)).toString());
+			minEdit.setText(S2Q(STR(minVal)));
+			maxEdit.setText(S2Q(STR(maxVal)));
 
 			// margins
 			minEdit.setContentsMargins(0,0,0,0);
 			maxEdit.setContentsMargins(0,0,0,0);
 			setContentsMargins(0,0,0,0);
 			layout.setContentsMargins(0,0,0,0);
+
+			// signals
+			connect(&minEdit, &QLineEdit::textChanged, [onMinValChange](const QString &text) {
+				onMinValChange(text.toFloat());
+			});
+			connect(&maxEdit, &QLineEdit::textChanged, [onMaxValChange](const QString &text) {
+				onMaxValChange(text.toFloat());
+			});
 		}
 		~ArgDescriptionWidget() {
-			appSettings.setValue(QString("TrainingWidget.DataSet_FunctionApproximationByFormulaWidget.arg-%1.min").arg(S2Q(argName)), minEdit.text());
-			appSettings.setValue(QString("TrainingWidget.DataSet_FunctionApproximationByFormulaWidget.arg-%1.max").arg(S2Q(argName)), maxEdit.text());
 		}
 	};
 
@@ -98,6 +109,8 @@ private: // data
 	std::vector<std::string> symbolNames;
 	std::vector<T>           symbolValues;
 	expression_t             expression;
+
+	std::vector<std::array<T,2>> argumentRanges;
 
 public:
 	DataSet_FunctionApproximationByFormulaWidget(QWidget *parent)
@@ -153,7 +166,12 @@ public:
 
 public: // iface
 	std::array<std::vector<float>,2> getData(bool validation) {
-		return std::array<std::vector<float>,2>();
+		// set arguments
+		for (unsigned a = 0, ae = symbolValues.size(); a < ae; a++)
+			symbolValues[a] = 1;
+		std::vector<float> val;
+		val.push_back(expression.value());
+		return {symbolValues, val};
 	}
 
 private:
@@ -172,8 +190,9 @@ private:
 
 		symbolTable = symbol_table_t();
 		expression = expression_t();
-		symbolNames .resize(numArgs);
-		symbolValues.resize(numArgs);
+		symbolNames   .resize(numArgs);
+		symbolValues  .resize(numArgs);
+		argumentRanges.resize(numArgs);
 
 		char argName = 'a';
 		for (unsigned i = 0; i < numArgs; i++, argName++) {
@@ -187,7 +206,23 @@ private:
 		argDescriptionWidgets.clear();
 		argDescriptionWidgets.resize(numArgs);
 		for (unsigned i = 0; i < numArgs; i++, argName++) {
-			argDescriptionWidgets[i].reset(new ArgDescriptionWidget(symbolNames[i], &argDescriptionsWidget));
+			auto const &name = symbolNames[i];
+			auto &range = argumentRanges[i];
+			range = {
+				appSettings.value(QString("TrainingWidget.DataSet_FunctionApproximationByFormulaWidget.arg-%1.min").arg(S2Q(name)), QVariant(0.)).toFloat(),
+				appSettings.value(QString("TrainingWidget.DataSet_FunctionApproximationByFormulaWidget.arg-%1.max").arg(S2Q(name)), QVariant(1.)).toFloat()
+			};
+			argDescriptionWidgets[i].reset(new ArgDescriptionWidget(symbolNames[i], range[0], range[1],
+				[&name,&range](float newMinVal) {
+					range[0] = newMinVal;
+					appSettings.setValue(QString("TrainingWidget.DataSet_FunctionApproximationByFormulaWidget.arg-%1.min").arg(S2Q(name)), newMinVal);
+				},
+				[&name,&range](float newMaxVal) {
+					range[1] = newMaxVal;
+					appSettings.setValue(QString("TrainingWidget.DataSet_FunctionApproximationByFormulaWidget.arg-%1.max").arg(S2Q(name)), newMaxVal);
+				},
+				&argDescriptionsWidget
+			));
 			argDescriptionsLayout.addWidget(argDescriptionWidgets[i].get());
 			argDescriptionWidgets[i]->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
 		}

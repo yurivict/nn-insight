@@ -2,11 +2,14 @@
 
 #pragma once
 
+#include "plugin-interface.h"
+
 #include <QComboBox>
 #include <QGridLayout>
 #include <QGroupBox>
 #include <QLabel>
 #include <QPushButton>
+#include <QThread>
 #include <QVBoxLayout>
 #include <QWidget>
 
@@ -15,6 +18,14 @@
 class TrainingWidget : public QWidget {
 	Q_OBJECT
 
+// types
+	enum TrainingType {
+		TrainingType_FunctionApproximationByFormula,
+		TrainingType_FunctionApproximationFromTabulatedData,
+		TrainingType_ImageLabeling
+	};
+
+// data
 	QGridLayout                 layout;
 	QLabel                      trainingTypeLabel;
 	QComboBox                   trainingTypeComboBox;
@@ -23,8 +34,13 @@ class TrainingWidget : public QWidget {
 	std::unique_ptr<QWidget>      dataSetWidget; // dpeends on the training type
 	QPushButton                 trainButton;
 
+	TrainingType                trainingType;
+	std::unique_ptr<QThread>    trainingThread;
+
+	bool                        threadStopFlag;
+
 public:
-	TrainingWidget(QWidget *parent);
+	TrainingWidget(QWidget *parent, PluginInterface::Model *model);
 	~TrainingWidget();
 
 private:

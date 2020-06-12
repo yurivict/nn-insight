@@ -174,7 +174,7 @@ private: // fields
 	static std::set<MainWindow*>                   allWindows; // registry of all top-level windows
 	const PluginManager::Plugin*                   plugin;    // plugin in use for the model
 	std::unique_ptr<PluginInterface>               pluginInterface; // the file is opened through this handle
-	std::unique_ptr<const PluginInterface::Model>  model;     // the model from the file that is currently open
+	std::unique_ptr<const PluginInterface::Model>  model;     // the model from the file that is currently open XXX need to lose "const", also see TrainingWidget in main-window.cpp
 
 	// data associated with a specific input data (image) currently loaded by the user (static tensors from the model aren't here)
 	TensorShape                      sourceTensorShape;

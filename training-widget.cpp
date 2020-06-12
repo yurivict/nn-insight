@@ -1,6 +1,7 @@
 // Copyright (C) 2020 by Yuri Victorovich. All rights reserved.
 
 #include "misc.h"
+#include "training.h"
 #include "training-widget.h"
 #include "util.h"
 #include "3rdparty/flowlayout/flowlayout.h"
@@ -18,13 +19,9 @@
 
 #include <exprtk.hpp>
 
+
 /// local types
 
-enum TrainingType {
-	TrainingType_FunctionApproximationByFormula,
-	TrainingType_FunctionApproximationFromTabulatedData,
-	TrainingType_ImageLabeling
-};
 
 /// Training dataset type widgets
 
@@ -154,6 +151,11 @@ public:
 		appSettings.setValue("TrainingWidget.DataSet_FunctionApproximationByFormulaWidget.numArgs", argumentCountSpinBox.value());
 	}
 
+public: // iface
+	std::array<std::vector<float>,2> getData(bool validation) {
+		return std::array<std::vector<float>,2>();
+	}
+
 private:
 	void checkFormula() {
 		checkFormula(formulaEdit.text());
@@ -204,8 +206,8 @@ public:
 		// add widgets to layouts
 		layout.addWidget(&xxxLabel,     0,   0/*column*/);
 	}
-}
-;
+};
+
 class DataSet_ImageLabeling : public QWidget {
 	QGridLayout        layout;
 	QLabel             xxxLabel;
@@ -220,9 +222,40 @@ public:
 	}
 };
 
+/// Training thread
+
+class TrainingThread : public QThread { // wrapper thread for Training::runTrainingLoop
+	Q_OBJECT
+
+	PluginInterface::Model                               *model;
+	unsigned                                              batchSize;
+	float                                                 trainingRate;
+	bool                                                 *stopFlag;
+	std::function<std::array<std::vector<float>,2>(bool)> getData;
+	std::function<void(unsigned)>                         batchDone;
+
+public:
+	TrainingThread(QObject *parent,
+		PluginInterface::Model *model_, unsigned batchSize_, float trainingRate_, bool *stopFlag_,
+		std::function<std::array<std::vector<float>,2>(bool)> getData_,
+		std::function<void(unsigned)> batchDone_)
+	: QThread(parent)
+	, model(model_)
+	, batchSize(batchSize_)
+	, trainingRate(trainingRate_)
+	, stopFlag(stopFlag_)
+	, getData(getData_)
+	, batchDone(batchDone_)
+	{ }
+
+	void run() override {
+		Training::runTrainingLoop(model, batchSize, trainingRate, stopFlag, getData, batchDone);
+	}
+};
+
 /// TrainingWidget methods
 
-TrainingWidget::TrainingWidget(QWidget *parent)
+TrainingWidget::TrainingWidget(QWidget *parent, PluginInterface::Model *model)
 : QWidget(parent)
 , layout(this)
 , trainingTypeLabel("Type of Training", this)
@@ -230,6 +263,8 @@ TrainingWidget::TrainingWidget(QWidget *parent)
 , dataSetGroupBox(tr("Training Data"), this)
 ,   dataSetLayout(&dataSetGroupBox)
 , trainButton(tr("Start Training"), this)
+, trainingType((TrainingType)appSettings.value("TrainingWidget.trainingType", QVariant(TrainingType_FunctionApproximationByFormula)).toUInt())
+, threadStopFlag(false)
 {
 	// add widgets to layouts
 	layout.addWidget(&trainingTypeLabel,     0,   0/*column*/);
@@ -246,7 +281,7 @@ TrainingWidget::TrainingWidget(QWidget *parent)
 	trainingTypeLabel.setAlignment(Qt::AlignRight|Qt::AlignVCenter);
 
 	// widget states
-	trainingTypeComboBox.setCurrentIndex(trainingTypeComboBox.findData(appSettings.value("TrainingWidget.trainingType", QVariant(TrainingType_FunctionApproximationByFormula))));
+	trainingTypeComboBox.setCurrentIndex(trainingTypeComboBox.findData(trainingType));
 
 	// tooltips
 	for (auto l : {(QWidget*)&trainingTypeLabel,(QWidget*)&trainingTypeComboBox})
@@ -254,8 +289,32 @@ TrainingWidget::TrainingWidget(QWidget *parent)
 
 	// process signals
 	connect(&trainingTypeComboBox, QOverload<int>::of(&QComboBox::activated), [this](int index) {
-		appSettings.setValue("TrainingWidget.trainingType", trainingTypeComboBox.itemData(index));
+		trainingType = (TrainingType)trainingTypeComboBox.itemData(index).toUInt();
 		updateTrainingType();
+	});
+	connect(&trainButton, &QAbstractButton::pressed, [this,model]() {
+		if (!trainingThread) { // start training
+			threadStopFlag = false;
+			trainingThread.reset(new TrainingThread(this, model, 1000/*batchSize*/, 0.001/*trainingRate*/, &threadStopFlag,
+				[this](bool validation) -> std::array<std::vector<float>,2> {
+					switch (trainingType) {
+					case TrainingType_FunctionApproximationByFormula:
+						return ((DataSet_FunctionApproximationByFormulaWidget*)dataSetWidget.get())->getData(validation);
+					default:
+						assert(false);
+					}
+				},
+				[](unsigned) {
+				}
+			));
+			connect(trainingThread.get(), &TrainingThread::finished, [this]() {
+				trainButton.setText(tr("Start Training"));
+				trainingThread.reset(nullptr);
+			});
+			trainButton.setText(tr("Stop Training"));
+		} else { // stop training
+			threadStopFlag = true;
+		}
 	});
 
 	// set data set widget initially
@@ -263,6 +322,7 @@ TrainingWidget::TrainingWidget(QWidget *parent)
 }
 
 TrainingWidget::~TrainingWidget() {
+	appSettings.setValue("TrainingWidget.trainingType", trainingType);
 }
 
 // privates
@@ -281,3 +341,5 @@ void TrainingWidget::updateTrainingType() {
 	}
 	dataSetLayout.addWidget(dataSetWidget.get());
 }
+
+#include "training-widget.moc" // because Q_OBJECT is in some local classes

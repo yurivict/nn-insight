@@ -291,4 +291,12 @@ PI::Model* constructTrainingModel(const PI::Model *model, PI::OperatorKind lossF
 	return training.release();
 }
 
+bool runTrainingLoop(PluginInterface::Model *model, unsigned batchSize, float trainingRate, bool *stopFlag,
+	std::function<std::array<std::vector<float>,2>(bool)> getData,
+	std::function<void(unsigned)> batchDone
+) {
+	// TODO
+	return true;
+}
+
 }

@@ -824,7 +824,7 @@ MainWindow::MainWindow()
 	actionsMenu->addAction(tr("Train Model"), [this]() {
 		if (trainingWidget.isVisible())
 			return; // already
-		trainingDetails.reset(new TrainingWidget(&trainingWidget));
+		trainingDetails.reset(new TrainingWidget(&trainingWidget, (PluginInterface::Model*)model.get()));
 		trainingLayout.addWidget(trainingDetails.get());
 		trainingWidget.show();
 	});

@@ -46,7 +46,7 @@ PI::Model* constructTrainingModel(const PI::Model *model, PI::OperatorKind lossF
 		case PI::KindSub:
 		case PI::KindMul:
 		case PI::KindDiv:
-			return new PI::OperatorOptionsList({{PI::OperatorOption_FUSED_ACTIVATION_FUNCTION, PI::OperatorOptionValue(0)}});
+			return new PI::OperatorOptionsList({{PI::OperatorOption_FUSED_ACTIVATION_FUNCTION, PI::OperatorOptionValue(PI::ActivationFunction_NONE)}});
 		default:
 			return nullptr;
 		}

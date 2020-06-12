@@ -1228,6 +1228,34 @@ bool compute(
 			cbTensorComputed(outputs[0]);
 
 			break;
+		} case PI::KindLossMeanSquareError: {
+			assert(inputs.size()==2 && outputs.size()==1 && Tensor::flatSize(model->getTensorShape(outputs[0]))==1);
+			assert(model->getTensorShape(inputs[0]) == model->getTensorShape(inputs[1]));
+
+			// create output data
+			std::unique_ptr<float> outputData(new float[1]);
+
+			// compute
+			auto computeLossMeanSquareError = [](const float *src1, const float *src2, unsigned sz) {
+				float sum = 0;
+				auto sq = [](float x) {return x*x;};
+				for (auto e = src1+sz; src1 < e;)
+					sum += sq((*src1++) - (*src2++));
+				return sum;
+			};
+			outputData.get()[0] = computeLossMeanSquareError(
+				(*tensorData)[inputs[0]].get(),
+				(*tensorData)[inputs[1]].get(),
+				Tensor::flatSize(model->getTensorShape(inputs[0]))
+			);
+
+			// save the data
+			(*tensorData)[outputs[0]].reset(outputData.release());
+
+			// notify the caller
+			cbTensorComputed(outputs[0]);
+
+			break;
 		} default: {
 			cbWarningMessage(STR("Computation didn't succeed: operator #" << (oid+1) << ": " << operatorKind << " isn't yet implemented"));
 			return false; // failed to compute the model to the end

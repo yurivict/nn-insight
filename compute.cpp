@@ -346,24 +346,28 @@ bool compute(
 			float *output, const TensorShape &outputShape,
 			float(*fn)(float i1, float i2)
 		) {
-			// some values
-			auto input1ShapeSize = Tensor::flatSize(input1Shape);
-			const float *input1e = input1+input1ShapeSize;
-
 			// by type of inputs
-			if (input1Shape==input2Shape) { // 2 streams of the same size produce another stream of the same size
+			if (input1Shape==input2Shape) { // Large vs. Large
+				const float *input1e = input1+Tensor::flatSize(input1Shape);
 				// input2 can only be dynamic here
 				for (; input1<input1e; )
 					*output++ = fn(*input1++, *input2++);
 				return true;
-			} else if (input2Shape.size()==1 && input2Shape[0]==1) { // operation with a constant from the model
-				auto Const = input2[0]; // input2 can only be static here
+			} else if (input1Shape.size()==0 || (input1Shape.size()==1 && input1Shape[0]==1)) { //  Const vs. Large
+				auto input2ShapeSize = Tensor::flatSize(input2Shape);
+				const float *input2e = input2+input2ShapeSize;
+				auto Const = input1[0];
+				for (; input2<input2e; )
+					*output++ = fn(Const,*input2++);
+				return true;
+			} else if (input2Shape.size()==01 || (input2Shape.size()==1 && input2Shape[0]==1)) { // Large vs. Const
+				const float *input1e = input1+Tensor::flatSize(input1Shape);
+				auto Const = input2[0];
 				for (; input1<input1e; )
 					*output++ = fn(*input1++, Const);
 				return true;
-			} else if (Tensor::isSubset(input1Shape, input2Shape)) { // operation with a smaller vector
-				// input2 can be dynamic or static here
-				auto input1e = input1+input1ShapeSize;
+			} else if (Tensor::isSubset(input1Shape, input2Shape)) { // Large vs. Small
+				auto input1e = input1+Tensor::flatSize(input1Shape);
 				auto input2b = input2;
 				auto input2e = input2+Tensor::flatSize(input2Shape);
 				for (; input1<input1e; input1++, output++) {
@@ -907,8 +911,7 @@ bool compute(
 		  case PI::KindMul: {
 			assert(inputs.size()==2 && outputs.size()==1);
 			assert(opts); // need to have options present
-			assert((*tensorData)[inputs[0]]); // need to have the input data present
-			assert(model->getTensorShape(inputs[0]) == model->getTensorShape(outputs[0])); // produces the same shape as consumes TODO should be in the model validation stage
+			assert(model->getTensorShape(inputs[0])==model->getTensorShape(outputs[0]) || model->getTensorShape(inputs[1])==model->getTensorShape(outputs[0])); // produces the same shape as consumes TODO should be in the model validation stage
 
 			// operator options required to run this operator
 			PI::ActivationFunction activationFunction = PI::ActivationFunction_NONE;
@@ -935,19 +938,19 @@ bool compute(
 			// compute
 			bool succ = operatorKind==PI::KindAdd ?
 				computeDualOperator( // KindAdd
-					(*tensorData)[inputs[0]].get(), model->getTensorShape(inputs[0]),
+					getTensorDataDynamicOrStatic(inputs[0]), model->getTensorShape(inputs[0]),
 					getTensorDataDynamicOrStatic(inputs[1]), model->getTensorShape(inputs[1]),
 					outputData.get(), outputShape,
 					[](float f1, float f2) {return f1+f2;})
 				: operatorKind==PI::KindSub ?
 				computeDualOperator( // KindSub
-					(*tensorData)[inputs[0]].get(), model->getTensorShape(inputs[0]),
+					getTensorDataDynamicOrStatic(inputs[0]), model->getTensorShape(inputs[0]),
 					getTensorDataDynamicOrStatic(inputs[1]), model->getTensorShape(inputs[1]),
 					outputData.get(), outputShape,
 					[](float f1, float f2) {return f1-f2;})
 				:
 				computeDualOperator( // KindMul
-					(*tensorData)[inputs[0]].get(), model->getTensorShape(inputs[0]),
+					getTensorDataDynamicOrStatic(inputs[0]), model->getTensorShape(inputs[0]),
 					getTensorDataDynamicOrStatic(inputs[1]), model->getTensorShape(inputs[1]),
 					outputData.get(), outputShape,
 					[](float f1, float f2) {return f1*f2;});

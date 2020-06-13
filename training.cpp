@@ -47,6 +47,12 @@ PI::Model* constructTrainingModel(const PI::Model *model, PI::OperatorKind lossF
 		case PI::KindMul:
 		case PI::KindDiv:
 			return new PI::OperatorOptionsList({{PI::OperatorOption_FUSED_ACTIVATION_FUNCTION, PI::OperatorOptionValue(PI::ActivationFunction_NONE)}});
+		case PI::KindFullyConnected:
+			return new PI::OperatorOptionsList({
+				{PI::OperatorOption_FUSED_ACTIVATION_FUNCTION, PI::OperatorOptionValue(PI::ActivationFunction_NONE)},
+				{PI::OperatorOption_WEIGHTS_FORMAT, PI::OperatorOptionValue(0)}, // XXX wrong, need special type for WeightsFormat
+				{PI::OperatorOption_KEEP_NUM_DIMS, PI::OperatorOptionValue(true)}
+			});
 		default:
 			return nullptr;
 		}

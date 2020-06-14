@@ -29,6 +29,12 @@ PI::Model* constructTrainingModel(const PI::Model *model, PI::OperatorKind lossF
 	std::unique_ptr<InMemoryModel> training(new InMemoryModel(model));
 	std::map<std::string,unsigned> opNos;
 
+	// frozen layers (they will be sklipped during model construction process)
+	std::vector<bool> frozenLayers; // bool[TensorId]
+	frozenLayers.resize(model->numTensors());
+	for (auto i : model->getInputs())
+		frozenLayers[i] = true;
+
 	// all derivative tensors
 	std::vector<int/*PI::TensorId or -1*/> derivatives; // tensorId -> derivativeTensorId
 	derivatives.resize(model->numTensors());
@@ -217,33 +223,34 @@ PI::Model* constructTrainingModel(const PI::Model *model, PI::OperatorKind lossF
 			assert(derivatives[tid] != -1);
 			// find input tensor
 			PI::TensorId inputTid = GetOperatorSingleInput(model, oid);
-			// ∂tanh(x)/∂x = 1-tanh(x)^2
-			auto derivativeOverTanhInput = Dual(
-				PI::KindMul,
-				derivatives[tid],
-				DualWithTypeShape(
-					PI::KindSub,
-					StaticFloat32(1),
-					Dual(
-						PI::KindMul,
-						tid,
-						tid
-					),
-					training->getTensorShape(tid),
-					training->getTensorType(tid)
-				)
-			);
-			if (derivatives[inputTid] == -1) {
-				derivatives[inputTid] = derivativeOverTanhInput;
-				tensorsToDo.insert(inputTid);
-			} else
-				derivatives[inputTid] = Dual(PI::KindAdd, derivatives[inputTid], derivativeOverTanhInput);
+			if (!frozenLayers[inputTid]) { // ∂tanh(x)/∂x = 1-tanh(x)^2
+				auto derivativeOverTanhInput = Dual(
+					PI::KindMul,
+					derivatives[tid],
+					DualWithTypeShape(
+						PI::KindSub,
+						StaticFloat32(1),
+						Dual(
+							PI::KindMul,
+							tid,
+							tid
+						),
+						training->getTensorShape(tid),
+						training->getTensorType(tid)
+					)
+				);
+				if (derivatives[inputTid] == -1) {
+					derivatives[inputTid] = derivativeOverTanhInput;
+					tensorsToDo.insert(inputTid);
+				} else
+					derivatives[inputTid] = Dual(PI::KindAdd, derivatives[inputTid], derivativeOverTanhInput);
+			}
 			break;
 		} case PI::KindFullyConnected: {
 			// find input tensors
 			auto inputTids = GetOperatorThreeInputs(model, oid);
 			// FC(x,W,B) = Wx+B
-			{ // ∂FC(x,W,B)/∂x = W', ∂Loss/∂x = W'⋅∂Loss/∂FC(x,W,B)
+			if (!frozenLayers[inputTids[0]]) { // ∂FC(x,W,B)/∂x = W', ∂Loss/∂x = W'⋅∂Loss/∂FC(x,W,B)
 				auto weightsShape = model->getTensorShape(inputTids[1]);
 				assert(weightsShape.size() == 2);
 				auto weightsData = model->getTensorData(inputTids[1]);
@@ -261,7 +268,7 @@ PI::Model* constructTrainingModel(const PI::Model *model, PI::OperatorKind lossF
 				derivatives[inputTids[0]] = derivativeOverFcInput;
 				tensorsToDo.insert(inputTids[0]);
 			}
-			{ // ∂FC(x,W,B)/∂W = x, ∂Loss/∂W = ∂Loss/∂FC(x,W,B)⊗x
+			if (!frozenLayers[inputTids[1]]){ // ∂FC(x,W,B)/∂W = x, ∂Loss/∂W = ∂Loss/∂FC(x,W,B)⊗x
 				auto weightsShape = model->getTensorShape(inputTids[1]);
 				assert(weightsShape.size() == 2);
 				auto weightsData = model->getTensorData(inputTids[1]);
@@ -278,7 +285,7 @@ PI::Model* constructTrainingModel(const PI::Model *model, PI::OperatorKind lossF
 				derivatives[inputTids[1]] = derivativeOverFcWeights;
 				training->addOutput(derivativeOverFcWeights);
 			}
-			{ // ∂FC(x,W,B)/∂B = 1, ∂Loss/∂B = ∂Loss/∂FC(x,W,B)
+			if (!frozenLayers[inputTids[2]]) { // ∂FC(x,W,B)/∂B = 1, ∂Loss/∂B = ∂Loss/∂FC(x,W,B)
 				auto derivativeOverFcBias = derivatives[tid];
 				PRINT("derivative of bias " << inputTids[2] << " is " << derivativeOverFcBias)
 				assert(derivatives[inputTids[2]] == -1);

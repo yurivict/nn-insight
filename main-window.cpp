@@ -814,11 +814,13 @@ MainWindow::MainWindow()
 		}
 
 	})->setShortcut(QKeySequence(Qt::SHIFT + Qt::Key_Q));
-	transformationsMenu->addAction(tr("To training model"), [this]() {
-		auto w = new MainWindow;
-		w->loadInMemoryModel(Training::constructTrainingModel(model.get(), PluginInterface::KindLossMeanSquareError), "Training model");
-		w->show();
-	});
+	if (auto toTrainingModelMenu = transformationsMenu->addMenu(tr("To training model")))
+		for (auto lossFunction : {PluginInterface::KindLossMeanSquareError,PluginInterface::KindLossCrossEntropy})
+			toTrainingModelMenu->addAction(QString(tr("... with loss function %1")).arg(S2Q(STR(lossFunction))), [this,lossFunction]() {
+				auto w = new MainWindow;
+				w->loadInMemoryModel(Training::constructTrainingModel(model.get(), lossFunction), "Training model");
+				w->show();
+			});
 
 	auto actionsMenu = menuBar.addMenu(tr("&Actions"));
 	actionsMenu->addAction(tr("Train Model"), [this]() {

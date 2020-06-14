@@ -1238,6 +1238,37 @@ bool compute(
 			cbTensorComputed(outputs[0]);
 
 			break;
+		} case PI::KindOuterProduct: {
+			assert(inputs.size()==2 && outputs.size()==1);
+			assert(!opts); // no options are defined for OuterProduct
+
+			auto input1Shape = model->getTensorShape(inputs[0]);
+			auto input2Shape = model->getTensorShape(inputs[1]);
+			assert(input1Shape.size()==2 && input1Shape[0]==1 && input2Shape.size()==2 && input2Shape[0]==1);
+
+			// create output data
+			std::unique_ptr<float> outputData(new float[input1Shape[1]*input2Shape[1]]);
+
+			// compute
+			auto computeOuterProduct = [](const float *left, unsigned Nleft, const float *right, unsigned Nright, float *result) {
+				auto righte = right + Nright;
+				for (auto lefte = left+Nleft; left < lefte; left++)
+					for (auto r = right; r < righte; r++)
+						*result++ = *left * *r;
+			};
+			computeOuterProduct(
+				getTensorDataDynamicOrStatic(inputs[0]), input1Shape[1],
+				getTensorDataDynamicOrStatic(inputs[1]), input2Shape[1],
+				outputData.get()
+			);
+
+			// save the data
+			(*tensorData)[outputs[0]].reset(outputData.release());
+
+			// notify the caller
+			cbTensorComputed(outputs[0]);
+
+			break;
 		} case PI::KindLossMeanSquareError: {
 			assert(inputs.size()==2 && outputs.size()==1 && Tensor::flatSize(model->getTensorShape(outputs[0]))==1);
 			assert(model->getTensorShape(inputs[0]) == model->getTensorShape(inputs[1]));

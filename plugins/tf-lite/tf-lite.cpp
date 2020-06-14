@@ -112,7 +112,10 @@ class TfLitePlugin : public PluginInterface {
 			OperatorKind getOperatorKind(OperatorId operatorId) const override {
 				auto opcode_index = subgraph->operators()->Get(operatorId)->opcode_index();
 				assert(opcode_index < plugin->model->operator_codes()->size());
-				return Helpers::opcodeToOperatorKind(plugin->model->operator_codes()->Get(opcode_index)->builtin_code());
+				auto okind = Helpers::opcodeToOperatorKind(plugin->model->operator_codes()->Get(opcode_index)->builtin_code());
+				if (okind == KindUnknown)
+					PRINT("TfLite: encountered the unknown operator with the opcode " << plugin->model->operator_codes()->Get(opcode_index)->builtin_code())
+				return okind;
 			}
 			PluginInterface::OperatorOptionsList* getOperatorOptions(OperatorId operatorId) const override {
 				auto o = subgraph->operators()->Get(operatorId);

@@ -71,6 +71,7 @@ public:
 		KindOuterProduct,
 		// Loss functions
 		KindLossMeanSquareError, // L2(O,L) = +1/N Σᵢ(Oᵢ-Lᵢ)²                         // 'O'utput, 'L'abel
+		KindMeanAbsoluteError, // sqrt(L2(O,L))
 		KindLossCrossEntropy, // CE(O,L) = -1/N Σᵢ(Lᵢ*log(Oᵢ) + (1-Lᵢ)*log(1-Oᵢ))
 		//
 		KindUnknown

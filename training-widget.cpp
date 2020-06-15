@@ -6,13 +6,17 @@
 #include "util.h"
 #include "3rdparty/flowlayout/flowlayout.h"
 
+#include <QDialog>
+#include <QDialogButtonBox>
 #include <QLineEdit>
 #include <QDoubleValidator>
 #include <QGridLayout>
 #include <QHBoxLayout>
+#include <QVBoxLayout>
 #include <QLabel>
 #include <QSettings>
 #include <QSpinBox>
+#include <QTextEdit>
 
 #include <array>
 #include <functional>
@@ -337,6 +341,17 @@ TrainingWidget::TrainingWidget(QWidget *parent, PluginInterface::Model *model)
 				return getData(validation);
 			}
 		);
+		QDialog          dlg(this);
+		dlg.setWindowTitle(tr("Derivatives Verification Report"));
+		QVBoxLayout      dbgLayout(&dlg);
+		QTextEdit        dlgText(&dlg);
+		QDialogButtonBox dlgButtonBox(QDialogButtonBox::Ok, &dlg);
+		dbgLayout.addWidget(&dlgText);
+		dbgLayout.addWidget(&dlgButtonBox);
+		dlgText.setReadOnly(true);
+		dlgText.setText(S2Q(msg));
+		connect(&dlgButtonBox, SIGNAL(accepted()), &dlg, SLOT(accept()));
+		dlg.exec();
 	});
 	connect(&trainButton, &QAbstractButton::pressed, [this,model]() {
 		if (!trainingThread) { // start training

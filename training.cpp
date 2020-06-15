@@ -304,6 +304,17 @@ PI::Model* constructTrainingModel(const PI::Model *model, PI::OperatorKind lossF
 	return training.release();
 }
 
+std::string verifyDerivatives(const PluginInterface::Model *model, unsigned numVerifications, unsigned numDirections, float delta, std::function<std::array<std::vector<float>,2>(bool)> getData) {
+	std::ostringstream ss;
+	for (unsigned v = 0; v < numVerifications; v++) {
+		auto sample = getData(false/*validation*/);
+		for (unsigned d = 0; d < numDirections; d++) {
+		}
+	}
+	// TODO
+	return ss.str();
+}
+
 bool runTrainingLoop(PluginInterface::Model *model, unsigned batchSize, float trainingRate, bool *stopFlag,
 	std::function<std::array<std::vector<float>,2>(bool)> getData,
 	std::function<void(unsigned)> batchDone

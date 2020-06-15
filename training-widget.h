@@ -13,7 +13,9 @@
 #include <QVBoxLayout>
 #include <QWidget>
 
+#include <array>
 #include <memory>
+#include <vector>
 
 class TrainingWidget : public QWidget {
 	Q_OBJECT
@@ -31,7 +33,8 @@ class TrainingWidget : public QWidget {
 	QComboBox                   trainingTypeComboBox;
 	QGroupBox                   dataSetGroupBox;
 	QVBoxLayout                   dataSetLayout;
-	std::unique_ptr<QWidget>      dataSetWidget; // dpeends on the training type
+	std::unique_ptr<QWidget>      dataSetWidget; // depends on the training type
+	QPushButton                 verifyDerivativesButton;
 	QPushButton                 trainButton;
 
 	TrainingType                trainingType;
@@ -45,4 +48,5 @@ public:
 
 private:
 	void updateTrainingType();
+	std::array<std::vector<float>,2> getData(bool validation) const;
 };

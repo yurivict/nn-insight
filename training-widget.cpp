@@ -16,8 +16,9 @@
 
 #include <array>
 #include <functional>
-#include <vector>
+#include <random>
 #include <string>
+#include <vector>
 
 #include <exprtk.hpp>
 
@@ -166,12 +167,13 @@ public:
 
 public: // iface
 	std::array<std::vector<float>,2> getData(bool validation) {
+		static std::random_device rd;
+		static std::mt19937 gen(rd());
 		// set arguments
 		for (unsigned a = 0, ae = symbolValues.size(); a < ae; a++)
-			symbolValues[a] = 1;
-		std::vector<float> val;
-		val.push_back(expression.value());
-		return {symbolValues, val};
+			symbolValues[a] = std::uniform_real_distribution<float>(argumentRanges[a][0], argumentRanges[a][1])(gen);
+		// compute the function value
+		return {symbolValues, {expression.value()}};
 	}
 
 private:
@@ -297,15 +299,17 @@ TrainingWidget::TrainingWidget(QWidget *parent, PluginInterface::Model *model)
 , trainingTypeComboBox(this)
 , dataSetGroupBox(tr("Training Data"), this)
 ,   dataSetLayout(&dataSetGroupBox)
+, verifyDerivativesButton(tr("Verify Derivatives"), this)
 , trainButton(tr("Start Training"), this)
 , trainingType((TrainingType)appSettings.value("TrainingWidget.trainingType", QVariant(TrainingType_FunctionApproximationByFormula)).toUInt())
 , threadStopFlag(false)
 {
 	// add widgets to layouts
-	layout.addWidget(&trainingTypeLabel,     0,   0/*column*/);
-	layout.addWidget(&trainingTypeComboBox,  0,   1/*column*/);
-	layout.addWidget(&dataSetGroupBox,       1,   0/*column*/,  1/*rowSpan*/, 2/*columnSpan*/);
-	layout.addWidget(&trainButton,           2,   0/*column*/,  1/*rowSpan*/, 2/*columnSpan*/);
+	layout.addWidget(&trainingTypeLabel,       0,   0/*column*/);
+	layout.addWidget(&trainingTypeComboBox,    0,   1/*column*/);
+	layout.addWidget(&dataSetGroupBox,         1,   0/*column*/,  1/*rowSpan*/, 2/*columnSpan*/);
+	layout.addWidget(&verifyDerivativesButton, 2,   0/*column*/,  1/*rowSpan*/, 2/*columnSpan*/);
+	layout.addWidget(&trainButton,             3,   0/*column*/,  1/*rowSpan*/, 2/*columnSpan*/);
 
 	// fill comboboxes
 	trainingTypeComboBox.addItem(tr("Function approximation (by formula)"), TrainingType_FunctionApproximationByFormula);
@@ -327,17 +331,19 @@ TrainingWidget::TrainingWidget(QWidget *parent, PluginInterface::Model *model)
 		trainingType = (TrainingType)trainingTypeComboBox.itemData(index).toUInt();
 		updateTrainingType();
 	});
+	connect(&verifyDerivativesButton, &QAbstractButton::pressed, [this,model]() {
+		auto msg = Training::verifyDerivatives(model, 10/*numVerifications*/, 10/*numDirections*/, 0.001/*delta*/,
+			[this](bool validation) -> std::array<std::vector<float>,2> {
+				return getData(validation);
+			}
+		);
+	});
 	connect(&trainButton, &QAbstractButton::pressed, [this,model]() {
 		if (!trainingThread) { // start training
 			threadStopFlag = false;
 			trainingThread.reset(new TrainingThread(this, model, 1000/*batchSize*/, 0.001/*trainingRate*/, &threadStopFlag,
 				[this](bool validation) -> std::array<std::vector<float>,2> {
-					switch (trainingType) {
-					case TrainingType_FunctionApproximationByFormula:
-						return ((DataSet_FunctionApproximationByFormulaWidget*)dataSetWidget.get())->getData(validation);
-					default:
-						assert(false);
-					}
+					return getData(validation);
 				},
 				[](unsigned) {
 				}
@@ -375,6 +381,15 @@ void TrainingWidget::updateTrainingType() {
 		break;
 	}
 	dataSetLayout.addWidget(dataSetWidget.get());
+}
+
+std::array<std::vector<float>,2> TrainingWidget::getData(bool validation) const {
+	switch (trainingType) {
+	case TrainingType_FunctionApproximationByFormula:
+		return ((DataSet_FunctionApproximationByFormulaWidget*)dataSetWidget.get())->getData(validation);
+	default:
+		assert(false);
+	}
 }
 
 #include "training-widget.moc" // because Q_OBJECT is in some local classes

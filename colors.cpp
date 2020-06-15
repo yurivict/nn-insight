@@ -56,7 +56,7 @@ QColor getOperatorColor(PluginInterface::OperatorKind okind) {
 	case PluginInterface::KindOuterProduct:
 		return QColor(15,91,5); // green
 	case PluginInterface::KindLossMeanSquareError:
-	case PluginInterface::KindMeanAbsoluteError:
+	case PluginInterface::KindLossMeanAbsoluteError:
 	case PluginInterface::KindLossCrossEntropy:
 		return QColor(173, 216, 230);
 	default: // unknown?

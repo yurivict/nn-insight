@@ -1270,7 +1270,7 @@ bool compute(
 
 			break;
 		} case PI::KindLossMeanSquareError:
-		  case PI::KindMeanAbsoluteError: {
+		  case PI::KindLossMeanAbsoluteError: {
 			assert(inputs.size()==2 && outputs.size()==1 && Tensor::flatSize(model->getTensorShape(outputs[0]))==1);
 			assert(model->getTensorShape(inputs[0]) == model->getTensorShape(inputs[1]));
 
@@ -1290,7 +1290,7 @@ bool compute(
 				(*tensorData)[inputs[1]].get(),
 				Tensor::flatSize(model->getTensorShape(inputs[0]))
 			);
-			if (operatorKind==PI::KindMeanAbsoluteError)
+			if (operatorKind==PI::KindLossMeanAbsoluteError)
 				outputData.get()[0] = std::sqrt(outputData.get()[0]);
 
 			// save the data

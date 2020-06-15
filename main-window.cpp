@@ -815,7 +815,7 @@ MainWindow::MainWindow()
 
 	})->setShortcut(QKeySequence(Qt::SHIFT + Qt::Key_Q));
 	if (auto toTrainingModelMenu = transformationsMenu->addMenu(tr("To training model")))
-		for (auto lossFunction : {PluginInterface::KindLossMeanSquareError,PluginInterface::KindMeanAbsoluteError,PluginInterface::KindLossCrossEntropy})
+		for (auto lossFunction : {PluginInterface::KindLossMeanSquareError,PluginInterface::KindLossMeanAbsoluteError,PluginInterface::KindLossCrossEntropy})
 			toTrainingModelMenu->addAction(QString(tr("... with loss function %1")).arg(S2Q(STR(lossFunction))), [this,lossFunction]() {
 				auto w = new MainWindow;
 				w->loadInMemoryModel(Training::constructTrainingModel(model.get(), lossFunction), "Training model");

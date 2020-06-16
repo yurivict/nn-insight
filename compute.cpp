@@ -931,9 +931,11 @@ bool compute(
 			auto input2Shape = model->getTensorShape(inputs[1]);
 			auto outputShape = model->getTensorShape(outputs[0]);
 			auto input1ShapeSize = Tensor::flatSize(input1Shape);
+			auto input2ShapeSize = Tensor::flatSize(input2Shape);
+			auto maxInputShapeSize = std::max(input1ShapeSize,input2ShapeSize);
 
 			// create output data
-			std::unique_ptr<float> outputData(new float[input1ShapeSize]);
+			std::unique_ptr<float> outputData(new float[maxInputShapeSize]);
 
 			// compute
 			bool succ = operatorKind==PI::KindAdd ?
@@ -961,7 +963,7 @@ bool compute(
 			}
 
 			// activation function
-			applyActivationFunction(input1ShapeSize, outputData.get(), activationFunction);
+			applyActivationFunction(maxInputShapeSize, outputData.get(), activationFunction);
 
 			// save the data
 			(*tensorData)[outputs[0]].reset(outputData.release());

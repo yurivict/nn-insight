@@ -34,6 +34,10 @@ PI::TensorId InMemoryModel::addTensor(const std::string &name, TensorShape shape
 	return tid;
 }
 
+void InMemoryModel::setTensorName(PI::TensorId tid, const std::string &name_) {
+	tensors[tid].name = name_;
+}
+
 void InMemoryModel::addOperator(PluginInterface::OperatorKind kind, std::vector<PI::TensorId> inputs, std::vector<PI::TensorId> outputs, PI::OperatorOptionsList *options) { // consumes options
 	operators.push_back(OperatorInfo{kind, inputs, outputs, std::unique_ptr<PI::OperatorOptionsList>(options)});
 }

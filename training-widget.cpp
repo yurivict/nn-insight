@@ -1,6 +1,7 @@
 // Copyright (C) 2020 by Yuri Victorovich. All rights reserved.
 
 #include "misc.h"
+#include "rng.h"
 #include "training.h"
 #include "training-widget.h"
 #include "util.h"
@@ -20,7 +21,6 @@
 
 #include <array>
 #include <functional>
-#include <random>
 #include <string>
 #include <vector>
 
@@ -175,7 +175,7 @@ public: // iface
 		static std::mt19937 gen(rd());
 		// set arguments
 		for (unsigned a = 0, ae = symbolValues.size(); a < ae; a++)
-			symbolValues[a] = std::uniform_real_distribution<float>(argumentRanges[a][0], argumentRanges[a][1])(gen);
+			symbolValues[a] = std::uniform_real_distribution<float>(argumentRanges[a][0], argumentRanges[a][1])(Rng::generator);
 		// compute the function value
 		return {symbolValues, {expression.value()}};
 	}

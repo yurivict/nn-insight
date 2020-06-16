@@ -99,6 +99,7 @@ add_executable(nn-insight
 	image-grid-widget.cpp
 	scale-image-widget.cpp
 	in-memory-model.cpp
+	rng.cpp
 	training.cpp
 	training-widget.cpp
 	transformation-quantize-dialog.cpp

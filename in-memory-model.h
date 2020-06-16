@@ -137,5 +137,6 @@ public: // iface for changing the model
 	void addOutput(PI::TensorId tid);
 	void removeOutput(PI::TensorId tid);
 	PI::TensorId addTensor(const std::string &name, TensorShape shape, PI::DataType type, uint8_t *staticTensorData);
+	void setTensorName(PI::TensorId tid, const std::string &name);
 	void addOperator(PluginInterface::OperatorKind kind, std::vector<PI::TensorId> inputs, std::vector<PI::TensorId> outputs, PI::OperatorOptionsList *options); // consumes options
 };

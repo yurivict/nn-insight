@@ -1,15 +1,19 @@
 // Copyright (C) 2020 by Yuri Victorovich. All rights reserved.
 
+#include "compute.h"
 #include "in-memory-model.h"
 #include "training.h"
 #include "misc.h"
 #include "model-functions.h"
+#include "rng.h"
 #include "util.h"
 
 #include <assert.h>
 
 #include <algorithm>
 #include <array>
+#include <cmath>
+#include <map>
 #include <memory>
 #include <set>
 #include <string>
@@ -40,7 +44,7 @@ PI::Model* constructTrainingModel(const PI::Model *model, PI::OperatorKind lossF
 	derivatives.resize(model->numTensors());
 	std::fill(derivatives.begin(), derivatives.end(), -1);
 
-	float pendingDerivativeLossCoefficient = 1.;
+	//float pendingDerivativeLossCoefficient = 1.;
 
 	// helpers
 	auto tname = [](const std::string &name) {
@@ -95,6 +99,7 @@ PI::Model* constructTrainingModel(const PI::Model *model, PI::OperatorKind lossF
 		assert(inputs.size()==1 && outputs.size()==1);
 		return inputs[0];
 	};
+	/*
 	auto GetOperatorTwoInputs = [](const PI::Model *model, PI::OperatorId oid) -> std::array<PI::TensorId,2> {
 		std::vector<PI::TensorId> inputs;
 		std::vector<PI::TensorId> outputs;
@@ -102,6 +107,7 @@ PI::Model* constructTrainingModel(const PI::Model *model, PI::OperatorKind lossF
 		assert(inputs.size()==2 && outputs.size()==1);
 		return {inputs[0],inputs[1]};
 	};
+	*/
 	auto GetOperatorThreeInputs = [](const PI::Model *model, PI::OperatorId oid) -> std::array<PI::TensorId,3> {
 		std::vector<PI::TensorId> inputs;
 		std::vector<PI::TensorId> outputs;
@@ -116,7 +122,7 @@ PI::Model* constructTrainingModel(const PI::Model *model, PI::OperatorKind lossF
 		TensorShape    shape;
 		PI::DataType   type;
 		PI::TensorId   lossInput;
-		PI::TensorId   lossLabel;
+		PI::TensorId   lossTarget;
 		PI::TensorId   lossOutput;
 		PI::TensorId   derivativeOfLossToInput;
 	};
@@ -127,13 +133,13 @@ PI::Model* constructTrainingModel(const PI::Model *model, PI::OperatorKind lossF
 		// collect all info into the OutputInfo
 		OutputInfo oinfo({training->getTensorName(modelOutput), training->getTensorShape(modelOutput), training->getTensorType(modelOutput), modelOutput, 0, 0});
 
-		// add the input for label
-		oinfo.lossLabel = training->addTensor(tname(STR("label-for-" << oinfo.name)), oinfo.shape, oinfo.type, nullptr);
-		training->addInput(oinfo.lossLabel);
+		// add the input for target
+		oinfo.lossTarget = training->addTensor(tname(STR("target-of-tensor-" << modelOutput)), oinfo.shape, oinfo.type, nullptr);
+		training->addInput(oinfo.lossTarget);
 
 		// add the loss function
-		oinfo.lossOutput = training->addTensor(tname(STR("loss-for-" << training->getTensorName(modelOutput))), TensorShape{1,1}, training->getTensorType(modelOutput), nullptr);
-		training->addOperator(lossFunction, {modelOutput, oinfo.lossLabel}, {oinfo.lossOutput}, nullptr/*loss function has no options*/);
+		oinfo.lossOutput = training->addTensor(tname(STR("loss-of-tensor-" << modelOutput)), TensorShape{1,1}, training->getTensorType(modelOutput), nullptr);
+		training->addOperator(lossFunction, {modelOutput, oinfo.lossTarget}, {oinfo.lossOutput}, nullptr/*loss function has no options*/);
 
 		// update model outputs
 		training->addOutput(oinfo.lossOutput);
@@ -160,7 +166,7 @@ PI::Model* constructTrainingModel(const PI::Model *model, PI::OperatorKind lossF
 				Dual(
 					PI::KindDiv,
 					outputInfo[0].lossInput/*=O*/,
-					outputInfo[0].lossLabel/*=L*/
+					outputInfo[0].lossTarget/*=L*/
 				),
 				Dual(
 					PI::KindDiv,
@@ -172,7 +178,7 @@ PI::Model* constructTrainingModel(const PI::Model *model, PI::OperatorKind lossF
 					Dual(
 						PI::KindSub,
 						onesTid,
-						outputInfo[0].lossLabel/*=L*/
+						outputInfo[0].lossTarget/*=L*/
 					)
 				)
 			),
@@ -284,6 +290,7 @@ PI::Model* constructTrainingModel(const PI::Model *model, PI::OperatorKind lossF
 				assert(derivatives[inputTids[1]] == -1);
 				derivatives[inputTids[1]] = derivativeOverFcWeights;
 				training->addOutput(derivativeOverFcWeights);
+				training->setTensorName(derivativeOverFcWeights, tname(STR("derivative-of-tensor-" << inputTids[1])));
 			}
 			if (!frozenLayers[inputTids[2]]) { // ∂FC(x,W,B)/∂B = 1, ∂Loss/∂B = ∂Loss/∂FC(x,W,B)
 				auto derivativeOverFcBias = derivatives[tid];
@@ -291,6 +298,7 @@ PI::Model* constructTrainingModel(const PI::Model *model, PI::OperatorKind lossF
 				assert(derivatives[inputTids[2]] == -1);
 				derivatives[inputTids[2]] = derivativeOverFcBias;
 				training->addOutput(derivativeOverFcBias);
+				training->setTensorName(derivativeOverFcBias, tname(STR("derivative-of-tensor-" << inputTids[2])));
 			}
 			break;
 		} default: {
@@ -304,12 +312,130 @@ PI::Model* constructTrainingModel(const PI::Model *model, PI::OperatorKind lossF
 	return training.release();
 }
 
-std::string verifyDerivatives(const PluginInterface::Model *model, unsigned numVerifications, unsigned numDirections, float delta, std::function<std::array<std::vector<float>,2>(bool)> getData) {
-	std::ostringstream ss;
-	for (unsigned v = 0; v < numVerifications; v++) {
-		auto sample = getData(false/*validation*/);
-		for (unsigned d = 0; d < numDirections; d++) {
+bool getModelTrainingIO(const PI::Model *trainingModel, TrainingIO &trainingInputsOutputs) {
+	auto tname = [](const char *what, PluginInterface::TensorId tid) {
+		return STR("training-" << what << "-of-tensor-" << tid);
+	};
+
+	// index tensors by name
+	std::map<std::string,PI::TensorId> nameToTensor;
+	for (PI::TensorId tid = 0, tide = trainingModel->numTensors(); tid<tide; tid++)
+		nameToTensor[trainingModel->getTensorName(tid)] = tid;
+
+	// targetInputs and lossOutputs
+	for (auto o : trainingModel->getOutputs())
+		if (!isTrainingLayer(trainingModel, o)) {
+			// targetInputs
+			auto i = nameToTensor.find(tname("target", o));
+			if (i != nameToTensor.end())
+				trainingInputsOutputs.targetInputs.push_back(i->second);
+			else
+				return false; // training-target-* input isn't found, maybe not a training model?
+			// lossOutputs
+			i = nameToTensor.find(tname("loss", o));
+			if (i != nameToTensor.end())
+				trainingInputsOutputs.lossOutputs.push_back(i->second);
+			else
+				return false; // training-loss-* output isn't found, maybe not a training model?
 		}
+
+	// derivativeOutputs
+	auto addTensorDerivative = [&nameToTensor,&trainingInputsOutputs,&tname](PI::TensorId tid) {
+		auto i = nameToTensor.find(tname("derivative", tid));
+		if (i != nameToTensor.end()) {
+			trainingInputsOutputs.derivativeOutputs[i->second] = tid;
+			return true;
+		} else
+			return false; // training-derivative-* output for bias isn't found, maybe not a training model?
+	};
+	for (PI::OperatorId oid = 0, oide = trainingModel->numOperators(); oid < oide; oid++)
+		switch (trainingModel->getOperatorKind(oid)) { // look into all operators that contain parameters
+		case PI::KindFullyConnected: {
+			std::vector<PI::TensorId> inputs, outputs;
+			trainingModel->getOperatorIo(oid, inputs, outputs);
+			assert(inputs.size()==3 && outputs.size()==1);
+			if (!isTrainingLayer(trainingModel, outputs[0])) {
+				if (!addTensorDerivative(inputs[1/*weights*/]) || !addTensorDerivative(inputs[2/*bias*/]))
+					return false; // training-derivative-* output for weights or bias isn't found, maybe not a training model?
+			}
+			break;
+		} default:
+			; // do nothing, operator doesn't contain parameters
+		}
+
+	return true; // found all training inputs/outputs
+}
+
+void getModelOriginalIO(const PI::Model *trainingModel, OriginalIO &originalIO) {
+	for (auto i : trainingModel->getInputs())
+		if (!isTrainingLayer(trainingModel, i))
+			originalIO.inputs.push_back(i);
+	for (auto o : trainingModel->getOutputs())
+		if (!isTrainingLayer(trainingModel, o))
+			originalIO.outputs.push_back(o);
+}
+
+std::string verifyDerivatives(const PluginInterface::Model *trainingModel, unsigned numVerifications, unsigned numDirections, float delta, std::function<std::array<std::vector<float>,2>(bool)> getData) {
+
+	// get TrainingIO
+	TrainingIO trainingIO;
+	if (!getModelTrainingIO(trainingModel, trainingIO))
+		return "ERROR Not a training model!";
+
+	// get OriginalIO
+	OriginalIO originalIO;
+	getModelOriginalIO(trainingModel, originalIO);
+
+	std::ostringstream ss;
+	for (unsigned v = 1; v <= numVerifications; v++) {
+		auto sample = getData(false/*validation*/);
+
+		// generate the requested number of directions
+		std::vector<std::vector<float>> dirs;
+		dirs.resize(numDirections);
+		for (auto &dir : dirs) {
+			dir.resize(sample[0].size());
+			float sum2 = 0;
+			for (auto &d : dir) {
+				d = std::uniform_real_distribution<float>(0, 1)(Rng::generator);
+				sum2 += d*d;
+			}
+			float c = delta/std::sqrt(sum2);
+			for (auto &d : dir)
+				d *= c;
+		}
+
+		// tensor data
+		std::unique_ptr<std::vector<std::shared_ptr<const float>>> tensorData(new std::vector<std::shared_ptr<const float>>);
+		tensorData->resize(trainingModel->numTensors());
+
+		auto assignTensor = [&tensorData](PI::TensorId tid, const float *data, unsigned size) {
+			auto tensor = new float[size];
+			tensorData->data()[tid].reset(tensor);
+			std::copy(data, data+size, tensor);
+		};
+
+		// assign input
+		PRINT("originalIO.inputs.size()=" << originalIO.inputs.size() << ": " << originalIO.inputs)
+		assert(originalIO.inputs.size()==1); // only support single input models for now
+		assignTensor(originalIO.inputs[0], sample[0].data(), sample[0].size());
+
+		// assign target
+		assert(trainingIO.targetInputs.size()==1); // only support single output models for now
+		assignTensor(trainingIO.targetInputs[0], sample[1].data(), sample[1].size());
+
+		// compute the loss for the center point
+		PRINT(">>> compute")
+		Compute::compute(trainingModel, tensorData, [](PI::TensorId) {}, [](const std::string&) {});
+		PRINT("<<< compute")
+		assert(trainingIO.lossOutputs.size()==1); // only support single-output models for now
+		auto loss = (*tensorData)[trainingIO.lossOutputs[0]].get()[0];
+
+		ss << "Verification #" << v << ": args=" << sample[0] << " target=" << sample[1] << " loss=" << loss << std::endl;
+
+
+		for (auto &dir : dirs)
+			ss << "  - delta=" << dir << std::endl;
 	}
 	// TODO
 	return ss.str();
@@ -321,6 +447,13 @@ bool runTrainingLoop(PluginInterface::Model *model, unsigned batchSize, float tr
 ) {
 	// TODO
 	return true;
+}
+
+bool isTrainingLayer(const PluginInterface::Model *model, PluginInterface::TensorId tid) {
+	auto beginsWith = [](const std::string &str,const char *small) {
+		return str.size()>std::strlen(small) && std::strncmp(str.c_str(), small, std::strlen(small))==0;
+	};
+	return beginsWith(model->getTensorName(tid), "training-");
 }
 
 }

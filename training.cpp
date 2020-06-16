@@ -368,7 +368,7 @@ void getModelOriginalIO(const PI::Model *trainingModel, OriginalIO &originalIO) 
 			originalIO.outputs.push_back(o);
 }
 
-std::string verifyDerivatives(const PluginInterface::Model *trainingModel, unsigned numVerifications, unsigned numDirections, float delta, std::function<std::array<std::vector<float>,2>(bool)> getData) {
+std::string verifyDerivatives(PluginInterface::Model *trainingModel, unsigned numVerifications, unsigned numPoints, float delta, std::function<std::array<std::vector<float>,2>(bool)> getData) {
 
 	// get TrainingIO
 	TrainingIO trainingIO;
@@ -383,20 +383,15 @@ std::string verifyDerivatives(const PluginInterface::Model *trainingModel, unsig
 	for (unsigned v = 1; v <= numVerifications; v++) {
 		auto sample = getData(false/*validation*/);
 
-		// generate the requested number of directions
-		std::vector<std::vector<float>> dirs;
-		dirs.resize(numDirections);
-		for (auto &dir : dirs) {
-			dir.resize(sample[0].size());
-			float sum2 = 0;
-			for (auto &d : dir) {
-				d = std::uniform_real_distribution<float>(0, 1)(Rng::generator);
-				sum2 += d*d;
-			}
-			float c = delta/std::sqrt(sum2);
-			for (auto &d : dir)
-				d *= c;
-		}
+		// generate the set of derivative deltas that we will test
+		std::map<PluginInterface::TensorId, std::set<std::vector<unsigned>>> tensorTestPoints; // TensorId -> array of points
+		ModelFunctions::iterateThroughParameters(trainingModel, [&](PluginInterface::OperatorId oid, unsigned anum, PluginInterface::TensorId tid) {
+			auto shape = trainingModel->getTensorShape(tid);
+			auto numPts = std::min(numPoints,(unsigned)Tensor::flatSize(shape));
+			auto &pts = tensorTestPoints[tid];
+			while (pts.size() < numPts)
+				pts.insert(Tensor::generateRandomPoint(shape));
+		});
 
 		// tensor data
 		std::unique_ptr<std::vector<std::shared_ptr<const float>>> tensorData(new std::vector<std::shared_ptr<const float>>);
@@ -417,16 +412,32 @@ std::string verifyDerivatives(const PluginInterface::Model *trainingModel, unsig
 		assignTensor(trainingIO.targetInputs[0], sample[1].data(), sample[1].size());
 
 		// compute the loss for the center point
-		PRINT(">>> compute")
-		Compute::compute(trainingModel, tensorData, [](PI::TensorId) {}, [](const std::string&) {});
-		PRINT("<<< compute")
 		assert(trainingIO.lossOutputs.size()==1); // only support single-output models for now
+		Compute::compute(trainingModel, tensorData, [](PI::TensorId) {}, [](const std::string&) {});
 		auto loss = (*tensorData)[trainingIO.lossOutputs[0]].get()[0];
 
-		ss << "Verification #" << v << ": args=" << sample[0] << " target=" << sample[1] << " loss=" << loss << std::endl;
+		auto testOnePoint = [&](PI::TensorId tid, const std::vector<unsigned> &pt) {
+			// get weight value
+			assert(trainingModel->getTensorHasData(tid));
+			auto &weightValue = ((float*)trainingModel->getTensorDataWr(tid))[Tensor::offset(trainingModel->getTensorShape(tid), pt)];
+			// alter the weight
+			float prevValue = weightValue;
+			weightValue += delta;
+			// compute loss
+			Compute::compute(trainingModel, tensorData, [](PI::TensorId) {}, [](const std::string&) {});
+			auto lossPlus = (*tensorData)[trainingIO.lossOutputs[0]].get()[0];
+			// bring the weight value back
+			weightValue = prevValue;
+			// report
+			return STR("loss=" << lossPlus << " Δloss=" << (lossPlus-loss));
+		};
 
-		for (auto &dir : dirs)
-			ss << "  - delta=" << dir << std::endl;
+		ss << "Verification #" << v << ": args=" << sample[0] << " target=" << sample[1] << " loss=" << loss << std::endl;
+		for (auto &oneTensor : tensorTestPoints) {
+			ss << "  - Tensor #" << oneTensor.first << std::endl;
+			for (auto &pt : oneTensor.second)
+				ss << "    - pt=" << pt << ": " << testOnePoint(oneTensor.first, pt) << std::endl;
+		}
 	}
 	// TODO
 	return ss.str();

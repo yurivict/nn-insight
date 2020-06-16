@@ -28,7 +28,7 @@ PluginInterface::Model* constructTrainingModel(const PluginInterface::Model *mod
 bool getModelTrainingIO(const PluginInterface::Model *trainingModel, TrainingIO &trainingIO);
 void getModelOriginalIO(const PluginInterface::Model *trainingModel, OriginalIO &originalIO);
 
-std::string verifyDerivatives(const PluginInterface::Model *trainingModel, unsigned numVerifications, unsigned numDirections, float delta, std::function<std::array<std::vector<float>,2>(bool)> getData);
+std::string verifyDerivatives(PluginInterface::Model *trainingModel, unsigned numVerifications, unsigned numPoints, float delta, std::function<std::array<std::vector<float>,2>(bool)> getData);
 
 bool runTrainingLoop(PluginInterface::Model *model, unsigned batchSize, float trainingRate, bool *stopFlag,
 	std::function<std::array<std::vector<float>,2>(bool)> getData,

@@ -19,5 +19,6 @@ bool canBeAnImage(const TensorShape &shape);
 void saveTensorDataAsJson(const TensorShape &shape, const float *data, const char *fileName);
 bool readTensorDataAsJson(const char *fileName, const TensorShape &shape, std::shared_ptr<const float> &tensorData);
 TensorShape generateRandomPoint(const TensorShape &shape);
+unsigned offset(const TensorShape &shape, const std::vector<unsigned> &pt);
 
 }

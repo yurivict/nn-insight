@@ -203,4 +203,14 @@ TensorShape generateRandomPoint(const TensorShape &shape) {
 	return res;
 }
 
+unsigned offset(const TensorShape &shape, const std::vector<unsigned> &pt) {
+	assert(shape.size() == pt.size());
+	unsigned off = 0, step = 1;
+	for (int i = shape.size()-1; i>=0; i--) {
+		off += pt[i]*step;
+		step *= shape[i];
+	}
+	return off;
+}
+
 }

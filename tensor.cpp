@@ -1,12 +1,14 @@
 // Copyright (C) 2020 by Yuri Victorovich. All rights reserved.
 
 #include "misc.h"
+#include "rng.h"
 #include "tensor.h"
 
 #include <functional>
 #include <fstream>
 #include <limits>
 #include <memory>
+#include <random>
 #include <streambuf>
 #include <string>
 
@@ -192,6 +194,13 @@ bool readTensorDataAsJson(const char *fileName, const TensorShape &shape, std::s
 
 	return false;
 
+}
+
+TensorShape generateRandomPoint(const TensorShape &shape) {
+	TensorShape res;
+	for (auto d : shape)
+		res.push_back(std::uniform_int_distribution<unsigned>(0,d-1)(Rng::generator));
+	return res;
 }
 
 }

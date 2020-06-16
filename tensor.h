@@ -18,5 +18,6 @@ float* transposeMatrixIndices1and2of2(const TensorShape &shape, float *src); // 
 bool canBeAnImage(const TensorShape &shape);
 void saveTensorDataAsJson(const TensorShape &shape, const float *data, const char *fileName);
 bool readTensorDataAsJson(const char *fileName, const TensorShape &shape, std::shared_ptr<const float> &tensorData);
+TensorShape generateRandomPoint(const TensorShape &shape);
 
 }

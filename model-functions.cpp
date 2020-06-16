@@ -343,4 +343,19 @@ void quantize(PluginInterface::Model *model, bool quantizeWeights, unsigned weig
 		}
 }
 
+void iterateThroughParameters(const PluginInterface::Model *model, std::function<void(PluginInterface::OperatorId,unsigned,PluginInterface::TensorId)> cb) {
+	for (PluginInterface::OperatorId oid = 0, oide = model->numOperators(); oid < oide; oid++)
+		switch (model->getOperatorKind(oid)) { // look into all operators that contain parameters
+		case PluginInterface::KindFullyConnected: {
+			std::vector<PluginInterface::TensorId> inputs, outputs;
+			model->getOperatorIo(oid, inputs, outputs);
+			assert(inputs.size()==3 && outputs.size()==1);
+			cb(oid, 1, inputs[1]); // weights
+			cb(oid, 2, inputs[2]); // bias
+			break;
+		} default:
+			; // do nothing, operator doesn't contain parameters
+		}
+}
+
 }

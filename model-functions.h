@@ -50,4 +50,6 @@ std::string dataRatioOfOperatorStr(const PluginInterface::Model *model, PluginIn
 
 void quantize(PluginInterface::Model *model, bool quantizeWeights, unsigned weightsQuantizationSegments, bool quantizeBiases, unsigned biasesQuantizationSegments);
 
+void iterateThroughParameters(const PluginInterface::Model *model, std::function<void(PluginInterface::OperatorId,unsigned,PluginInterface::TensorId)> cb);
+
 }

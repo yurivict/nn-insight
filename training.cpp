@@ -348,22 +348,15 @@ bool getModelTrainingIO(const PI::Model *trainingModel, TrainingIO &trainingInpu
 		} else
 			return false; // training-derivative-* output for bias isn't found, maybe not a training model?
 	};
-	for (PI::OperatorId oid = 0, oide = trainingModel->numOperators(); oid < oide; oid++)
-		switch (trainingModel->getOperatorKind(oid)) { // look into all operators that contain parameters
-		case PI::KindFullyConnected: {
-			std::vector<PI::TensorId> inputs, outputs;
-			trainingModel->getOperatorIo(oid, inputs, outputs);
-			assert(inputs.size()==3 && outputs.size()==1);
-			if (!isTrainingLayer(trainingModel, outputs[0])) {
-				if (!addTensorDerivative(inputs[1/*weights*/]) || !addTensorDerivative(inputs[2/*bias*/]))
-					return false; // training-derivative-* output for weights or bias isn't found, maybe not a training model?
-			}
-			break;
-		} default:
-			; // do nothing, operator doesn't contain parameters
+	bool succ = true;
+	ModelFunctions::iterateThroughParameters(trainingModel, [trainingModel,addTensorDerivative,&succ](PluginInterface::OperatorId oid, unsigned anum, PluginInterface::TensorId tid) {
+		if (!isTrainingLayer(trainingModel, tid)) {
+			if (!addTensorDerivative(tid))
+				succ = false; // training-derivative-* output for a parameter isn't found, maybe not a training model?
 		}
+	});
 
-	return true; // found all training inputs/outputs
+	return succ; // found all training inputs/outputs
 }
 
 void getModelOriginalIO(const PI::Model *trainingModel, OriginalIO &originalIO) {
@@ -416,7 +409,6 @@ std::string verifyDerivatives(const PluginInterface::Model *trainingModel, unsig
 		};
 
 		// assign input
-		PRINT("originalIO.inputs.size()=" << originalIO.inputs.size() << ": " << originalIO.inputs)
 		assert(originalIO.inputs.size()==1); // only support single input models for now
 		assignTensor(originalIO.inputs[0], sample[0].data(), sample[0].size());
 
@@ -432,7 +424,6 @@ std::string verifyDerivatives(const PluginInterface::Model *trainingModel, unsig
 		auto loss = (*tensorData)[trainingIO.lossOutputs[0]].get()[0];
 
 		ss << "Verification #" << v << ": args=" << sample[0] << " target=" << sample[1] << " loss=" << loss << std::endl;
-
 
 		for (auto &dir : dirs)
 			ss << "  - delta=" << dir << std::endl;

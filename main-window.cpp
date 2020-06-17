@@ -9,6 +9,7 @@
 #include "image.h"
 #include "in-memory-model.h"
 #include "misc.h"
+#include "model-validator.h"
 #include "model-views/merge-dequantize-operators.h"
 #include "nn-operators.h"
 #include "nn-types.h"
@@ -44,6 +45,7 @@
 #include <algorithm>
 #include <map>
 #include <memory>
+#include <sstream>
 
 #if defined(USE_PERFTOOLS)
 #include <gperftools/malloc_extension.h>
@@ -823,6 +825,15 @@ MainWindow::MainWindow()
 			});
 
 	auto actionsMenu = menuBar.addMenu(tr("&Actions"));
+	actionsMenu->addAction(tr("Validate Model"), [this]() {
+		if (!model)
+			return;
+		std::ostringstream msgs;
+		if (ModelValidator::validate(model.get(), msgs))
+			Util::messageOk(this, "Model Validation", "Model is valid");
+		else
+			Util::warningOk(this, S2Q(msgs.str()));
+	});
 	actionsMenu->addAction(tr("Train Model"), [this]() {
 		if (trainingWidget.isVisible())
 			return; // already

@@ -91,6 +91,7 @@ add_executable(nn-insight
 	nn-types.cpp
 	model-functions.cpp
 	render-model.cpp
+	model-validator.cpp
 	svg-graphics-generator.cpp
 	nn-widget.cpp
 	no-nn-is-open-widget.cpp

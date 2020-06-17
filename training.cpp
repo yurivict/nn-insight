@@ -23,7 +23,7 @@ namespace Training {
 
 typedef PluginInterface PI;
 
-PI::Model* constructTrainingModel(const PI::Model *model, PI::OperatorKind lossFunction) { // returns ownership
+std::tuple<PluginInterface::Model*,float> constructTrainingModel(const PI::Model *model, PI::OperatorKind lossFunction) { // returns ownership
 	// index model
 	std::vector<int/*PluginInterface::OperatorId or -1*/> tensorProducers;
 	std::vector<std::vector<PluginInterface::OperatorId>> tensorConsumers;
@@ -44,7 +44,7 @@ PI::Model* constructTrainingModel(const PI::Model *model, PI::OperatorKind lossF
 	derivatives.resize(model->numTensors());
 	std::fill(derivatives.begin(), derivatives.end(), -1);
 
-	//float pendingDerivativeLossCoefficient = 1.;
+	float pendingDerivativeLossCoefficient = 1.;
 
 	// helpers
 	auto tname = [](const std::string &name) {
@@ -192,11 +192,9 @@ PI::Model* constructTrainingModel(const PI::Model *model, PI::OperatorKind lossF
 	} case PI::KindLossMeanSquareError: { // CAVEAT coefficient 2/N isn't included
 		// ∂L2(O,L)/∂x = 2/N Σᵢ(Oᵢ-Lᵢ)
 		auto derivativeOfLoss = outputInfo[0].lossInput; /*=O=derivativeOfLoss*/
-		//pendingDerivativeLossCoefficient = 2./;
+		pendingDerivativeLossCoefficient = 2./Tensor::flatSize(training->getTensorShape(outputInfo[0].lossInput));
 
 		outputInfo[0].derivativeOfLossToInput = derivativeOfLoss;
-		//training->addOutput(outputInfo[0].lossInput/*=O=derivativeOfLoss*/);
-
 		derivatives[outputInfo[0].lossInput] = derivativeOfLoss;
 
 		break;
@@ -215,7 +213,6 @@ PI::Model* constructTrainingModel(const PI::Model *model, PI::OperatorKind lossF
 		auto it = tensorsToDo.begin();
 		auto tid  = *it;
 		tensorsToDo.erase(it);
-		PRINT(">>> iteration tid=" << tid)
 
 		// find the operator that produced it
 		auto oid = tensorProducers[tid];
@@ -223,7 +220,6 @@ PI::Model* constructTrainingModel(const PI::Model *model, PI::OperatorKind lossF
 			continue; // model input, not operator
 
 		// by operator kind
-		PRINT("operator kind=" << model->getOperatorKind(oid))
 		switch (model->getOperatorKind(oid)) {
 		case PI::KindTanh: {
 			assert(derivatives[tid] != -1);
@@ -304,12 +300,11 @@ PI::Model* constructTrainingModel(const PI::Model *model, PI::OperatorKind lossF
 		} default: {
 			PRINT("Training: operator not yet supported: " << model->getOperatorKind(oid))
 		}}
-		PRINT("<<< iteration tid=" << tid)
 	}
 
 	//
 	PRINT("training model is ready")
-	return training.release();
+	return {training.release(),pendingDerivativeLossCoefficient};
 }
 
 bool getModelTrainingIO(const PI::Model *trainingModel, TrainingIO &trainingInputsOutputs) {
@@ -371,8 +366,14 @@ void getModelOriginalIO(const PI::Model *trainingModel, OriginalIO &originalIO) 
 			originalIO.outputs.push_back(o);
 }
 
-std::string verifyDerivatives(PluginInterface::Model *trainingModel, unsigned numVerifications, unsigned numPoints, float delta, std::function<std::array<std::vector<float>,2>(bool)> getData) {
-
+std::string verifyDerivatives(
+	PluginInterface::Model *trainingModel,
+	float pendingTrainingDerivativesCoefficient,
+	unsigned numVerifications,
+	unsigned numPoints,
+	float delta,
+	std::function<std::array<std::vector<float>,2>(bool)> getData)
+{
 	// get TrainingIO
 	TrainingIO trainingIO;
 	if (!getModelTrainingIO(trainingModel, trainingIO))
@@ -436,12 +437,11 @@ std::string verifyDerivatives(PluginInterface::Model *trainingModel, unsigned nu
 			// bring the weight value back
 			weightValue = prevValue;
 			// find a derivative value
-			PRINT("look for derivative for parameterTid=" << parameterTid)
 			assert(trainingIO.parameterToDerivativeOutputs.find(parameterTid) != trainingIO.parameterToDerivativeOutputs.end());
 			auto derivativeTid = trainingIO.parameterToDerivativeOutputs.find(parameterTid)->second;
-			auto derivativeValue = (*tensorData)[derivativeTid].get()[offset];
+			auto derivativeValue = (*tensorData)[derivativeTid].get()[offset]*pendingTrainingDerivativesCoefficient;
 			// report
-			return STR("loss=" << lossPlus << " Δloss=" << (lossPlus-loss) << " derivative=" << derivativeValue);
+			return STR("loss=" << lossPlus << " Δloss=" << (lossPlus-loss) << " derivativeComputed=" << derivativeValue << " derivativeActual=" << (lossPlus-loss)/delta);
 		};
 
 		ss << "Verification #" << v << ": args=" << sample[0] << " target=" << sample[1] << " loss=" << loss << std::endl;

@@ -8,6 +8,7 @@
 #include <functional>
 #include <map>
 #include <sstream>
+#include <tuple>
 #include <vector>
 
 namespace Training {
@@ -24,12 +25,18 @@ struct OriginalIO {
 	std::vector<PluginInterface::TensorId>                        outputs;
 };
 
-PluginInterface::Model* constructTrainingModel(const PluginInterface::Model *model, PluginInterface::OperatorKind lossFunction); // returns ownership
+std::tuple<PluginInterface::Model*,float> constructTrainingModel(const PluginInterface::Model *model, PluginInterface::OperatorKind lossFunction); // returns ownership
 
 bool getModelTrainingIO(const PluginInterface::Model *trainingModel, TrainingIO &trainingIO);
 void getModelOriginalIO(const PluginInterface::Model *trainingModel, OriginalIO &originalIO);
 
-std::string verifyDerivatives(PluginInterface::Model *trainingModel, unsigned numVerifications, unsigned numPoints, float delta, std::function<std::array<std::vector<float>,2>(bool)> getData);
+std::string verifyDerivatives(
+	PluginInterface::Model *trainingModel,
+	float pendingTrainingDerivativesCoefficient,
+	unsigned numVerifications,
+	unsigned numPoints,
+	float delta,
+	std::function<std::array<std::vector<float>,2>(bool)> getData);
 
 bool runTrainingLoop(PluginInterface::Model *model, unsigned batchSize, float trainingRate, bool *stopFlag,
 	std::function<std::array<std::vector<float>,2>(bool)> getData,

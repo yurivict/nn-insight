@@ -258,6 +258,7 @@ MainWindow::MainWindow()
 ,   memoryUseTimer(&statusBar)
 #endif
 , plugin(nullptr)
+, modelPendingTrainingDerivativesCoefficient(0)
 , scaleImageWidthPct(0)
 , scaleImageHeightPct(0)
 , self(0)
@@ -820,7 +821,9 @@ MainWindow::MainWindow()
 		for (auto lossFunction : {PluginInterface::KindLossMeanSquareError,PluginInterface::KindLossMeanAbsoluteError,PluginInterface::KindLossCrossEntropy})
 			toTrainingModelMenu->addAction(QString(tr("... with loss function %1")).arg(S2Q(STR(lossFunction))), [this,lossFunction]() {
 				auto w = new MainWindow;
-				w->loadInMemoryModel(Training::constructTrainingModel(model.get(), lossFunction), "Training model");
+				auto modelWithCoefficient = Training::constructTrainingModel(model.get(), lossFunction);
+				w->loadInMemoryModel(std::get<0>(modelWithCoefficient), "Training model");
+				w->modelPendingTrainingDerivativesCoefficient = std::get<1>(modelWithCoefficient);
 				w->show();
 			});
 
@@ -837,7 +840,7 @@ MainWindow::MainWindow()
 	actionsMenu->addAction(tr("Train Model"), [this]() {
 		if (trainingWidget.isVisible())
 			return; // already
-		trainingDetails.reset(new TrainingWidget(&trainingWidget, (PluginInterface::Model*)model.get()));
+		trainingDetails.reset(new TrainingWidget(&trainingWidget, (PluginInterface::Model*)model.get(), modelPendingTrainingDerivativesCoefficient));
 		trainingLayout.addWidget(trainingDetails.get());
 		trainingWidget.show();
 	});

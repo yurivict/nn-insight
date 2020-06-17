@@ -43,7 +43,7 @@ class TrainingWidget : public QWidget {
 	bool                        threadStopFlag;
 
 public:
-	TrainingWidget(QWidget *parent, PluginInterface::Model *model);
+	TrainingWidget(QWidget *parent, PluginInterface::Model *model, float modelPendingTrainingDerivativesCoefficient);
 	~TrainingWidget();
 
 private:

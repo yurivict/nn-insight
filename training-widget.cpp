@@ -296,7 +296,7 @@ public:
 
 /// TrainingWidget methods
 
-TrainingWidget::TrainingWidget(QWidget *parent, PluginInterface::Model *model)
+TrainingWidget::TrainingWidget(QWidget *parent, PluginInterface::Model *model, float modelPendingTrainingDerivativesCoefficient)
 : QWidget(parent)
 , layout(this)
 , trainingTypeLabel("Type of Training", this)
@@ -335,8 +335,8 @@ TrainingWidget::TrainingWidget(QWidget *parent, PluginInterface::Model *model)
 		trainingType = (TrainingType)trainingTypeComboBox.itemData(index).toUInt();
 		updateTrainingType();
 	});
-	connect(&verifyDerivativesButton, &QAbstractButton::pressed, [this,model]() {
-		auto msg = Training::verifyDerivatives(model, 10/*numVerifications*/, 10/*numDirections*/, 0.001/*delta*/,
+	connect(&verifyDerivativesButton, &QAbstractButton::pressed, [this,model,modelPendingTrainingDerivativesCoefficient]() {
+		auto msg = Training::verifyDerivatives(model, modelPendingTrainingDerivativesCoefficient, 10/*numVerifications*/, 10/*numDirections*/, 0.001/*delta*/,
 			[this](bool validation) -> std::array<std::vector<float>,2> {
 				return getData(validation);
 			}

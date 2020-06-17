@@ -389,6 +389,10 @@ std::string verifyDerivatives(
 	getModelOriginalIO(trainingModel, originalIO);
 
 	std::ostringstream ss;
+	auto wrapLine = [](const std::string &line) {
+		return STR(line << std::endl);
+	};
+
 	for (unsigned v = 1; v <= numVerifications; v++) {
 		auto sample = getData(false/*validation*/);
 
@@ -463,7 +467,7 @@ std::string verifyDerivatives(
 					std::abs(derivativeActual - derivativeComputed)/std::abs(derivativeComputed) <= tolerance ?
 						STR("PASS (" << std::abs(derivativeActual - derivativeComputed)/std::abs(derivativeComputed) << " <= " << tolerance << ")")
 						:
-						STR("FAIL (" << std::abs(derivativeActual - derivativeComputed)/std::abs(derivativeComputed) << " > " << tolerance << ")")
+						STR("***** FAIL (" << std::abs(derivativeActual - derivativeComputed)/std::abs(derivativeComputed) << " > " << tolerance << ") *****")
 				)
 			);
 		};
@@ -472,10 +476,9 @@ std::string verifyDerivatives(
 		for (auto &oneTensor : tensorTestPoints) {
 			ss << "  - Tensor #" << oneTensor.first << std::endl;
 			for (auto &pt : oneTensor.second)
-				ss << "    - pt=" << pt << ": " << testOnePoint(oneTensor.first, pt) << std::endl;
+				ss << wrapLine(STR("    - pt=" << pt << ": " << testOnePoint(oneTensor.first, pt)));
 		}
 	}
-	// TODO
 	return ss.str();
 }
 

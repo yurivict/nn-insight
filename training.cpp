@@ -191,7 +191,11 @@ std::tuple<PluginInterface::Model*,float> constructTrainingModel(const PI::Model
 		break;
 	} case PI::KindLossMeanSquareError: { // CAVEAT coefficient 2/N isn't included
 		// ∂L2(O,L)/∂x = 2/N Σᵢ(Oᵢ-Lᵢ)
-		auto derivativeOfLoss = outputInfo[0].lossInput; /*=O=derivativeOfLoss*/
+		auto derivativeOfLoss = Dual(
+			PI::KindSub,
+			outputInfo[0].lossInput,
+			outputInfo[0].lossTarget
+		);
 		pendingDerivativeLossCoefficient = 2./Tensor::flatSize(training->getTensorShape(outputInfo[0].lossInput));
 
 		outputInfo[0].derivativeOfLossToInput = derivativeOfLoss;
@@ -440,8 +444,17 @@ std::string verifyDerivatives(
 			assert(trainingIO.parameterToDerivativeOutputs.find(parameterTid) != trainingIO.parameterToDerivativeOutputs.end());
 			auto derivativeTid = trainingIO.parameterToDerivativeOutputs.find(parameterTid)->second;
 			auto derivativeValue = (*tensorData)[derivativeTid].get()[offset]*pendingTrainingDerivativesCoefficient;
+			// output value
+			assert(originalIO.outputs.size() == 1);
+			auto outputValue = (*tensorData)[originalIO.outputs[0]].get()[0];
 			// report
-			return STR("loss=" << lossPlus << " Δloss=" << (lossPlus-loss) << " derivativeComputed=" << derivativeValue << " derivativeActual=" << (lossPlus-loss)/delta);
+			return STR(
+				"output=" << outputValue
+				<< " loss=" << lossPlus
+				<< " Δloss=" << (lossPlus-loss)
+				<< " derivativeComputed=" << derivativeValue
+				<< " derivativeActual=" << (lossPlus-loss)/delta
+			);
 		};
 
 		ss << "Verification #" << v << ": args=" << sample[0] << " target=" << sample[1] << " loss=" << loss << std::endl;

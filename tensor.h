@@ -1,8 +1,12 @@
 // Copyright (C) 2020 by Yuri Victorovich. All rights reserved.
 
+#pragma once
+
+#include <ostream>
 #include <vector>
 
 typedef std::vector<unsigned> TensorShape;
+std::ostream& operator<<(std::ostream& os, const TensorShape& shape);
 
 namespace Tensor {
 

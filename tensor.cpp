@@ -8,12 +8,23 @@
 #include <fstream>
 #include <limits>
 #include <memory>
+#include <ostream>
 #include <random>
 #include <streambuf>
 #include <string>
+#include <vector>
 
 #include <assert.h>
 #include <nlohmann/json.hpp>
+
+std::ostream& operator<<(std::ostream& os, const TensorShape& shape) {
+        os << "[";
+        int i = 0;
+        for (auto d : shape)
+                os << (i++!=0 ? "," : "") << d;
+        os << "]";
+        return os;
+}
 
 namespace Tensor {
 

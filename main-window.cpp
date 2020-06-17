@@ -840,7 +840,7 @@ MainWindow::MainWindow()
 	actionsMenu->addAction(tr("Train Model"), [this]() {
 		if (trainingWidget.isVisible())
 			return; // already
-		trainingDetails.reset(new TrainingWidget(&trainingWidget, (PluginInterface::Model*)model.get(), modelPendingTrainingDerivativesCoefficient));
+		trainingDetails.reset(new TrainingWidget(&trainingWidget, this, (PluginInterface::Model*)model.get(), modelPendingTrainingDerivativesCoefficient));
 		trainingLayout.addWidget(trainingDetails.get());
 		trainingWidget.show();
 	});

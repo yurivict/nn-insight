@@ -44,6 +44,11 @@ bool warningOk(QWidget *parent, const QString &msg) {
 	return false; // for convenience of callers
 }
 
+void centerWidgetAtOtherWidget(QWidget *widget, QWidget *otherWidget, float fraction) {
+	widget->resize(otherWidget->size()*fraction);
+	// TODO move should be also performed, but our uses get by because we use centerWidgetAtOtherWidget on modal dialogs before show() and the dialog gets centered automatically
+}
+
 float getScreenDPI() {
 	static float dpi = QApplication::screens().at(0)->logicalDotsPerInch();
 	return dpi;

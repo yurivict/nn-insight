@@ -296,7 +296,7 @@ public:
 
 /// TrainingWidget methods
 
-TrainingWidget::TrainingWidget(QWidget *parent, PluginInterface::Model *model, float modelPendingTrainingDerivativesCoefficient)
+TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginInterface::Model *model, float modelPendingTrainingDerivativesCoefficient)
 : QWidget(parent)
 , layout(this)
 , trainingTypeLabel("Type of Training", this)
@@ -335,7 +335,7 @@ TrainingWidget::TrainingWidget(QWidget *parent, PluginInterface::Model *model, f
 		trainingType = (TrainingType)trainingTypeComboBox.itemData(index).toUInt();
 		updateTrainingType();
 	});
-	connect(&verifyDerivativesButton, &QAbstractButton::pressed, [this,model,modelPendingTrainingDerivativesCoefficient]() {
+	connect(&verifyDerivativesButton, &QAbstractButton::pressed, [this,model,modelPendingTrainingDerivativesCoefficient,topLevelWidget]() {
 		auto msg = Training::verifyDerivatives(model, modelPendingTrainingDerivativesCoefficient, 10/*numVerifications*/, 10/*numDirections*/, 0.001/*delta*/, 0.05/*tolerance*/,
 			[this](bool validation) -> std::array<std::vector<float>,2> {
 				return getData(validation);
@@ -351,6 +351,7 @@ TrainingWidget::TrainingWidget(QWidget *parent, PluginInterface::Model *model, f
 		dlgText.setReadOnly(true);
 		dlgText.setText(S2Q(msg));
 		connect(&dlgButtonBox, SIGNAL(accepted()), &dlg, SLOT(accept()));
+		Util::centerWidgetAtOtherWidget(&dlg, topLevelWidget, 0.75/*fraction*/);
 		dlg.exec();
 	});
 	connect(&trainButton, &QAbstractButton::pressed, [this,model]() {

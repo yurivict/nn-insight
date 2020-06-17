@@ -482,7 +482,7 @@ std::string verifyDerivatives(
 	return ss.str();
 }
 
-bool runTrainingLoop(PluginInterface::Model *model, unsigned batchSize, float trainingRate, bool *stopFlag,
+bool runTrainingLoop(PluginInterface::Model *model, unsigned batchSize, float learningRate, unsigned maxBatches, bool *stopFlag,
 	std::function<std::array<std::vector<float>,2>(bool)> getData,
 	std::function<void(unsigned)> batchDone
 ) {

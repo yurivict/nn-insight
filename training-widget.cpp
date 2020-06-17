@@ -21,6 +21,7 @@
 
 #include <array>
 #include <functional>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -270,27 +271,32 @@ class TrainingThread : public QThread { // wrapper thread for Training::runTrain
 
 	PluginInterface::Model                               *model;
 	unsigned                                              batchSize;
-	float                                                 trainingRate;
+	float                                                 learningRate;
+	unsigned                                              maxBatches;
 	bool                                                 *stopFlag;
 	std::function<std::array<std::vector<float>,2>(bool)> getData;
 	std::function<void(unsigned)>                         batchDone;
 
 public:
 	TrainingThread(QObject *parent,
-		PluginInterface::Model *model_, unsigned batchSize_, float trainingRate_, bool *stopFlag_,
+		PluginInterface::Model *model_, unsigned batchSize_, float learningRate_, bool maxBatches_, bool *stopFlag_,
 		std::function<std::array<std::vector<float>,2>(bool)> getData_,
 		std::function<void(unsigned)> batchDone_)
 	: QThread(parent)
 	, model(model_)
 	, batchSize(batchSize_)
-	, trainingRate(trainingRate_)
+	, learningRate(learningRate_)
+	, maxBatches(maxBatches_)
 	, stopFlag(stopFlag_)
 	, getData(getData_)
 	, batchDone(batchDone_)
 	{ }
 
 	void run() override {
-		Training::runTrainingLoop(model, batchSize, trainingRate, stopFlag, getData, batchDone);
+		PRINT(">>> trainingThread")
+		//Training::runTrainingLoop(model, batchSize, learningRate, maxBatches, stopFlag, getData, batchDone);
+		sleep(3);
+		PRINT("<<< trainingThread")
 	}
 };
 
@@ -303,17 +309,47 @@ TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginI
 , trainingTypeComboBox(this)
 , dataSetGroupBox(tr("Training Data"), this)
 ,   dataSetLayout(&dataSetGroupBox)
+, parametersGroupBox(tr("Training Parameters"), this)
+,   parametersLayout(&parametersGroupBox)
+,   paramBatchSizeLabel(tr("Batch Size"), &parametersGroupBox)
+,   paramBatchSizeSpinBox(&parametersGroupBox)
+,   paramLearningRateLabel(tr("Learning Rate"), &parametersGroupBox)
+,   paramLearningRateSpinBox(&parametersGroupBox)
+,   paramMaxBatchesLabel(tr("Max Batches"), &parametersGroupBox)
+,   paramMaxBatchesSpinBox(&parametersGroupBox)
 , verifyDerivativesButton(tr("Verify Derivatives"), this)
 , trainButton(tr("Start Training"), this)
 , trainingType((TrainingType)appSettings.value("TrainingWidget.trainingType", QVariant(TrainingType_FunctionApproximationByFormula)).toUInt())
 , threadStopFlag(false)
 {
+	// helpers
+	auto enableOtherWidgets = [this](bool enable) {
+		for (auto w : {(QWidget*)&trainingTypeLabel,(QWidget*)&trainingTypeComboBox,(QWidget*)&dataSetGroupBox,(QWidget*)&parametersGroupBox,(QWidget*)&verifyDerivativesButton})
+			w->setEnabled(enable);
+	};
+	auto updateLearningRateSpinBoxStep = [this]() {
+		auto val = paramLearningRateSpinBox.value();
+		if (val <= 0.015)
+			paramLearningRateSpinBox.setSingleStep(0.0001);
+		else if (val <= 0.15)
+			paramLearningRateSpinBox.setSingleStep(0.001);
+		else
+			paramLearningRateSpinBox.setSingleStep(0.01);
+	};
+
 	// add widgets to layouts
 	layout.addWidget(&trainingTypeLabel,       0,   0/*column*/);
 	layout.addWidget(&trainingTypeComboBox,    0,   1/*column*/);
 	layout.addWidget(&dataSetGroupBox,         1,   0/*column*/,  1/*rowSpan*/, 2/*columnSpan*/);
-	layout.addWidget(&verifyDerivativesButton, 2,   0/*column*/,  1/*rowSpan*/, 2/*columnSpan*/);
-	layout.addWidget(&trainButton,             3,   0/*column*/,  1/*rowSpan*/, 2/*columnSpan*/);
+	layout.addWidget(&parametersGroupBox,      2,   0/*column*/,  1/*rowSpan*/, 2/*columnSpan*/);
+	  parametersLayout.addWidget(&paramBatchSizeLabel);
+	  parametersLayout.addWidget(&paramBatchSizeSpinBox);
+	  parametersLayout.addWidget(&paramLearningRateLabel);
+	  parametersLayout.addWidget(&paramLearningRateSpinBox);
+	  parametersLayout.addWidget(&paramMaxBatchesLabel);
+	  parametersLayout.addWidget(&paramMaxBatchesSpinBox);
+	layout.addWidget(&verifyDerivativesButton, 3,   0/*column*/,  1/*rowSpan*/, 2/*columnSpan*/);
+	layout.addWidget(&trainButton,             4,   0/*column*/,  1/*rowSpan*/, 2/*columnSpan*/);
 
 	// fill comboboxes
 	trainingTypeComboBox.addItem(tr("Function approximation (by formula)"), TrainingType_FunctionApproximationByFormula);
@@ -321,22 +357,45 @@ TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginI
 	trainingTypeComboBox.addItem(tr("Image labeling"), TrainingType_ImageLabeling);
 
 	// alignment
-	trainingTypeLabel.setAlignment(Qt::AlignRight|Qt::AlignVCenter);
+	for (auto l : {&trainingTypeLabel,&paramBatchSizeLabel,&paramLearningRateLabel,&paramMaxBatchesLabel})
+		l->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
+
+	// validation
+	paramBatchSizeSpinBox   .setRange(1, std::numeric_limits<int>::max());
+	paramLearningRateSpinBox.setRange(0, 0.5);
+	paramLearningRateSpinBox.setDecimals(4);
+	paramMaxBatchesSpinBox  .setRange(1, std::numeric_limits<int>::max());
+
+	// initialize values
+	paramBatchSizeSpinBox   .setValue(appSettings.value("TrainingWidget.Options.BatchSize", 100).toUInt());
+	paramLearningRateSpinBox.setValue(appSettings.value("TrainingWidget.Options.LearningRate", 0.01).toDouble());
+	paramMaxBatchesSpinBox  .setValue(appSettings.value("TrainingWidget.Options.MaxBatches", 1000).toUInt());
+
 
 	// widget states
 	trainingTypeComboBox.setCurrentIndex(trainingTypeComboBox.findData(trainingType));
+	updateLearningRateSpinBoxStep();
 
 	// tooltips
 	for (auto l : {(QWidget*)&trainingTypeLabel,(QWidget*)&trainingTypeComboBox})
 		l->setToolTip(tr("Choose the training type to perform"));
+	for (auto l : {(QWidget*)&paramBatchSizeLabel,(QWidget*)&paramBatchSizeSpinBox})
+		l->setToolTip(tr("Choose the batch size for the training process. Batch size is how many training iterations to perform between weight updates."));
+	for (auto l : {(QWidget*)&paramLearningRateLabel,(QWidget*)&paramLearningRateSpinBox})
+		l->setToolTip(tr("Choose the learning rate for the training process. Learning rate is a coefficient telling how much to update model weights after each batch."));
+	for (auto l : {(QWidget*)&paramMaxBatchesLabel,(QWidget*)&paramMaxBatchesSpinBox})
+		l->setToolTip(tr("Choose the maximum number of batches before the training stops."));
 
 	// process signals
 	connect(&trainingTypeComboBox, QOverload<int>::of(&QComboBox::activated), [this](int index) {
 		trainingType = (TrainingType)trainingTypeComboBox.itemData(index).toUInt();
 		updateTrainingType();
 	});
+	connect(&paramLearningRateSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), [updateLearningRateSpinBoxStep](double) {
+		updateLearningRateSpinBoxStep();
+	});
 	connect(&verifyDerivativesButton, &QAbstractButton::pressed, [this,model,modelPendingTrainingDerivativesCoefficient,topLevelWidget]() {
-		auto msg = Training::verifyDerivatives(model, modelPendingTrainingDerivativesCoefficient, 10/*numVerifications*/, 10/*numDirections*/, 0.001/*delta*/, 0.05/*tolerance*/,
+		auto msg = Training::verifyDerivatives(model, modelPendingTrainingDerivativesCoefficient, 10/*numVerifications*/, 10/*numPoints*/, 0.001/*delta*/, 0.05/*tolerance*/,
 			[this](bool validation) -> std::array<std::vector<float>,2> {
 				return getData(validation);
 			}
@@ -354,21 +413,27 @@ TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginI
 		Util::centerWidgetAtOtherWidget(&dlg, topLevelWidget, 0.75/*fraction*/);
 		dlg.exec();
 	});
-	connect(&trainButton, &QAbstractButton::pressed, [this,model]() {
+	connect(&trainButton, &QAbstractButton::pressed, [this,model,enableOtherWidgets]() {
 		if (!trainingThread) { // start training
+			// disable other widgets for the ducration of training
+			enableOtherWidgets(false);
+			// start the training thread
 			threadStopFlag = false;
-			trainingThread.reset(new TrainingThread(this, model, 1000/*batchSize*/, 0.001/*trainingRate*/, &threadStopFlag,
+			trainingThread.reset(new TrainingThread(this, model, paramBatchSizeSpinBox.value(), paramLearningRateSpinBox.value(), paramMaxBatchesSpinBox.value(), &threadStopFlag,
 				[this](bool validation) -> std::array<std::vector<float>,2> {
 					return getData(validation);
 				},
 				[](unsigned) {
 				}
 			));
-			connect(trainingThread.get(), &TrainingThread::finished, [this]() {
+			connect(trainingThread.get(), &TrainingThread::finished, QThread::currentThread(), [this,enableOtherWidgets]() {
 				trainButton.setText(tr("Start Training"));
 				trainingThread.reset(nullptr);
-			});
+				// reenable other widgets
+				enableOtherWidgets(true);
+			}, Qt::QueuedConnection);
 			trainButton.setText(tr("Stop Training"));
+			trainingThread->start();
 		} else { // stop training
 			threadStopFlag = true;
 		}
@@ -380,6 +445,9 @@ TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginI
 
 TrainingWidget::~TrainingWidget() {
 	appSettings.setValue("TrainingWidget.trainingType", trainingType);
+	appSettings.setValue("TrainingWidget.Options.BatchSize", paramBatchSizeSpinBox.value());
+	appSettings.setValue("TrainingWidget.Options.LearningRate", paramLearningRateSpinBox.value());
+	appSettings.setValue("TrainingWidget.Options.MaxBatches", paramMaxBatchesSpinBox.value());
 }
 
 // privates

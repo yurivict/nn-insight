@@ -5,10 +5,13 @@
 #include "plugin-interface.h"
 
 #include <QComboBox>
+#include <QDoubleSpinBox>
 #include <QGridLayout>
 #include <QGroupBox>
+#include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
+#include <QSpinBox>
 #include <QThread>
 #include <QVBoxLayout>
 #include <QWidget>
@@ -34,6 +37,14 @@ class TrainingWidget : public QWidget {
 	QGroupBox                   dataSetGroupBox;
 	QVBoxLayout                   dataSetLayout;
 	std::unique_ptr<QWidget>      dataSetWidget; // depends on the training type
+	QGroupBox                   parametersGroupBox;
+	QHBoxLayout                   parametersLayout;
+	QLabel                        paramBatchSizeLabel;
+	QSpinBox                      paramBatchSizeSpinBox;
+	QLabel                        paramLearningRateLabel;
+	QDoubleSpinBox                paramLearningRateSpinBox;
+	QLabel                        paramMaxBatchesLabel;
+	QSpinBox                      paramMaxBatchesSpinBox;
 	QPushButton                 verifyDerivativesButton;
 	QPushButton                 trainButton;
 

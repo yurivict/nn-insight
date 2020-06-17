@@ -24,8 +24,8 @@ void renderModelToCoordinates(const PluginInterface::Model *model,
 	std::function<QSizeF(PluginInterface::TensorId)> outputBoxFn, // output boxes in inches
 	Box2 &bbox, // return: bounding box in pixels
 	std::vector<Box2> &operatorBoxes, //  return: operator boxes in pixels
-	std::map<PluginInterface::TensorId, ModelFunctions::Box2> &inputBoxes, //  return: input boxes in pixels
-	std::map<PluginInterface::TensorId, ModelFunctions::Box2> &outputBoxes, //  return: output boxes in pixels
+	std::vector<std::tuple<PluginInterface::TensorId, ModelFunctions::Box2>> &inputBoxes, //  return: input boxes in pixels
+	std::vector<std::tuple<PluginInterface::TensorId, ModelFunctions::Box2>> &outputBoxes, //  return: output boxes in pixels
 	std::vector<std::vector<std::vector<std::array<float,2>>>> &tensorLineCubicSplines, // cubic splines
 	std::vector<std::vector<std::array<float,2>>> &tensorLabelPositions // return: tensor label positions in pixels
 );

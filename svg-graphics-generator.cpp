@@ -110,8 +110,8 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::arra
 	// render the model to the coordinates
 	ModelFunctions::Box2 graphBBox;
 	std::vector<ModelFunctions::Box2> operatorBoxes;
-	std::map<PluginInterface::TensorId, ModelFunctions::Box2> inputBoxes;
-	std::map<PluginInterface::TensorId, ModelFunctions::Box2> outputBoxes;
+	std::vector<std::tuple<PluginInterface::TensorId, ModelFunctions::Box2>> inputBoxes;
+	std::vector<std::tuple<PluginInterface::TensorId, ModelFunctions::Box2>> outputBoxes;
 	std::vector<std::vector<std::vector<std::array<float,2>>>> tensorLineCubicSplines;
 	std::vector<std::vector<std::array<float,2>>> tensorLabelPositions;
 	{
@@ -263,12 +263,12 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::arra
 	}
 
 	// draw input boxes
-	for (auto it : inputBoxes) {
-		auto box = boxToQRectF(dotBoxToQtBox(boxInchesToPixels(it.second)));
+	for (auto &i : inputBoxes) {
+		auto box = boxToQRectF(dotBoxToQtBox(boxInchesToPixels(std::get<1>(i))));
 		outIndexes[2]->push_back(box);
 		drawBox(painter,
 			box,
-			inputLabel(it.first/*tid*/),
+			inputLabel(std::get<0>(i)/*tid*/),
 			Qt::gray,
 			{},
 			""
@@ -276,12 +276,12 @@ QByteArray generateModelSvg(const PluginInterface::Model *model, const std::arra
 	}
 
 	// draw output boxes
-	for (auto it : outputBoxes) {
-		auto box = boxToQRectF(dotBoxToQtBox(boxInchesToPixels(it.second)));
+	for (auto &o : outputBoxes) {
+		auto box = boxToQRectF(dotBoxToQtBox(boxInchesToPixels(std::get<1>(o))));
 		outIndexes[3]->push_back(box);
 		drawBox(painter,
 			box,
-			outputLabel(it.first/*tid*/),
+			outputLabel(std::get<0>(o)/*tid*/),
 			Qt::gray,
 			{},
 			""

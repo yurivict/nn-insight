@@ -336,7 +336,7 @@ TrainingWidget::TrainingWidget(QWidget *parent, PluginInterface::Model *model, f
 		updateTrainingType();
 	});
 	connect(&verifyDerivativesButton, &QAbstractButton::pressed, [this,model,modelPendingTrainingDerivativesCoefficient]() {
-		auto msg = Training::verifyDerivatives(model, modelPendingTrainingDerivativesCoefficient, 10/*numVerifications*/, 10/*numDirections*/, 0.001/*delta*/,
+		auto msg = Training::verifyDerivatives(model, modelPendingTrainingDerivativesCoefficient, 10/*numVerifications*/, 10/*numDirections*/, 0.001/*delta*/, 0.05/*tolerance*/,
 			[this](bool validation) -> std::array<std::vector<float>,2> {
 				return getData(validation);
 			}

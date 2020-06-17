@@ -36,6 +36,7 @@ std::string verifyDerivatives(
 	unsigned numVerifications,
 	unsigned numPoints,
 	float delta,
+	float tolerance, // tolerance for derivative accuracy (ex. 0.05 means 5%)
 	std::function<std::array<std::vector<float>,2>(bool)> getData);
 
 bool runTrainingLoop(PluginInterface::Model *model, unsigned batchSize, float trainingRate, bool *stopFlag,

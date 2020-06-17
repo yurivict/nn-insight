@@ -376,6 +376,7 @@ std::string verifyDerivatives(
 	unsigned numVerifications,
 	unsigned numPoints,
 	float delta,
+	float tolerance,
 	std::function<std::array<std::vector<float>,2>(bool)> getData)
 {
 	// get TrainingIO
@@ -443,7 +444,8 @@ std::string verifyDerivatives(
 			// find a derivative value
 			assert(trainingIO.parameterToDerivativeOutputs.find(parameterTid) != trainingIO.parameterToDerivativeOutputs.end());
 			auto derivativeTid = trainingIO.parameterToDerivativeOutputs.find(parameterTid)->second;
-			auto derivativeValue = (*tensorData)[derivativeTid].get()[offset]*pendingTrainingDerivativesCoefficient;
+			auto derivativeComputed = (*tensorData)[derivativeTid].get()[offset]*pendingTrainingDerivativesCoefficient;
+			auto derivativeActual = (lossPlus-loss)/delta;
 			// output value
 			assert(originalIO.outputs.size() == 1);
 			auto outputValue = (*tensorData)[originalIO.outputs[0]].get()[0];
@@ -452,8 +454,17 @@ std::string verifyDerivatives(
 				"output=" << outputValue
 				<< " loss=" << lossPlus
 				<< " Δloss=" << (lossPlus-loss)
-				<< " derivativeComputed=" << derivativeValue
-				<< " derivativeActual=" << (lossPlus-loss)/delta
+				<< " derivativeComputed=" << derivativeComputed
+				<< " derivativeActual=" << derivativeActual
+				<< " -> " << (
+					(derivativeActual==0 || derivativeComputed==0) ?
+					"ZERO"
+					:
+					std::abs(derivativeActual - derivativeComputed)/std::abs(derivativeComputed) <= tolerance ?
+						STR("PASS (" << std::abs(derivativeActual - derivativeComputed)/std::abs(derivativeComputed) << " <= " << tolerance << ")")
+						:
+						STR("FAIL (" << std::abs(derivativeActual - derivativeComputed)/std::abs(derivativeComputed) << " > " << tolerance << ")")
+				)
 			);
 		};
 

@@ -343,7 +343,10 @@ bool getModelTrainingIO(const PI::Model *trainingModel, TrainingIO &trainingInpu
 	auto addTensorDerivative = [&nameToTensor,&trainingInputsOutputs,&tname](PI::TensorId tid) {
 		auto i = nameToTensor.find(tname("derivative", tid));
 		if (i != nameToTensor.end()) {
-			trainingInputsOutputs.derivativeOutputs[i->second] = tid;
+			PRINT("param->deriv: " << tid << "->" << i->second)
+			trainingInputsOutputs.derivativeToParameterOutputs[i->second] = tid;
+			trainingInputsOutputs.parameterToDerivativeOutputs[tid] = i->second;
+			assert(trainingInputsOutputs.derivativeToParameterOutputs.size() == trainingInputsOutputs.parameterToDerivativeOutputs.size());
 			return true;
 		} else
 			return false; // training-derivative-* output for bias isn't found, maybe not a training model?
@@ -386,11 +389,13 @@ std::string verifyDerivatives(PluginInterface::Model *trainingModel, unsigned nu
 		// generate the set of derivative deltas that we will test
 		std::map<PluginInterface::TensorId, std::set<std::vector<unsigned>>> tensorTestPoints; // TensorId -> array of points
 		ModelFunctions::iterateThroughParameters(trainingModel, [&](PluginInterface::OperatorId oid, unsigned anum, PluginInterface::TensorId tid) {
-			auto shape = trainingModel->getTensorShape(tid);
-			auto numPts = std::min(numPoints,(unsigned)Tensor::flatSize(shape));
-			auto &pts = tensorTestPoints[tid];
-			while (pts.size() < numPts)
-				pts.insert(Tensor::generateRandomPoint(shape));
+			if (!isTrainingLayer(trainingModel, tid)) {
+				auto shape = trainingModel->getTensorShape(tid);
+				auto numPts = std::min(numPoints,(unsigned)Tensor::flatSize(shape));
+				auto &pts = tensorTestPoints[tid];
+				while (pts.size() < numPts)
+					pts.insert(Tensor::generateRandomPoint(shape));
+			}
 		});
 
 		// tensor data
@@ -416,10 +421,12 @@ std::string verifyDerivatives(PluginInterface::Model *trainingModel, unsigned nu
 		Compute::compute(trainingModel, tensorData, [](PI::TensorId) {}, [](const std::string&) {});
 		auto loss = (*tensorData)[trainingIO.lossOutputs[0]].get()[0];
 
-		auto testOnePoint = [&](PI::TensorId tid, const std::vector<unsigned> &pt) {
+		auto testOnePoint = [&](PI::TensorId parameterTid, const std::vector<unsigned> &pt) {
+			// offset of the weight point
+			auto offset = Tensor::offset(trainingModel->getTensorShape(parameterTid), pt);
 			// get weight value
-			assert(trainingModel->getTensorHasData(tid));
-			auto &weightValue = ((float*)trainingModel->getTensorDataWr(tid))[Tensor::offset(trainingModel->getTensorShape(tid), pt)];
+			assert(trainingModel->getTensorHasData(parameterTid));
+			auto &weightValue = ((float*)trainingModel->getTensorDataWr(parameterTid))[offset];
 			// alter the weight
 			float prevValue = weightValue;
 			weightValue += delta;
@@ -428,8 +435,13 @@ std::string verifyDerivatives(PluginInterface::Model *trainingModel, unsigned nu
 			auto lossPlus = (*tensorData)[trainingIO.lossOutputs[0]].get()[0];
 			// bring the weight value back
 			weightValue = prevValue;
+			// find a derivative value
+			PRINT("look for derivative for parameterTid=" << parameterTid)
+			assert(trainingIO.parameterToDerivativeOutputs.find(parameterTid) != trainingIO.parameterToDerivativeOutputs.end());
+			auto derivativeTid = trainingIO.parameterToDerivativeOutputs.find(parameterTid)->second;
+			auto derivativeValue = (*tensorData)[derivativeTid].get()[offset];
 			// report
-			return STR("loss=" << lossPlus << " Δloss=" << (lossPlus-loss));
+			return STR("loss=" << lossPlus << " Δloss=" << (lossPlus-loss) << " derivative=" << derivativeValue);
 		};
 
 		ss << "Verification #" << v << ": args=" << sample[0] << " target=" << sample[1] << " loss=" << loss << std::endl;

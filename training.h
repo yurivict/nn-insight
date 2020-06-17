@@ -13,9 +13,10 @@
 namespace Training {
 
 struct TrainingIO {
-	std::vector<PluginInterface::TensorId>                        targetInputs;      // one per model output
-	std::vector<PluginInterface::TensorId>                        lossOutputs;       // one per model output
-	std::map<PluginInterface::TensorId,PluginInterface::TensorId> derivativeOutputs; // derivative -> original parameters, one per parameter tensor
+	std::vector<PluginInterface::TensorId>                        targetInputs;                 // one per model output
+	std::vector<PluginInterface::TensorId>                        lossOutputs;                  // one per model output
+	std::map<PluginInterface::TensorId,PluginInterface::TensorId> derivativeToParameterOutputs; // derivative -> original parameters, one per parameter tensor
+	std::map<PluginInterface::TensorId,PluginInterface::TensorId> parameterToDerivativeOutputs; // original parameters -> derivative, one per parameter tensor
 };
 
 struct OriginalIO {

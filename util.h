@@ -26,6 +26,7 @@ class QWidget;
 namespace Util {
 
 std::string QStringToStlString(const QString &qs);
+bool messageOk(QWidget *parent, const QString &title, const QString &msg);
 bool warningOk(QWidget *parent, const QString &msg);
 float getScreenDPI();
 QPoint getGlobalMousePos();

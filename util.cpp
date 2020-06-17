@@ -34,9 +34,14 @@ std::string QStringToStlString(const QString &qs) {
 	return std::string(qs.toUtf8().constData());
 }
 
+bool messageOk(QWidget *parent, const QString &title, const QString &msg) {
+	QMessageBox::warning(parent, title, msg, QMessageBox::Ok);
+	return false; // for convenience of callers
+}
+
 bool warningOk(QWidget *parent, const QString &msg) {
-  QMessageBox::warning(parent, "Warning", msg, QMessageBox::Ok);
-  return false; // for convenience of callers
+	QMessageBox::warning(parent, "Warning", msg, QMessageBox::Ok);
+	return false; // for convenience of callers
 }
 
 float getScreenDPI() {

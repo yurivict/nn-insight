@@ -5,6 +5,7 @@
 #include "../misc.h"
 #include "../tensor.h"
 
+#include <assert.h>
 #include <half.hpp>
 
 namespace ModelViews {

@@ -658,6 +658,7 @@ bool compute(
 			// tensors
 			auto inputShape  = model->getTensorShape(inputs[0]);
 			auto filterShape = model->getTensorShape(inputs[1]);
+			auto biasShape   = model->getTensorShape(inputs[2]);
 			auto outputShape = model->getTensorShape(outputs[0]);
 			auto outputShapeSize = Tensor::flatSize(outputShape);
 
@@ -668,7 +669,7 @@ bool compute(
 			NnOperators::FullyConnected(
 				inputShape, (*tensorData)[inputs[0]].get(), // input
 				filterShape, model->getTensorDataF32(inputs[1]), // filter
-				model->getTensorShape(inputs[2]), model->getTensorDataF32(inputs[2]), // bias
+				biasShape, biasShape.size()==1 ? model->getTensorDataF32(inputs[2]) : nullptr, // bias
 				outputShape, outputData.get() // output
 			);
 

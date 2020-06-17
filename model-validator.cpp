@@ -38,7 +38,7 @@ bool validate(const PluginInterface::Model *model, std::ostream &os) {
 				if (weightsShape.size()!=2 || weightsShape[0]!=Tensor::flatSize(outputShape) || weightsShape[1]!=Tensor::flatSize(inputShape))
 					addError(STR("Operator#" << oid << " (" << model->getOperatorKind(oid) << "): has wrong weights shape: "
 					             << weightsShape << ", expected [" << Tensor::flatSize(outputShape) << "," << Tensor::flatSize(inputShape) << "]"));
-				if (biasShape.size()!=1 || biasShape[0]!=Tensor::flatSize(outputShape))
+				if (!(biasShape.size()==0/*no-bias operator (is this legit?)*/ || (biasShape.size()==1 && biasShape[0]==Tensor::flatSize(outputShape))))
 					addError(STR("Operator#" << oid << " (" << model->getOperatorKind(oid) << "): has wrong bias shape: "
 					             << biasShape << ", expected [" << Tensor::flatSize(outputShape) << "]"));
 			}

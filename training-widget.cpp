@@ -7,6 +7,7 @@
 #include "util.h"
 #include "3rdparty/flowlayout/flowlayout.h"
 
+#include <QDateTime>
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QLineEdit>
@@ -275,13 +276,11 @@ class TrainingThread : public QThread { // wrapper thread for Training::runTrain
 	unsigned                                              maxBatches;
 	bool                                                 *stopFlag;
 	std::function<std::array<std::vector<float>,2>(bool)> getData;
-	std::function<void(unsigned)>                         batchDone;
 
 public:
 	TrainingThread(QObject *parent,
-		PluginInterface::Model *model_, unsigned batchSize_, float learningRate_, bool maxBatches_, bool *stopFlag_,
-		std::function<std::array<std::vector<float>,2>(bool)> getData_,
-		std::function<void(unsigned)> batchDone_)
+		PluginInterface::Model *model_, unsigned batchSize_, float learningRate_, unsigned maxBatches_, bool *stopFlag_,
+		std::function<std::array<std::vector<float>,2>(bool)> getData_)
 	: QThread(parent)
 	, model(model_)
 	, batchSize(batchSize_)
@@ -289,15 +288,15 @@ public:
 	, maxBatches(maxBatches_)
 	, stopFlag(stopFlag_)
 	, getData(getData_)
-	, batchDone(batchDone_)
 	{ }
 
 	void run() override {
-		PRINT(">>> trainingThread")
-		//Training::runTrainingLoop(model, batchSize, learningRate, maxBatches, stopFlag, getData, batchDone);
-		sleep(3);
-		PRINT("<<< trainingThread")
+		Training::runTrainingLoop(model, batchSize, learningRate, maxBatches, stopFlag, getData, [this](unsigned batchNo) {
+			emit batchDone(batchNo); // channel batchDone through the signal that crosses threads
+		});
 	}
+signals:
+	void batchDone(unsigned batchNo);
 };
 
 /// TrainingWidget methods
@@ -319,6 +318,7 @@ TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginI
 ,   paramMaxBatchesSpinBox(&parametersGroupBox)
 , verifyDerivativesButton(tr("Verify Derivatives"), this)
 , trainButton(tr("Start Training"), this)
+, trainingStats(this)
 , trainingType((TrainingType)appSettings.value("TrainingWidget.trainingType", QVariant(TrainingType_FunctionApproximationByFormula)).toUInt())
 , threadStopFlag(false)
 {
@@ -350,6 +350,7 @@ TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginI
 	  parametersLayout.addWidget(&paramMaxBatchesSpinBox);
 	layout.addWidget(&verifyDerivativesButton, 3,   0/*column*/,  1/*rowSpan*/, 2/*columnSpan*/);
 	layout.addWidget(&trainButton,             4,   0/*column*/,  1/*rowSpan*/, 2/*columnSpan*/);
+	layout.addWidget(&trainingStats,           5,   0/*column*/,  1/*rowSpan*/, 2/*columnSpan*/);
 
 	// fill comboboxes
 	trainingTypeComboBox.addItem(tr("Function approximation (by formula)"), TrainingType_FunctionApproximationByFormula);
@@ -375,6 +376,7 @@ TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginI
 	// widget states
 	trainingTypeComboBox.setCurrentIndex(trainingTypeComboBox.findData(trainingType));
 	updateLearningRateSpinBoxStep();
+	trainingStats.hide();
 
 	// tooltips
 	for (auto l : {(QWidget*)&trainingTypeLabel,(QWidget*)&trainingTypeComboBox})
@@ -419,18 +421,31 @@ TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginI
 			enableOtherWidgets(false);
 			// start the training thread
 			threadStopFlag = false;
-			trainingThread.reset(new TrainingThread(this, model, paramBatchSizeSpinBox.value(), paramLearningRateSpinBox.value(), paramMaxBatchesSpinBox.value(), &threadStopFlag,
-				[this](bool validation) -> std::array<std::vector<float>,2> {
+			auto tmStart = QDateTime::currentMSecsSinceEpoch();
+			auto updateStats = [this,tmStart](unsigned batchNo) {
+				auto tmNow = QDateTime::currentMSecsSinceEpoch();
+				trainingStats.show();
+				trainingStats.setText(QString(tr("Training stats: done %1 batches in %2 milliseconds")).arg(batchNo).arg(tmNow-tmStart));
+			};
+			updateStats(0);
+			trainingThread.reset(new TrainingThread(this,
+				model,
+				paramBatchSizeSpinBox.value(), paramLearningRateSpinBox.value(), paramMaxBatchesSpinBox.value(),
+				&threadStopFlag,
+				[this](bool validation) -> std::array<std::vector<float>,2> { // data is pulled through a synchronous callback from the training thread
 					return getData(validation);
-				},
-				[](unsigned) {
 				}
 			));
+			connect((TrainingThread*)trainingThread.get(), &TrainingThread::batchDone, QThread::currentThread(), [updateStats](unsigned batchNo) {
+				updateStats(batchNo);
+			}, Qt::QueuedConnection);
 			connect(trainingThread.get(), &TrainingThread::finished, QThread::currentThread(), [this,enableOtherWidgets]() {
-				trainButton.setText(tr("Start Training"));
+				// delete the thread object
 				trainingThread.reset(nullptr);
-				// reenable other widgets
+				// restore widgets to their normal state
+				trainButton.setText(tr("Start Training"));
 				enableOtherWidgets(true);
+				trainingStats.hide();
 			}, Qt::QueuedConnection);
 			trainButton.setText(tr("Stop Training"));
 			trainingThread->start();

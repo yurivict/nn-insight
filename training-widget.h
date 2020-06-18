@@ -47,6 +47,7 @@ class TrainingWidget : public QWidget {
 	QSpinBox                      paramMaxBatchesSpinBox;
 	QPushButton                 verifyDerivativesButton;
 	QPushButton                 trainButton;
+	QLabel                      trainingStats;
 
 	TrainingType                trainingType;
 	std::unique_ptr<QThread>    trainingThread;

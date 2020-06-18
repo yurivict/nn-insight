@@ -486,7 +486,10 @@ bool runTrainingLoop(PluginInterface::Model *model, unsigned batchSize, float le
 	std::function<std::array<std::vector<float>,2>(bool)> getData,
 	std::function<void(unsigned)> batchDone
 ) {
-	// TODO
+	for (unsigned batch = 1; batch<=maxBatches; batch++) {
+		// TODO
+		batchDone(batch);
+	}
 	return true;
 }
 

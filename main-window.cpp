@@ -482,7 +482,7 @@ MainWindow::MainWindow()
 	                &nnOperatorComplexityLabel, &nnOperatorComplexityValue, &nnOperatorStaticDataLabel, &nnOperatorStaticDataValue, &nnOperatorDataRatioLabel, &nnOperatorDataRatioValue,
 	                &nnTensorKindLabel, &nnTensorKindValue, &nnTensorShapeLabel, &nnTensorShapeValue, &nnTensorTypeLabel})
 		w->                           setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
-	trainingWidget                       .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+	trainingWidget                       .setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
 	nnNetworkOperatorsListWidget         .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
 	nnOperatorDetailsSpacer              .setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
 	for (auto l : {&nnTensorDataPlaceholder, &nnTensorDataPlaceholder1DnotImplemented})
@@ -842,13 +842,17 @@ MainWindow::MainWindow()
 			return; // already
 		trainingDetails.reset(new TrainingWidget(&trainingWidget, this, (PluginInterface::Model*)model.get(), modelPendingTrainingDerivativesCoefficient));
 		trainingLayout.addWidget(trainingDetails.get());
+		trainingDetails->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum); // training widget occupies as much space as it can
 		trainingWidget.show();
+		for (auto w : {(QWidget*)&nnDetailsStack,(QWidget*)&nnOperatorDetails,(QWidget*)&nnTensorDetails})
+			w->hide();
 	});
 	actionsMenu->addAction(tr("Close Training"), [this]() {
 		if (!trainingWidget.isVisible())
 			return; // already
 		trainingDetails.reset(nullptr);
 		trainingWidget.hide();
+		nnDetailsStack.show();
 	});
 
 	windowsMenu = menuBar.addMenu(tr("&Windows")); // filled dynamically

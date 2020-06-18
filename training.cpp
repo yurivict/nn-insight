@@ -6,6 +6,7 @@
 #include "misc.h"
 #include "model-functions.h"
 #include "rng.h"
+#include "tensor.h"
 #include "util.h"
 
 #include <assert.h>
@@ -17,6 +18,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <tuple>
 #include <vector>
 
 namespace Training {
@@ -482,13 +484,102 @@ std::string verifyDerivatives(
 	return ss.str();
 }
 
-bool runTrainingLoop(PluginInterface::Model *model, unsigned batchSize, float learningRate, unsigned maxBatches, bool *stopFlag,
+bool runTrainingLoop(
+	PluginInterface::Model *trainingModel,
+	float pendingTrainingDerivativesCoefficient,
+	unsigned batchSize, float learningRate, unsigned maxBatches,
+	bool *stopFlag,
 	std::function<std::array<std::vector<float>,2>(bool)> getData,
-	std::function<void(unsigned)> batchDone
+	std::function<void(unsigned,float)> batchDone
 ) {
-	for (unsigned batch = 1; batch<=maxBatches; batch++) {
-		// TODO
-		batchDone(batch);
+	// some values
+	auto numTensors = trainingModel->numTensors();
+
+	// get TrainingIO
+	TrainingIO trainingIO;
+	if (!getModelTrainingIO(trainingModel, trainingIO))
+		{assert(false);}
+
+	// get OriginalIO
+	OriginalIO originalIO;
+	getModelOriginalIO(trainingModel, originalIO);
+
+	// allocate tensors
+	std::unique_ptr<std::vector<std::shared_ptr<const float>>> tensorData(new std::vector<std::shared_ptr<const float>>);
+	tensorData->resize(numTensors);
+
+	// helpers
+	auto zeroArray = [](float *a, unsigned sz) {
+		std::fill(a, a+sz, 0);
+	};
+	auto addArrays = [](float *a, const float *d, unsigned sz) {
+		for (auto ae = a+sz; a<ae; a++, d++) // TODO SIMD-optimize
+			*a += *d;
+			
+	};
+	auto addArraysWithMultiplication = [](float *a, const float *d, float M, unsigned sz) {
+		for (auto ae = a+sz; a<ae; a++, d++) // TODO SIMD-optimize
+			*a += M*(*d);
+	};
+	auto assignTensor = [&tensorData](PI::TensorId tid, const float *data, unsigned size) {
+		auto tensor = new float[size];
+		tensorData->data()[tid].reset(tensor);
+		std::copy(data, data+size, tensor);
+	};
+
+	// allocate the tensor derivative accumulator
+	std::unique_ptr<std::tuple<std::unique_ptr<float>,unsigned>> derivativeAccumulator(new std::tuple<std::unique_ptr<float>,unsigned>[numTensors]);
+	for (auto d : trainingIO.derivativeToParameterOutputs) {
+		auto sz = Tensor::flatSize(trainingModel->getTensorShape(d.first));
+		auto &arr = derivativeAccumulator.get()[d.first];
+		std::get<0>(arr).reset(new float[sz]);
+		std::get<1>(arr) = sz;
+		zeroArray(std::get<0>(arr).get(), sz);
+	}
+
+	// loop
+	for (unsigned batchNo = 1; batchNo<=maxBatches; batchNo++) {
+		// run computation on batchSize cases, accumulate derivatives
+		float totalLoss = 0;
+		for (unsigned sampleNo=0; sampleNo<batchSize; sampleNo++) {
+			// get sample
+			auto sampleData = getData(false/*validation*/);
+			// assign input
+			assert(originalIO.inputs.size()==1); // only support single input models for now
+			assignTensor(originalIO.inputs[0], sampleData[0].data(), sampleData[0].size());
+			// assign target
+			assert(trainingIO.targetInputs.size()==1); // only support single output models for now
+			assignTensor(trainingIO.targetInputs[0], sampleData[1].data(), sampleData[1].size());
+			// compute
+			Compute::compute(trainingModel, tensorData, [](PI::TensorId) {}, [](const std::string&) {});
+			// add loss
+			totalLoss += (*tensorData)[trainingIO.lossOutputs[0]].get()[0];
+			// add derivatives to accumulator
+			for (PI::TensorId tid = 0, tide = numTensors; tid < tide; tid++) {
+				auto &d = derivativeAccumulator.get()[tid];
+				if (std::get<0>(d))
+					addArrays(std::get<0>(d).get(), (*tensorData)[tid].get(), std::get<1>(d));
+			}
+		}
+		// update weights
+		for (PI::TensorId tid = 0, tide = numTensors; tid < tide; tid++) {
+			auto &d = derivativeAccumulator.get()[tid];
+			if (std::get<0>(d)) {
+				auto staticTensorInModel = (float*)trainingModel->getTensorDataWr(tid);
+				assert(staticTensorInModel);
+				// update the original weight
+				addArraysWithMultiplication(staticTensorInModel, std::get<0>(d).get(), -learningRate*pendingTrainingDerivativesCoefficient, std::get<1>(d));
+			}
+		}
+		// zero accumulators
+		for (PI::TensorId tid = 0; tid<numTensors; tid++) {
+			auto &arr = derivativeAccumulator.get()[tid];
+			if (std::get<0>(arr))
+				zeroArray(std::get<0>(arr).get(), std::get<1>(arr));
+		}
+		// notify the caller that the batch has finished
+		float avgLoss = totalLoss/batchSize;
+		batchDone(batchNo, avgLoss);
 	}
 	return true;
 }

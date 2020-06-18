@@ -39,11 +39,13 @@ std::string verifyDerivatives(
 	float tolerance, // tolerance for derivative accuracy (ex. 0.05 means 5%)
 	std::function<std::array<std::vector<float>,2>(bool)> getData);
 
-bool runTrainingLoop(PluginInterface::Model *model, unsigned batchSize, float learningRate, unsigned maxBatches, bool *stopFlag,
+bool runTrainingLoop(
+	PluginInterface::Model *trainingModel,
+	float pendingTrainingDerivativesCoefficient,
+	unsigned batchSize, float learningRate, unsigned maxBatches,
+	bool *stopFlag,
 	std::function<std::array<std::vector<float>,2>(bool)> getData,
-	std::function<void(unsigned)> batchDone
-
-);
+	std::function<void(unsigned,float)> batchDone);
 
 bool isTrainingLayer(const PluginInterface::Model *model, PluginInterface::TensorId tid);
 

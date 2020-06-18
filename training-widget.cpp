@@ -271,6 +271,7 @@ class TrainingThread : public QThread { // wrapper thread for Training::runTrain
 	Q_OBJECT
 
 	PluginInterface::Model                               *model;
+	float                                                 modelPendingTrainingDerivativesCoefficient;
 	unsigned                                              batchSize;
 	float                                                 learningRate;
 	unsigned                                              maxBatches;
@@ -278,11 +279,14 @@ class TrainingThread : public QThread { // wrapper thread for Training::runTrain
 	std::function<std::array<std::vector<float>,2>(bool)> getData;
 
 public:
-	TrainingThread(QObject *parent,
-		PluginInterface::Model *model_, unsigned batchSize_, float learningRate_, unsigned maxBatches_, bool *stopFlag_,
-		std::function<std::array<std::vector<float>,2>(bool)> getData_)
+	TrainingThread(QObject *parent
+		, PluginInterface::Model *model_
+		, float modelPendingTrainingDerivativesCoefficient_
+		, unsigned batchSize_, float learningRate_, unsigned maxBatches_, bool *stopFlag_
+		, std::function<std::array<std::vector<float>,2>(bool)> getData_)
 	: QThread(parent)
 	, model(model_)
+	, modelPendingTrainingDerivativesCoefficient(modelPendingTrainingDerivativesCoefficient_)
 	, batchSize(batchSize_)
 	, learningRate(learningRate_)
 	, maxBatches(maxBatches_)
@@ -291,12 +295,18 @@ public:
 	{ }
 
 	void run() override {
-		Training::runTrainingLoop(model, batchSize, learningRate, maxBatches, stopFlag, getData, [this](unsigned batchNo) {
-			emit batchDone(batchNo); // channel batchDone through the signal that crosses threads
-		});
+		Training::runTrainingLoop(
+			model, modelPendingTrainingDerivativesCoefficient,
+			batchSize, learningRate, maxBatches,
+			stopFlag,
+			getData,
+			[this](unsigned batchNo, float avgLoss) {
+				emit batchDone(batchNo, avgLoss); // channel batchDone through the signal that crosses threads
+			}
+		);
 	}
 signals:
-	void batchDone(unsigned batchNo);
+	void batchDone(unsigned batchNo, float avgLoss);
 };
 
 /// TrainingWidget methods
@@ -397,7 +407,9 @@ TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginI
 		updateLearningRateSpinBoxStep();
 	});
 	connect(&verifyDerivativesButton, &QAbstractButton::pressed, [this,model,modelPendingTrainingDerivativesCoefficient,topLevelWidget]() {
-		auto msg = Training::verifyDerivatives(model, modelPendingTrainingDerivativesCoefficient, 10/*numVerifications*/, 10/*numPoints*/, 0.001/*delta*/, 0.05/*tolerance*/,
+		auto msg = Training::verifyDerivatives(
+			model, modelPendingTrainingDerivativesCoefficient,
+			10/*numVerifications*/, 10/*numPoints*/, 0.001/*delta*/, 0.05/*tolerance*/,
 			[this](bool validation) -> std::array<std::vector<float>,2> {
 				return getData(validation);
 			}
@@ -415,29 +427,29 @@ TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginI
 		Util::centerWidgetAtOtherWidget(&dlg, topLevelWidget, 0.75/*fraction*/);
 		dlg.exec();
 	});
-	connect(&trainButton, &QAbstractButton::pressed, [this,model,enableOtherWidgets]() {
+	connect(&trainButton, &QAbstractButton::pressed, [this,model,modelPendingTrainingDerivativesCoefficient,enableOtherWidgets]() {
 		if (!trainingThread) { // start training
 			// disable other widgets for the ducration of training
 			enableOtherWidgets(false);
 			// start the training thread
 			threadStopFlag = false;
 			auto tmStart = QDateTime::currentMSecsSinceEpoch();
-			auto updateStats = [this,tmStart](unsigned batchNo) {
+			auto updateStats = [this,tmStart](unsigned batchNo, float avgLoss) {
 				auto tmNow = QDateTime::currentMSecsSinceEpoch();
 				trainingStats.show();
-				trainingStats.setText(QString(tr("Training stats: done %1 batches in %2 milliseconds")).arg(batchNo).arg(tmNow-tmStart));
+				trainingStats.setText(QString(tr("Training stats: done %1 batches in %2 milliseconds, loss=%3")).arg(batchNo).arg(tmNow-tmStart).arg(avgLoss));
 			};
-			updateStats(0);
+			updateStats(0,0);
 			trainingThread.reset(new TrainingThread(this,
-				model,
+				model, modelPendingTrainingDerivativesCoefficient,
 				paramBatchSizeSpinBox.value(), paramLearningRateSpinBox.value(), paramMaxBatchesSpinBox.value(),
 				&threadStopFlag,
 				[this](bool validation) -> std::array<std::vector<float>,2> { // data is pulled through a synchronous callback from the training thread
 					return getData(validation);
 				}
 			));
-			connect((TrainingThread*)trainingThread.get(), &TrainingThread::batchDone, QThread::currentThread(), [updateStats](unsigned batchNo) {
-				updateStats(batchNo);
+			connect((TrainingThread*)trainingThread.get(), &TrainingThread::batchDone, QThread::currentThread(), [updateStats](unsigned batchNo, float avgLoss) {
+				updateStats(batchNo, avgLoss);
 			}, Qt::QueuedConnection);
 			connect(trainingThread.get(), &TrainingThread::finished, QThread::currentThread(), [this,enableOtherWidgets]() {
 				// delete the thread object

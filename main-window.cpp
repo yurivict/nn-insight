@@ -971,7 +971,6 @@ void MainWindow::loadInMemoryModel(PluginInterface::Model *inMemoryModel, const 
 // overrides
 
 void MainWindow::closeEvent(QCloseEvent *event) {
-	PRINT("MainWindow::closeEvent")
 	delete this;
 }
 

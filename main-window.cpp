@@ -884,7 +884,7 @@ MainWindow::~MainWindow() {
 	appSettings.setValue("MainWindow.geometry", saveGeometry());
 
 	// remove from the registry
-	allWindows.insert(this);
+	allWindows.erase(this);
 	updateWindowsLists();
 }
 
@@ -966,6 +966,13 @@ void MainWindow::loadInMemoryModel(PluginInterface::Model *inMemoryModel, const 
 	static std::map<std::string,unsigned> modelWinNo;
 	setWindowTitle(QString("NN Insight: %1 #%2 (%3)").arg(name).arg(++modelWinNo[name]).arg(S2Q(Util::formatFlops(ModelFunctions::computeModelFlops(model.get())))));
 	updateWindowsLists();
+}
+
+// overrides
+
+void MainWindow::closeEvent(QCloseEvent *event) {
+	PRINT("MainWindow::closeEvent")
+	delete this;
 }
 
 /// private methods

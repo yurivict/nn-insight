@@ -22,6 +22,7 @@
 #include <QTimer>
 #endif
 #include <QVBoxLayout>
+class QCloseEvent;
 
 #include "data-table-2d.h"
 #include "nn-widget.h"
@@ -191,6 +192,9 @@ private: // fields
 
 private: // types
 	enum HowLong {Temporary, Permanent};
+
+public: // overrides
+	void closeEvent(QCloseEvent *event) override;
 
 private: // private methods
 	bool haveImageOpen() const;

@@ -11,6 +11,8 @@
 #include <QApplication>
 #include <QSettings>
 
+#include <memory>
+
 
 QSettings appSettings("NN Insight"); // a global settings object allowing the app to have persistent settings
 
@@ -21,9 +23,10 @@ int main(int argc, char **argv) {
 
 	QApplication app(argc, argv);
 
-	MainWindow mainWindow;
-	mainWindow.loadModelFile(argv[1]);
-	mainWindow.show();
+	std::unique_ptr<MainWindow> mainWindow(new MainWindow);
+	mainWindow->loadModelFile(argv[1]);
+	mainWindow->show();
+	mainWindow.release(); // MainWindow objects are self-destroyed on close
 
 	return app.exec();
 }

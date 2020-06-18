@@ -263,15 +263,19 @@ std::tuple<PluginInterface::Model*,float> constructTrainingModel(const PI::Model
 				assert(weightsShape.size() == 2);
 				auto weightsData = model->getTensorData(inputTids[1]);
 				assert(weightsData);
+				PI::TensorId transposedWeightsTid = 0;
 				auto derivativeOverFcInput = TripleWithTypeShape(
 					PI::KindFullyConnected,
 					derivatives[tid],
-					StaticFloat32Tensor({weightsShape[1],weightsShape[0]}, Tensor::transposeMatrixIndices1and2of2(weightsShape, (float*)weightsData)),
+					transposedWeightsTid = StaticFloat32Tensor(
+						{weightsShape[1],weightsShape[0]},
+						Tensor::transposeMatrixIndices1and2of2(weightsShape, (float*)weightsData)
+					),
 					StaticFloat32(0),
 					{1,weightsShape[1]},
 					training->getTensorType(tid)
 				);
-				PRINT("derivative of input " << inputTids[0] << " is " << derivativeOverFcInput)
+				training->setTensorName(transposedWeightsTid, tname(STR("transpose-of-tensor-" << inputTids[1])));
 				assert(derivatives[inputTids[0]] == -1);
 				derivatives[inputTids[0]] = derivativeOverFcInput;
 				tensorsToDo.insert(inputTids[0]);
@@ -288,7 +292,6 @@ std::tuple<PluginInterface::Model*,float> constructTrainingModel(const PI::Model
 					{1,(unsigned)Tensor::flatSize(training->getTensorShape(tid)),(unsigned)Tensor::flatSize(training->getTensorShape(inputTids[0]))},
 					training->getTensorType(tid)
 				);
-				PRINT("derivative of weights " << inputTids[1] << " is " << derivativeOverFcWeights)
 				assert(derivatives[inputTids[1]] == -1);
 				derivatives[inputTids[1]] = derivativeOverFcWeights;
 				training->addOutput(derivativeOverFcWeights);
@@ -296,7 +299,6 @@ std::tuple<PluginInterface::Model*,float> constructTrainingModel(const PI::Model
 			}
 			if (!frozenLayers[inputTids[2]]) { // ∂FC(x,W,B)/∂B = 1, ∂Loss/∂B = ∂Loss/∂FC(x,W,B)
 				auto derivativeOverFcBias = derivatives[tid];
-				PRINT("derivative of bias " << inputTids[2] << " is " << derivativeOverFcBias)
 				assert(derivatives[inputTids[2]] == -1);
 				derivatives[inputTids[2]] = derivativeOverFcBias;
 				training->addOutput(derivativeOverFcBias);
@@ -313,7 +315,7 @@ std::tuple<PluginInterface::Model*,float> constructTrainingModel(const PI::Model
 	return {training.release(),pendingDerivativeLossCoefficient};
 }
 
-bool getModelTrainingIO(const PI::Model *trainingModel, TrainingIO &trainingInputsOutputs) {
+bool getModelTrainingIO(const PI::Model *trainingModel, TrainingIO &trainingIO) {
 	auto tname = [](const char *what, PluginInterface::TensorId tid) {
 		return STR("training-" << what << "-of-tensor-" << tid);
 	};
@@ -329,34 +331,39 @@ bool getModelTrainingIO(const PI::Model *trainingModel, TrainingIO &trainingInpu
 			// targetInputs
 			auto i = nameToTensor.find(tname("target", o));
 			if (i != nameToTensor.end())
-				trainingInputsOutputs.targetInputs.push_back(i->second);
+				trainingIO.targetInputs.push_back(i->second);
 			else
 				return false; // training-target-* input isn't found, maybe not a training model?
 			// lossOutputs
 			i = nameToTensor.find(tname("loss", o));
 			if (i != nameToTensor.end())
-				trainingInputsOutputs.lossOutputs.push_back(i->second);
+				trainingIO.lossOutputs.push_back(i->second);
 			else
 				return false; // training-loss-* output isn't found, maybe not a training model?
 		}
 
-	// derivativeOutputs
-	auto addTensorDerivative = [&nameToTensor,&trainingInputsOutputs,&tname](PI::TensorId tid) {
+	auto addTensorDerivative = [&nameToTensor,&trainingIO,&tname](PI::TensorId tid) {
 		auto i = nameToTensor.find(tname("derivative", tid));
 		if (i != nameToTensor.end()) {
-			PRINT("param->deriv: " << tid << "->" << i->second)
-			trainingInputsOutputs.derivativeToParameterOutputs[i->second] = tid;
-			trainingInputsOutputs.parameterToDerivativeOutputs[tid] = i->second;
-			assert(trainingInputsOutputs.derivativeToParameterOutputs.size() == trainingInputsOutputs.parameterToDerivativeOutputs.size());
+			trainingIO.derivativeToParameterOutputs[i->second] = tid;
+			trainingIO.parameterToDerivativeOutputs[tid] = i->second;
+			assert(trainingIO.derivativeToParameterOutputs.size() == trainingIO.parameterToDerivativeOutputs.size());
 			return true;
 		} else
 			return false; // training-derivative-* output for bias isn't found, maybe not a training model?
 	};
+	// derivativeOutputs and parameterToTranspose
 	bool succ = true;
-	ModelFunctions::iterateThroughParameters(trainingModel, [trainingModel,addTensorDerivative,&succ](PluginInterface::OperatorId oid, unsigned anum, PluginInterface::TensorId tid) {
+	trainingIO.parameterToTranspose.resize(trainingModel->numTensors());
+	std::fill(trainingIO.parameterToTranspose.begin(), trainingIO.parameterToTranspose.end(), -1);
+	ModelFunctions::iterateThroughParameters(trainingModel, [&](PluginInterface::OperatorId oid, unsigned anum, PluginInterface::TensorId tid) {
 		if (!isTrainingLayer(trainingModel, tid)) {
 			if (!addTensorDerivative(tid))
 				succ = false; // training-derivative-* output for a parameter isn't found, maybe not a training model?
+			auto i = nameToTensor.find(tname("transpose", tid));
+			if (i != nameToTensor.end()) {
+				trainingIO.parameterToTranspose[tid] = i->second;
+			}
 		}
 	});
 
@@ -494,6 +501,7 @@ bool runTrainingLoop(
 ) {
 	// some values
 	auto numTensors = trainingModel->numTensors();
+	bool interrupted = false;
 
 	// get TrainingIO
 	TrainingIO trainingIO;
@@ -561,14 +569,26 @@ bool runTrainingLoop(
 					addArrays(std::get<0>(d).get(), (*tensorData)[tid].get(), std::get<1>(d));
 			}
 		}
+		// average loss
+		float avgLoss = totalLoss/batchSize;
 		// update weights
-		for (PI::TensorId tid = 0, tide = numTensors; tid < tide; tid++) {
-			auto &d = derivativeAccumulator.get()[tid];
+		for (PI::TensorId derivativeTid = 0, derivativeTide = numTensors; derivativeTid < derivativeTide; derivativeTid++) {
+			auto &d = derivativeAccumulator.get()[derivativeTid];
 			if (std::get<0>(d)) {
-				auto staticTensorInModel = (float*)trainingModel->getTensorDataWr(tid);
+				auto i = trainingIO.derivativeToParameterOutputs.find(derivativeTid);
+				assert(i != trainingIO.derivativeToParameterOutputs.end());
+				auto parameterTid = i->second;
+				auto staticTensorInModel = (float*)trainingModel->getTensorDataWr(parameterTid);
 				assert(staticTensorInModel);
-				// update the original weight
-				addArraysWithMultiplication(staticTensorInModel, std::get<0>(d).get(), -learningRate*pendingTrainingDerivativesCoefficient, std::get<1>(d));
+				// update the original weights
+				addArraysWithMultiplication(staticTensorInModel, std::get<0>(d).get(), -learningRate*avgLoss*pendingTrainingDerivativesCoefficient, std::get<1>(d));
+				// update the transposed parameters when exists
+				if (trainingIO.parameterToTranspose[parameterTid] != -1)
+					Tensor::transposeMatrixIndices1and2of2(
+						trainingModel->getTensorShape(parameterTid),
+						staticTensorInModel,
+						(float*)trainingModel->getTensorDataWr(trainingIO.parameterToTranspose[parameterTid])
+					);
 			}
 		}
 		// zero accumulators
@@ -578,10 +598,15 @@ bool runTrainingLoop(
 				zeroArray(std::get<0>(arr).get(), std::get<1>(arr));
 		}
 		// notify the caller that the batch has finished
-		float avgLoss = totalLoss/batchSize;
 		batchDone(batchNo, avgLoss);
+		PRINT("batchDone: batchNo=" << batchNo << " avgLoss=" << avgLoss)
+		// user requested us to stop?
+		if (*stopFlag) {
+			interrupted = true;
+			break;
+		}
 	}
-	return true;
+	return interrupted ? false : true;
 }
 
 bool isTrainingLayer(const PluginInterface::Model *model, PluginInterface::TensorId tid) {

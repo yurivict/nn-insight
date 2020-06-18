@@ -18,6 +18,7 @@ struct TrainingIO {
 	std::vector<PluginInterface::TensorId>                        lossOutputs;                  // one per model output
 	std::map<PluginInterface::TensorId,PluginInterface::TensorId> derivativeToParameterOutputs; // derivative -> original parameters, one per parameter tensor
 	std::map<PluginInterface::TensorId,PluginInterface::TensorId> parameterToDerivativeOutputs; // original parameters -> derivative, one per parameter tensor
+	std::vector<int/*PluginInterface::TensorId or -1*/>           parameterToTranspose;         // parameterTid->transposedParameterTid, when applicable (XXX not really IO)
 };
 
 struct OriginalIO {

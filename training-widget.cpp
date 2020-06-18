@@ -500,6 +500,7 @@ std::array<std::vector<float>,2> TrainingWidget::getData(bool validation) const 
 		return ((DataSet_FunctionApproximationByFormulaWidget*)dataSetWidget.get())->getData(validation);
 	default:
 		assert(false);
+		return {};
 	}
 }
 

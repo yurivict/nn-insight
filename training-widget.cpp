@@ -148,7 +148,7 @@ public:
 		argumentCountLabel.setAlignment(Qt::AlignRight|Qt::AlignVCenter);
 
 		// widget states
-		formulaEdit.setText(appSettings.value("TrainingWidget.DataSet_FunctionApproximationByFormulaWidget.formula", QVariant("sin(a*b)+tan(a-b)*cos(a-b)")).toString());
+		formulaEdit.setText(appSettings.value("TrainingWidget.DataSet_FunctionApproximationByFormulaWidget.formula", "a*b*exp(-a^2-b^2)").toString());
 		formulaErrorExcl.setStyleSheet("QLabel {color: red;}");
 		argumentCountSpinBox.setRange(1,32); // limited by the alphabet
 		argumentCountSpinBox.setValue(appSettings.value("TrainingWidget.DataSet_FunctionApproximationByFormulaWidget.numArgs", QVariant(2)).toUInt());
@@ -217,8 +217,8 @@ private:
 			auto const &name = symbolNames[i];
 			auto &range = argumentRanges[i];
 			range = {
-				appSettings.value(QString("TrainingWidget.DataSet_FunctionApproximationByFormulaWidget.arg-%1.min").arg(S2Q(name)), QVariant(0.)).toFloat(),
-				appSettings.value(QString("TrainingWidget.DataSet_FunctionApproximationByFormulaWidget.arg-%1.max").arg(S2Q(name)), QVariant(1.)).toFloat()
+				appSettings.value(QString("TrainingWidget.DataSet_FunctionApproximationByFormulaWidget.arg-%1.min").arg(S2Q(name)), -2.).toFloat(),
+				appSettings.value(QString("TrainingWidget.DataSet_FunctionApproximationByFormulaWidget.arg-%1.max").arg(S2Q(name)), +2.).toFloat()
 			};
 			argDescriptionWidgets[i].reset(new ArgDescriptionWidget(symbolNames[i], range[0], range[1],
 				[&name,&range](float newMinVal) {

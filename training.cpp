@@ -379,6 +379,11 @@ void getModelOriginalIO(const PI::Model *trainingModel, OriginalIO &originalIO) 
 			originalIO.outputs.push_back(o);
 }
 
+bool isTrainingNetwork(const PluginInterface::Model *model) {
+	TrainingIO trainingIO;
+	return getModelTrainingIO(model, trainingIO);
+}
+
 std::string verifyDerivatives(
 	PluginInterface::Model *trainingModel,
 	float pendingTrainingDerivativesCoefficient,

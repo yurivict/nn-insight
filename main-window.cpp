@@ -820,6 +820,12 @@ MainWindow::MainWindow()
 	if (auto toTrainingModelMenu = transformationsMenu->addMenu(tr("To training model")))
 		for (auto lossFunction : {PluginInterface::KindLossMeanSquareError,PluginInterface::KindLossMeanAbsoluteError,PluginInterface::KindLossCrossEntropy})
 			toTrainingModelMenu->addAction(QString(tr("... with loss function %1")).arg(S2Q(STR(lossFunction))), [this,lossFunction]() {
+				// check if this NN is already a training network
+				if (Training::isTrainingNetwork(model.get())) {
+					Util::warningOk(this, tr("This network is already a training network"));
+					return;
+				}
+				// construct the training model
 				auto w = new MainWindow;
 				auto modelWithCoefficient = Training::constructTrainingModel(model.get(), lossFunction);
 				w->loadInMemoryModel(std::get<0>(modelWithCoefficient), "Training model");
@@ -838,6 +844,11 @@ MainWindow::MainWindow()
 			Util::warningOk(this, S2Q(msgs.str()));
 	});
 	actionsMenu->addAction(tr("Train Model"), [this]() {
+		// check if this NN is a training network
+		if (!Training::isTrainingNetwork(model.get())) {
+			Util::warningOk(this, tr("This network is not a training network, please convert to the training network first"));
+			return;
+		}
 		if (trainingWidget.isVisible())
 			return; // already
 		trainingDetails.reset(new TrainingWidget(&trainingWidget, this, (PluginInterface::Model*)model.get(), modelPendingTrainingDerivativesCoefficient));

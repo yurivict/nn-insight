@@ -30,6 +30,7 @@ std::tuple<PluginInterface::Model*,float> constructTrainingModel(const PluginInt
 
 bool getModelTrainingIO(const PluginInterface::Model *trainingModel, TrainingIO &trainingIO);
 void getModelOriginalIO(const PluginInterface::Model *trainingModel, OriginalIO &originalIO);
+bool isTrainingNetwork(const PluginInterface::Model *model);
 
 std::string verifyDerivatives(
 	PluginInterface::Model *trainingModel,

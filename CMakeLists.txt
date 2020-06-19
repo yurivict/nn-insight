@@ -53,6 +53,12 @@ find_package(Qt5 COMPONENTS Core Gui Widgets Svg REQUIRED)
 find_package(nlohmann_json 3.2.0 REQUIRED)
 find_package(png++ REQUIRED)
 find_package(PNG REQUIRED)
+find_library(QCUSTOM_PLOT_LIB NAMES QCustomPlot-qt5)
+if (QCUSTOM_PLOT_LIB)
+	message(STATUS "Found the QCustomPlot-qt5 library: ${QCUSTOM_PLOT_LIB}")
+else()
+	message(FATAL_ERROR "Failed to find the QCustomPlot-qt5 library")
+endif()
 find_path(HALF_PRECISION half.hpp)
 if (NOT HALF_PRECISION)
 	message(FATAL_ERROR "Failed to find the half-precision floating point library (half.hpp)")
@@ -103,6 +109,7 @@ add_executable(nn-insight
 	rng.cpp
 	training.cpp
 	training-widget.cpp
+	training-progress-widget.cpp
 	transformation-quantize-dialog.cpp
 	svg-push-button.cpp
 	image.cpp
@@ -122,6 +129,7 @@ target_link_libraries(nn-insight
 	${png++_LIBRARIES}
 	PkgConfig::libcgraph ${libcgraph_LIBRARY_DIRS}/graphviz/libgvplugin_dot_layout.so
 	${CMAKE_DL_LIBS}
+	${QCUSTOM_PLOT_LIB}
 )
 if (USE_PERFTOOLS)
 target_link_libraries(nn-insight

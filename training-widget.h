@@ -3,6 +3,7 @@
 #pragma once
 
 #include "plugin-interface.h"
+#include "training-progress-widget.h"
 
 #include <QComboBox>
 #include <QDoubleSpinBox>
@@ -48,11 +49,14 @@ class TrainingWidget : public QWidget {
 	QPushButton                 verifyDerivativesButton;
 	QPushButton                 trainButton;
 	QLabel                      trainingStats;
+	TrainingProgressWidget      trainingProgressWidget;
 
 	TrainingType                trainingType;
 	std::unique_ptr<QThread>    trainingThread;
 
 	bool                        threadStopFlag;
+	float                       minLoss;
+	float                       maxLoss;
 
 public:
 	TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginInterface::Model *model, float modelPendingTrainingDerivativesCoefficient);

@@ -329,8 +329,11 @@ TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginI
 , verifyDerivativesButton(tr("Verify Derivatives"), this)
 , trainButton(tr("Start Training"), this)
 , trainingStats(this)
+, trainingProgressWidget(this)
 , trainingType((TrainingType)appSettings.value("TrainingWidget.trainingType", QVariant(TrainingType_FunctionApproximationByFormula)).toUInt())
 , threadStopFlag(false)
+, minLoss(false)
+, maxLoss(false)
 {
 	// helpers
 	auto enableOtherWidgets = [this](bool enable) {
@@ -361,6 +364,7 @@ TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginI
 	layout.addWidget(&verifyDerivativesButton, 3,   0/*column*/,  1/*rowSpan*/, 2/*columnSpan*/);
 	layout.addWidget(&trainButton,             4,   0/*column*/,  1/*rowSpan*/, 2/*columnSpan*/);
 	layout.addWidget(&trainingStats,           5,   0/*column*/,  1/*rowSpan*/, 2/*columnSpan*/);
+	layout.addWidget(&trainingProgressWidget,  6,   0/*column*/,  1/*rowSpan*/, 2/*columnSpan*/);
 
 	// fill comboboxes
 	trainingTypeComboBox.addItem(tr("Function approximation (by formula)"), TrainingType_FunctionApproximationByFormula);
@@ -387,6 +391,11 @@ TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginI
 	trainingTypeComboBox.setCurrentIndex(trainingTypeComboBox.findData(trainingType));
 	updateLearningRateSpinBoxStep();
 	trainingStats.hide();
+
+	// policies
+	for (auto w : {(QWidget*)&dataSetGroupBox,(QWidget*)&parametersGroupBox,(QWidget*)&verifyDerivativesButton,(QWidget*)&trainButton,(QWidget*)&trainingStats})
+		w->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum);
+	trainingProgressWidget.setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
 
 	// tooltips
 	for (auto l : {(QWidget*)&trainingTypeLabel,(QWidget*)&trainingTypeComboBox})
@@ -431,15 +440,24 @@ TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginI
 		if (!trainingThread) { // start training
 			// disable other widgets for the ducration of training
 			enableOtherWidgets(false);
+			trainingProgressWidget.clear();
 			// start the training thread
 			threadStopFlag = false;
+			minLoss = 0;
+			maxLoss = 0;
 			auto tmStart = QDateTime::currentMSecsSinceEpoch();
-			auto updateStats = [this,tmStart](unsigned batchNo, float avgLoss) {
+			auto updateStats = [this,tmStart](unsigned batchNo, float avgLoss, float minLoss, float maxLoss) {
 				auto tmNow = QDateTime::currentMSecsSinceEpoch();
 				trainingStats.show();
-				trainingStats.setText(QString(tr("Training stats: done %1 batches in %2 milliseconds, loss=%3")).arg(batchNo).arg(tmNow-tmStart).arg(avgLoss));
+				trainingStats.setText(QString(tr("Training stats: done %1 batches in %2 milliseconds, loss=%3 observed range is [%4,%5]"))
+					.arg(batchNo)
+					.arg(tmNow-tmStart)
+					.arg(avgLoss)
+					.arg(minLoss)
+					.arg(maxLoss)
+				);
 			};
-			updateStats(0,0);
+			updateStats(0,0,0,0);
 			trainingThread.reset(new TrainingThread(this,
 				model, modelPendingTrainingDerivativesCoefficient,
 				paramBatchSizeSpinBox.value(), paramLearningRateSpinBox.value(), paramMaxBatchesSpinBox.value(),
@@ -448,9 +466,19 @@ TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginI
 					return getData(validation);
 				}
 			));
-			connect((TrainingThread*)trainingThread.get(), &TrainingThread::batchDone, QThread::currentThread(), [updateStats](unsigned batchNo, float avgLoss) {
-				updateStats(batchNo, avgLoss);
-			}, Qt::QueuedConnection);
+			connect((TrainingThread*)trainingThread.get(), &TrainingThread::batchDone, QThread::currentThread(),
+				[this,updateStats](unsigned batchNo, float avgLoss) {
+					if (minLoss==0 || avgLoss<minLoss)
+						minLoss = avgLoss;
+					if (maxLoss<avgLoss) {
+						maxLoss = avgLoss;
+						trainingProgressWidget.setRanges(paramMaxBatchesSpinBox.value()/*epochMax*/, maxLoss*1.3); // 1.3 is a margin for the loss values in graph
+					}
+					updateStats(batchNo, avgLoss, minLoss, maxLoss);
+					trainingProgressWidget.addDataPoint(batchNo/*epoch*/, avgLoss);
+				},
+				Qt::QueuedConnection
+			);
 			connect(trainingThread.get(), &TrainingThread::finished, QThread::currentThread(), [this,enableOtherWidgets]() {
 				// delete the thread object
 				trainingThread.reset(nullptr);

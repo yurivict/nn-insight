@@ -22,8 +22,8 @@ TrainingProgressWidget::TrainingProgressWidget(QWidget *parent)
 	// set up the graph
 	addGraph(yAxis, xAxis);
 	graph(0)->setPen(QPen(QColor(255, 100, 0)));
-	graph(0)->setBrush(QBrush(QPixmap("./balboa.jpg"))); // fill with texture of specified image
-	graph(0)->setLineStyle(QCPGraph::lsLine);
+	graph(0)->setBrush(QBrush());
+	graph(0)->setLineStyle(QCPGraph::lsNone); // XXX lsLine draws lines from previous points
 	graph(0)->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssDisc, 5));
 	graph(0)->setName("Loss vs. Epoch");
 
@@ -33,7 +33,7 @@ TrainingProgressWidget::TrainingProgressWidget(QWidget *parent)
 
 	// add title layout element
 	plotLayout()->insertRow(0);
-	plotLayout()->addElement(0, 0, new QCPTextElement(this, "Loss at Training Epoch", QFont("sans", 12, QFont::Bold)));
+	plotLayout()->addElement(0, 0, new QCPTextElement(this, "Loss vs. Training Epoch", QFont("sans", 12, QFont::Bold)));
 
 	// make ticks on bottom axis go outward:
 	xAxis->setTickLength(0, 5);

@@ -599,7 +599,6 @@ bool runTrainingLoop(
 		}
 		// notify the caller that the batch has finished
 		batchDone(batchNo, avgLoss);
-		PRINT("batchDone: batchNo=" << batchNo << " avgLoss=" << avgLoss)
 		// user requested us to stop?
 		if (*stopFlag) {
 			interrupted = true;

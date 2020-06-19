@@ -581,7 +581,7 @@ bool runTrainingLoop(
 				auto staticTensorInModel = (float*)trainingModel->getTensorDataWr(parameterTid);
 				assert(staticTensorInModel);
 				// update the original weights
-				addArraysWithMultiplication(staticTensorInModel, std::get<0>(d).get(), -learningRate*avgLoss*pendingTrainingDerivativesCoefficient, std::get<1>(d));
+				addArraysWithMultiplication(staticTensorInModel, std::get<0>(d).get(), -learningRate*(1./batchSize)*pendingTrainingDerivativesCoefficient, std::get<1>(d));
 				// update the transposed parameters when exists
 				if (trainingIO.parameterToTranspose[parameterTid] != -1)
 					Tensor::transposeMatrixIndices1and2of2(

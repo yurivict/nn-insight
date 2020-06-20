@@ -47,6 +47,14 @@ public:
 	}
 };
 
+static float computeLossMeanSquareError(const float *src1, const float *src2, unsigned sz) {
+	float sum = 0;
+	auto sq = [](float x) {return x*x;};
+	for (auto e = src1+sz; src1 < e;)
+		sum += sq((*src1++) - (*src2++));
+	return sum;
+}
+
 // helper for operators Concatenate and Split
 template<typename OneFloat, typename ManyFloat>
 void CopyTensorSlices(
@@ -1272,8 +1280,7 @@ bool compute(
 			cbTensorComputed(outputs[0]);
 
 			break;
-		} case PI::KindLossMeanSquareError:
-		  case PI::KindLossMeanAbsoluteError: {
+		} case PI::KindLossMeanSquareError: {
 			assert(inputs.size()==2 && outputs.size()==1 && Tensor::flatSize(model->getTensorShape(outputs[0]))==1);
 			assert(model->getTensorShape(inputs[0]) == model->getTensorShape(inputs[1]));
 
@@ -1281,20 +1288,37 @@ bool compute(
 			std::unique_ptr<float> outputData(new float[1]);
 
 			// compute
-			auto computeLossMeanSquareError = [](const float *src1, const float *src2, unsigned sz) {
-				float sum = 0;
-				auto sq = [](float x) {return x*x;};
-				for (auto e = src1+sz; src1 < e;)
-					sum += sq((*src1++) - (*src2++));
-				return sum;
-			};
 			outputData.get()[0] = computeLossMeanSquareError(
 				(*tensorData)[inputs[0]].get(),
 				(*tensorData)[inputs[1]].get(),
 				Tensor::flatSize(model->getTensorShape(inputs[0]))
 			);
-			if (operatorKind==PI::KindLossMeanAbsoluteError)
-				outputData.get()[0] = std::sqrt(outputData.get()[0]);
+
+			// save the data
+			(*tensorData)[outputs[0]].reset(outputData.release());
+
+			// notify the caller
+			cbTensorComputed(outputs[0]);
+
+			break;
+		} case PI::KindLossMeanAbsoluteError: {
+			assert(inputs.size()==2 && outputs.size()==1 && Tensor::flatSize(model->getTensorShape(outputs[0]))==1);
+			assert(model->getTensorShape(inputs[0]) == model->getTensorShape(inputs[1]));
+
+			auto sz = Tensor::flatSize(model->getTensorShape(inputs[0]));
+
+			// create output data
+			std::unique_ptr<float> outputData(new float[1]);
+
+			// compute
+			if (sz==1) // a simplified computation in a 1D case
+				outputData.get()[0] = std::abs((*tensorData)[inputs[0]].get()[0] - (*tensorData)[inputs[1]].get()[0]);
+			else
+				outputData.get()[0] = std::sqrt(computeLossMeanSquareError(
+					(*tensorData)[inputs[0]].get(),
+					(*tensorData)[inputs[1]].get(),
+					sz
+				));
 
 			// save the data
 			(*tensorData)[outputs[0]].reset(outputData.release());

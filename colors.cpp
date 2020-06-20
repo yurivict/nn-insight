@@ -43,6 +43,8 @@ QColor getOperatorColor(PluginInterface::OperatorKind okind) {
 		return QColor(32,170,170);
 	case PluginInterface::KindMean:
 		return QColor(130,11,212);
+	case PluginInterface::KindSign:
+		return QColor(110,10,240);
 	case PluginInterface::KindDequantize:
 		return QColor(170,170,240); // light blue
 	case PluginInterface::KindArgMax:

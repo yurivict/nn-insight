@@ -1137,6 +1137,36 @@ bool compute(
 			cbTensorComputed(outputs[0]);
 
 			break;
+		} case PI::KindSign: {
+			assert(inputs.size()==1 && outputs.size()==1);
+			assert(!opts); // need to have options present
+			assert(model->getTensorShape(inputs[0]) == model->getTensorShape(outputs[0])); // produces the same shape as consumes TODO should be in the model validation stage
+
+			auto sz = Tensor::flatSize(model->getTensorShape(inputs[0]));
+
+			// create output data
+			std::unique_ptr<float> outputData(new float[sz]);
+
+			// compute
+			auto input = (*tensorData)[inputs[0]].get();
+			auto output = outputData.get();
+			auto computeSign = [](float x) -> float {
+				if (x > 0)
+					return +1;
+				if (x < 0)
+					return -1;
+				return 0;
+			};
+			for (auto inpute = input+sz; input<inpute; input++, output++)
+				*output = computeSign(*input);
+
+			// save the data
+			(*tensorData)[outputs[0]].reset(outputData.release());
+
+			// notify the caller
+			cbTensorComputed(outputs[0]);
+
+			break;
 		} case PI::KindArgMax: {
 			doArgMxx(std::numeric_limits<float>::lowest(), [](float f1,float f2) {return f1>f2;});
 			break;

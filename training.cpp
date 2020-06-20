@@ -77,6 +77,11 @@ std::tuple<PluginInterface::Model*,float> constructTrainingModel(const PI::Model
 	auto StaticFloat32Tensor = [&training,&opNos,tname](const TensorShape &shape, float *values) -> PI::TensorId { // consumes ownership of values
 		return training->addTensor(tname(STR("static-no" << ++opNos["static"])), shape, PI::DataType_Float32, (uint8_t*)values);
 	};
+	auto Single = [&training,&opNos,tname,CreateDefaultOperatorOptions](PI::OperatorKind kind, PI::TensorId arg) { // single-argument operator
+		auto otid = training->addTensor(tname(STR(kind << "-no" << ++opNos[STR(kind)])), training->getTensorShape(arg), training->getTensorType(arg), nullptr);
+		training->addOperator(kind, {arg}, {otid}, CreateDefaultOperatorOptions(kind));
+		return otid;
+	};
 	auto Dual = [&training,&opNos,tname,CreateDefaultOperatorOptions](PI::OperatorKind kind, PI::TensorId arg1, PI::TensorId arg2) { // dual symmetric
 		auto otid = training->addTensor(tname(STR(kind << "-no" << ++opNos[STR(kind)])), training->getTensorShape(arg1), training->getTensorType(arg1), nullptr);
 		training->addOperator(kind, {arg1,arg2}, {otid}, CreateDefaultOperatorOptions(kind));
@@ -191,12 +196,28 @@ std::tuple<PluginInterface::Model*,float> constructTrainingModel(const PI::Model
 		training->addOutput(derivativeOfLoss);
 
 		break;
-	} case PI::KindLossMeanSquareError: { // CAVEAT coefficient 2/N isn't included
+	} case PI::KindLossMeanSquareError: {
 		// ∂L2(O,L)/∂x = 2/N Σᵢ(Oᵢ-Lᵢ)
 		auto derivativeOfLoss = Dual(
 			PI::KindSub,
 			outputInfo[0].lossInput,
 			outputInfo[0].lossTarget
+		);
+		pendingDerivativeLossCoefficient = 2./Tensor::flatSize(training->getTensorShape(outputInfo[0].lossInput));
+
+		outputInfo[0].derivativeOfLossToInput = derivativeOfLoss;
+		derivatives[outputInfo[0].lossInput] = derivativeOfLoss;
+
+		break;
+	} case PI::KindLossMeanAbsoluteError: {
+		// ∂L2(O,L)/∂x = 2/N Σᵢ(Oᵢ-Lᵢ)
+		auto derivativeOfLoss = Single(
+			PI::KindSign,
+			Dual(
+				PI::KindSub,
+				outputInfo[0].lossInput,
+				outputInfo[0].lossTarget
+			)
 		);
 		pendingDerivativeLossCoefficient = 2./Tensor::flatSize(training->getTensorShape(outputInfo[0].lossInput));
 
@@ -280,7 +301,7 @@ std::tuple<PluginInterface::Model*,float> constructTrainingModel(const PI::Model
 				derivatives[inputTids[0]] = derivativeOverFcInput;
 				tensorsToDo.insert(inputTids[0]);
 			}
-			if (!frozenLayers[inputTids[1]]){ // ∂FC(x,W,B)/∂W = x, ∂Loss/∂W = ∂Loss/∂FC(x,W,B)⊗x
+			if (!frozenLayers[inputTids[1]]) { // ∂FC(x,W,B)/∂W = x, ∂Loss/∂W = ∂Loss/∂FC(x,W,B)⊗x
 				auto weightsShape = model->getTensorShape(inputTids[1]);
 				assert(weightsShape.size() == 2);
 				auto weightsData = model->getTensorData(inputTids[1]);

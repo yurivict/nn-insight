@@ -893,6 +893,7 @@ MainWindow::~MainWindow() {
 		pluginInterface.reset(nullptr);
 		if (plugin) // can be null for non-plugin-based models
 			PluginManager::unloadPlugin(plugin);
+		nnNetworkOperatorsListWidget.clearNnModel();
 	}
 
 	// save geometry

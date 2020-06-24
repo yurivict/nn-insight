@@ -3,6 +3,7 @@
 #include "data-table-2d.h"
 #include "tensor.h"
 #include "misc.h"
+#include "options.h"
 #include "util.h"
 
 #include <QFontMetrics>
@@ -473,7 +474,11 @@ DataTable2D<T>::DataTable2D(const TensorShape &shape_, const T *data_, QWidget *
 			.arg(std::get<0>(dataRange))
 			.arg(std::get<1>(dataRange))
 			.arg(Util::arrayNumZeros(data, Tensor::flatSize(shape)))
-			.arg(Util::arrayNumNearZeros(data, Tensor::flatSize(shape), (T)(Util::max(Util::abs(std::get<0>(dataRange)),Util::abs(std::get<1>(dataRange)))*T(0.000001))))
+			.arg(Util::arrayNumNearZeros(
+				data,
+				Tensor::flatSize(shape),
+				(T)(Util::max(Util::abs(std::get<0>(dataRange)), Util::abs(std::get<1>(dataRange)))*T(Options::get().getNearZeroCoefficient()))
+			))
 	);
 
 	// create the model

@@ -101,6 +101,8 @@ add_executable(nn-insight
 	svg-graphics-generator.cpp
 	nn-widget.cpp
 	no-nn-is-open-widget.cpp
+	options.cpp
+	options-dialog.cpp
 	zoomable-svg-widget.cpp
 	data-table-2d.cpp
 	image-grid-widget.cpp

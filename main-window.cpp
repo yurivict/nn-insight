@@ -13,6 +13,8 @@
 #include "model-views/merge-dequantize-operators.h"
 #include "nn-operators.h"
 #include "nn-types.h"
+#include "options.h"
+#include "options-dialog.h"
 #include "svg-graphics-generator.h"
 #include "svg-push-button.h"
 #include "tensor.h"
@@ -875,6 +877,9 @@ MainWindow::MainWindow()
 		else
 			showFullScreen();
 	})->setShortcut(QKeySequence(Qt::Key_F11));
+	viewMenu->addAction(tr("Op&tions"), [this]() {
+		OptionsDialog(Options::get(), this).exec();
+	})->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_T));
 
 	// icon
 	setWindowIcon(QPixmap::fromImage(Util::svgToImage(SvgGraphics::generateNnAppIcon(), QSize(128,128), QPainter::CompositionMode_SourceOver)));

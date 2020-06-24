@@ -1,6 +1,6 @@
 // Copyright (C) 2020 by Yuri Victorovich. All rights reserved.
 
-#include "misc.h"
+#include "misc.h" // has appSettings
 #include "rng.h"
 #include "training.h"
 #include "training-widget.h"

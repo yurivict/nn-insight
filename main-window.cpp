@@ -1655,7 +1655,7 @@ QLabel* MainWindow::makeTextSelectable(QLabel *label) {
 
 void MainWindow::showNnTensorData2D() {
 	assert(nnCurrentTensorId >= 0);
-	if (Tensor::numMultiDims(model->getTensorShape(nnCurrentTensorId)) >= 2) {
+	if (Tensor::numMultiDims(model->getTensorShape(nnCurrentTensorId)) >= 2 || model->getTensorShape(nnCurrentTensorId).size()>1/*2D widget shows 1D/0D data, see data-table-2d.cpp*/) {
 		switch (model->getTensorType(nnCurrentTensorId)) {
 		case PluginInterface::DataType_Float16:
 			assert(!model->isTensorComputed(nnCurrentTensorId)); // we don't yet support computed tensors of type float16 because tensorData always has float32

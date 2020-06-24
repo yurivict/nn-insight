@@ -401,10 +401,24 @@ DataTable2D<T>::DataTable2D(const TensorShape &shape_, const T *data_, QWidget *
 
 		// choose the initial vertical and horizontal dimensions
 		switch (numMultiDims) {
-		case 0:
-		case 1:
-			assert(false); // 0 is invalid, 1 should be handled by the 1D class
-		default:
+		case 0: {
+			assert(shape.size()>=2); // still show 0D data when enough dimensions are present in shape
+			dimHorizontal = 0;
+			dimVertical = 1;
+			break;
+		} case 1: { // use 2D widget to show 1D data (also see this choice in MainWindow)
+			assert(shape.size()>=2);
+			unsigned idx = 0;
+			for (auto d : shape) {
+				if (d > 1) {
+					dimVertical = idx;
+					dimHorizontal = idx>0 ? idx-1 : idx+1; // choose shape dimension with size 1 anyway
+					break;
+				}
+				idx++;
+			}
+			break;
+		} default: {
 			// in case of 2 - choose the only two that are avalable, in other cases choose two before the very last one, because the last one is usually a channel dimension
 			unsigned num = 0, numMatch = (numMultiDims==2 ? 0 : numMultiDims-3), idx = 0;
 			for (auto d : shape) {
@@ -420,7 +434,7 @@ DataTable2D<T>::DataTable2D(const TensorShape &shape_, const T *data_, QWidget *
 				idx++;
 			}
 			break;
-		}
+		}}
 		for (unsigned dim = 0; dim < shapeDimensionsComboBoxes.size(); dim++) {
 			if (dim == dimVertical)
 				shapeDimensionsComboBoxes[dim]->setCurrentIndex(1/*Y*/);

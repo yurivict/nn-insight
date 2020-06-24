@@ -599,25 +599,30 @@ bool runTrainingLoop(
 		// average loss
 		float avgLoss = totalLoss/batchSize;
 		// update weights
-		for (PI::TensorId derivativeTid = 0, derivativeTide = numTensors; derivativeTid < derivativeTide; derivativeTid++) {
-			auto &d = derivativeAccumulator.get()[derivativeTid];
-			if (std::get<0>(d)) {
-				auto i = trainingIO.derivativeToParameterOutputs.find(derivativeTid);
-				assert(i != trainingIO.derivativeToParameterOutputs.end());
-				auto parameterTid = i->second;
-				auto staticTensorInModel = (float*)trainingModel->getTensorDataWr(parameterTid);
-				assert(staticTensorInModel);
-				// update the original weights
-				addArraysWithMultiplication(staticTensorInModel, std::get<0>(d).get(), -learningRate*(1./batchSize)*pendingTrainingDerivativesCoefficient, std::get<1>(d));
-				// update the transposed parameters when exists
-				if (trainingIO.parameterToTranspose[parameterTid] != -1)
-					Tensor::transposeMatrixIndices1and2of2(
-						trainingModel->getTensorShape(parameterTid),
-						staticTensorInModel,
-						(float*)trainingModel->getTensorDataWr(trainingIO.parameterToTranspose[parameterTid])
-					);
+		auto iterateThroughModelParameters = [&](std::function<void(PI::TensorId derivativeTid, PI::TensorId parameterTid, float *derivatives, float *staticTensorInModel, unsigned sz)> cb) {
+			for (PI::TensorId derivativeTid = 0, derivativeTide = numTensors; derivativeTid < derivativeTide; derivativeTid++) {
+				auto &d = derivativeAccumulator.get()[derivativeTid];
+				if (std::get<0>(d)) {
+					auto i = trainingIO.derivativeToParameterOutputs.find(derivativeTid);
+					assert(i != trainingIO.derivativeToParameterOutputs.end());
+					auto parameterTid = i->second;
+					auto staticTensorInModel = (float*)trainingModel->getTensorDataWr(parameterTid);
+					assert(staticTensorInModel);
+					cb(derivativeTid, parameterTid, std::get<0>(d).get(), staticTensorInModel, std::get<1>(d));
+				}
 			}
-		}
+		};
+		iterateThroughModelParameters([&](PI::TensorId derivativeTid, PI::TensorId parameterTid, float *derivatives, float *staticTensorInModel, unsigned sz) {
+			// update the original weights
+			addArraysWithMultiplication(staticTensorInModel, derivatives, -learningRate*(1./batchSize)*pendingTrainingDerivativesCoefficient, sz);
+			// update the transposed parameters when exists
+			if (trainingIO.parameterToTranspose[parameterTid] != -1)
+				Tensor::transposeMatrixIndices1and2of2(
+					trainingModel->getTensorShape(parameterTid),
+					staticTensorInModel,
+					(float*)trainingModel->getTensorDataWr(trainingIO.parameterToTranspose[parameterTid])
+				);
+		});
 		// zero accumulators
 		for (PI::TensorId tid = 0; tid<numTensors; tid++) {
 			auto &arr = derivativeAccumulator.get()[tid];

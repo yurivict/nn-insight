@@ -13,6 +13,7 @@
 #include <QPainter>
 class QComboBox;
 
+#include <cmath>
 #include <string>
 #include <vector>
 #include <ostream>
@@ -24,6 +25,16 @@ class QComboBox;
 class QWidget;
 
 namespace Util {
+
+// some functions that are in std:: but lack half_float::half instantiations
+template<typename T>
+T abs(T t) {
+	return t>=0 ? t : -t;
+}
+template<typename T>
+T max(T t1, T t2) {
+	return t1>t2 ? t1 : t2;
+}
 
 std::string QStringToStlString(const QString &qs);
 bool messageOk(QWidget *parent, const QString &title, const QString &msg);
@@ -45,6 +56,22 @@ std::tuple<T,T> arrayMinMax(const T *arr, size_t len) {
 			amax = *arr;
 	}
 	return std::tuple<T,T>(amin, amax);
+}
+template<typename T>
+unsigned arrayNumZeros(const T *arr, size_t len) {
+	unsigned cnt = 0;
+	for (const T *ae = arr + len; arr < ae; arr++)
+		if (*arr == 0)
+			cnt++;
+	return cnt;
+}
+template<typename T>
+unsigned arrayNumNearZeros(const T *arr, size_t len, T margin) {
+	unsigned cnt = 0;
+	for (const T *ae = arr + len; arr < ae; arr++)
+		if (*arr != 0 && Util::abs(*arr) <= margin)
+			cnt++;
+	return cnt;
 }
 template<typename T>
 T* arrayOfOnes(unsigned sz) {

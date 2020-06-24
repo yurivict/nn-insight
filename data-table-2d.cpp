@@ -10,6 +10,7 @@
 #include <QPixmap>
 #include <QSettings>
 
+#include <algorithm>
 #include <cmath>
 #include <functional>
 #include <sstream>
@@ -453,7 +454,13 @@ DataTable2D<T>::DataTable2D(const TensorShape &shape_, const T *data_, QWidget *
 
 	// data range
 	auto dataRange = Util::arrayMinMax(data, Tensor::flatSize(shape));
-	dataRangeLabel.setText(QString(tr("Data Range: %1..%2")).arg(std::get<0>(dataRange)).arg(std::get<1>(dataRange)));
+	dataRangeLabel.setText(
+		QString(tr("Data Range: %1..%2\nNum. Zeros: %3 Num. NearZeros: %4"))
+			.arg(std::get<0>(dataRange))
+			.arg(std::get<1>(dataRange))
+			.arg(Util::arrayNumZeros(data, Tensor::flatSize(shape)))
+			.arg(Util::arrayNumNearZeros(data, Tensor::flatSize(shape), (T)(Util::max(Util::abs(std::get<0>(dataRange)),Util::abs(std::get<1>(dataRange)))*T(0.000001))))
+	);
 
 	// create the model
 	tableModel.reset(new DataModel<T>(new TensorSliceDataSource(shape, dimVertical, dimHorizontal, mkIdxs(), data), nullptr, &tableView));

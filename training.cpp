@@ -219,7 +219,7 @@ std::tuple<PluginInterface::Model*,float> constructTrainingModel(const PI::Model
 				outputInfo[0].lossTarget
 			)
 		);
-		pendingDerivativeLossCoefficient = 2./Tensor::flatSize(training->getTensorShape(outputInfo[0].lossInput));
+		pendingDerivativeLossCoefficient = 1;
 
 		outputInfo[0].derivativeOfLossToInput = derivativeOfLoss;
 		derivatives[outputInfo[0].lossInput] = derivativeOfLoss;

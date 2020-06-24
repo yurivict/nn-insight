@@ -521,6 +521,7 @@ bool runTrainingLoop(
 	PluginInterface::Model *trainingModel,
 	float pendingTrainingDerivativesCoefficient,
 	unsigned batchSize, float learningRate, unsigned maxBatches,
+	OptimizationAlgorithm algo,
 	bool *stopFlag,
 	std::function<std::array<std::vector<float>,2>(bool)> getData,
 	std::function<void(unsigned,float)> batchDone

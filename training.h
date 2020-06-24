@@ -26,6 +26,15 @@ struct OriginalIO {
 	std::vector<PluginInterface::TensorId>                        outputs;
 };
 
+enum OptimizationAlgorithm {
+// see https://towardsdatascience.com/adam-latest-trends-in-deep-learning-optimization-6be9a291375c for Adam description and other discussion
+	OptimizationAlgorithm_SDG_straight,      // derivatives are added to parameters
+	OptimizationAlgorithm_SDG_with_inverse,  // normalized inverse derivatives are added to parameters
+	OptimizationAlgorithm_Adam, // Diederik P. Kingma and Jimmy Lei Ba. Adam : A method for stochastic optimization. 2014. arXiv:1412.6980v9
+	OptimizationAlgorithm_AdaGrad, // John Duchi, Elad Hazan, and Yoram Singer. Adaptive Subgradient Methods for Online Learning and Stochastic Optimization. Journal of Machine Learning Research, 12:2121–2159, 2011.
+	OptimizationAlgorithm_RMSprop
+};
+
 std::tuple<PluginInterface::Model*,float> constructTrainingModel(const PluginInterface::Model *model, PluginInterface::OperatorKind lossFunction); // returns ownership
 
 bool getModelTrainingIO(const PluginInterface::Model *trainingModel, TrainingIO &trainingIO);
@@ -45,6 +54,7 @@ bool runTrainingLoop(
 	PluginInterface::Model *trainingModel,
 	float pendingTrainingDerivativesCoefficient,
 	unsigned batchSize, float learningRate, unsigned maxBatches,
+	OptimizationAlgorithm algo,
 	bool *stopFlag,
 	std::function<std::array<std::vector<float>,2>(bool)> getData,
 	std::function<void(unsigned,float)> batchDone);

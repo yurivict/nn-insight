@@ -46,6 +46,8 @@ class TrainingWidget : public QWidget {
 	QDoubleSpinBox                paramLearningRateSpinBox;
 	QLabel                        paramMaxBatchesLabel;
 	QSpinBox                      paramMaxBatchesSpinBox;
+	QLabel                        paramOptimizationAlgorithmLabel;
+	QComboBox                     paramOptimizationAlgorithmComboBox;
 	QPushButton                 verifyDerivativesButton;
 	QPushButton                 trainButton;
 	QLabel                      trainingStats;

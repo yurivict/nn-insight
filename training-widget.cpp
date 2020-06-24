@@ -29,8 +29,18 @@
 #include <exprtk.hpp>
 
 
-/// local types
+/// print operators
 
+std::ostream& operator<<(std::ostream &os, Training::OptimizationAlgorithm algo) {
+	switch (algo) {
+	case Training::OptimizationAlgorithm_SDG_straight:     os << "SDG-straight";     break;
+	case Training::OptimizationAlgorithm_SDG_with_inverse: os << "SDG-with-inverse"; break;
+	case Training::OptimizationAlgorithm_Adam:             os << "Adam";             break;
+	case Training::OptimizationAlgorithm_AdaGrad:          os << "AdaGrad";          break;
+	case Training::OptimizationAlgorithm_RMSprop:          os << "RMSprop";          break;
+	}
+	return os;
+}
 
 /// Training dataset type widgets
 
@@ -144,8 +154,8 @@ public:
 		argDescriptionsLayout.setContentsMargins(0,0,0,0);
 
 		// alignment
-		formulaLabel      .setAlignment(Qt::AlignRight|Qt::AlignVCenter);
-		argumentCountLabel.setAlignment(Qt::AlignRight|Qt::AlignVCenter);
+		for (auto l : {&formulaLabel,&argumentCountLabel})
+			l->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
 
 		// widget states
 		formulaEdit.setText(appSettings.value("TrainingWidget.DataSet_FunctionApproximationByFormulaWidget.formula", "a*b*exp(-a^2-b^2)").toString());
@@ -275,6 +285,7 @@ class TrainingThread : public QThread { // wrapper thread for Training::runTrain
 	unsigned                                              batchSize;
 	float                                                 learningRate;
 	unsigned                                              maxBatches;
+	Training::OptimizationAlgorithm                       algo;
 	bool                                                 *stopFlag;
 	std::function<std::array<std::vector<float>,2>(bool)> getData;
 
@@ -282,7 +293,9 @@ public:
 	TrainingThread(QObject *parent
 		, PluginInterface::Model *model_
 		, float modelPendingTrainingDerivativesCoefficient_
-		, unsigned batchSize_, float learningRate_, unsigned maxBatches_, bool *stopFlag_
+		, unsigned batchSize_, float learningRate_, unsigned maxBatches_
+		, Training::OptimizationAlgorithm algo_
+		, bool *stopFlag_
 		, std::function<std::array<std::vector<float>,2>(bool)> getData_)
 	: QThread(parent)
 	, model(model_)
@@ -290,6 +303,7 @@ public:
 	, batchSize(batchSize_)
 	, learningRate(learningRate_)
 	, maxBatches(maxBatches_)
+	, algo(algo_)
 	, stopFlag(stopFlag_)
 	, getData(getData_)
 	{ }
@@ -298,6 +312,7 @@ public:
 		Training::runTrainingLoop(
 			model, modelPendingTrainingDerivativesCoefficient,
 			batchSize, learningRate, maxBatches,
+			algo,
 			stopFlag,
 			getData,
 			[this](unsigned batchNo, float avgLoss) {
@@ -326,6 +341,8 @@ TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginI
 ,   paramLearningRateSpinBox(&parametersGroupBox)
 ,   paramMaxBatchesLabel(tr("Max Batches"), &parametersGroupBox)
 ,   paramMaxBatchesSpinBox(&parametersGroupBox)
+,   paramOptimizationAlgorithmLabel(tr("Optimization"), &parametersGroupBox)
+,   paramOptimizationAlgorithmComboBox(&parametersGroupBox)
 , verifyDerivativesButton(tr("Verify Derivatives"), this)
 , trainButton(tr("Start Training"), this)
 , trainingStats(this)
@@ -361,6 +378,8 @@ TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginI
 	  parametersLayout.addWidget(&paramLearningRateSpinBox);
 	  parametersLayout.addWidget(&paramMaxBatchesLabel);
 	  parametersLayout.addWidget(&paramMaxBatchesSpinBox);
+	  parametersLayout.addWidget(&paramOptimizationAlgorithmLabel);
+	  parametersLayout.addWidget(&paramOptimizationAlgorithmComboBox);
 	layout.addWidget(&verifyDerivativesButton, 3,   0/*column*/,  1/*rowSpan*/, 2/*columnSpan*/);
 	layout.addWidget(&trainButton,             4,   0/*column*/,  1/*rowSpan*/, 2/*columnSpan*/);
 	layout.addWidget(&trainingStats,           5,   0/*column*/,  1/*rowSpan*/, 2/*columnSpan*/);
@@ -370,9 +389,14 @@ TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginI
 	trainingTypeComboBox.addItem(tr("Function approximation (by formula)"), TrainingType_FunctionApproximationByFormula);
 	trainingTypeComboBox.addItem(tr("Function approximation (from tabulated data)"), TrainingType_FunctionApproximationFromTabulatedData);
 	trainingTypeComboBox.addItem(tr("Image labeling"), TrainingType_ImageLabeling);
+	{
+		using namespace Training;
+		for (auto e : {OptimizationAlgorithm_SDG_straight,OptimizationAlgorithm_SDG_with_inverse,OptimizationAlgorithm_Adam,OptimizationAlgorithm_AdaGrad,OptimizationAlgorithm_RMSprop})
+			paramOptimizationAlgorithmComboBox.addItem(S2Q(STR(e)), e);
+		}
 
 	// alignment
-	for (auto l : {&trainingTypeLabel,&paramBatchSizeLabel,&paramLearningRateLabel,&paramMaxBatchesLabel})
+	for (auto l : {&trainingTypeLabel,&paramBatchSizeLabel,&paramLearningRateLabel,&paramMaxBatchesLabel,&paramOptimizationAlgorithmLabel})
 		l->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
 
 	// validation
@@ -406,6 +430,8 @@ TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginI
 		l->setToolTip(tr("Choose the learning rate for the training process. Learning rate is a coefficient telling how much to update model weights after each batch."));
 	for (auto l : {(QWidget*)&paramMaxBatchesLabel,(QWidget*)&paramMaxBatchesSpinBox})
 		l->setToolTip(tr("Choose the maximum number of batches before the training stops."));
+	for (auto l : {(QWidget*)&paramOptimizationAlgorithmLabel,(QWidget*)&paramOptimizationAlgorithmComboBox})
+		l->setToolTip(tr("Optimization algorithm to use during training."));
 
 	// process signals
 	connect(&trainingTypeComboBox, QOverload<int>::of(&QComboBox::activated), [this](int index) {
@@ -414,6 +440,13 @@ TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginI
 	});
 	connect(&paramLearningRateSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), [updateLearningRateSpinBoxStep](double) {
 		updateLearningRateSpinBoxStep();
+	});
+	connect(&paramOptimizationAlgorithmComboBox, QOverload<int>::of(&QComboBox::activated), [this](int index) {
+		auto algo = (Training::OptimizationAlgorithm)paramOptimizationAlgorithmComboBox.currentData().toUInt();
+		if (algo!=Training::OptimizationAlgorithm_SDG_straight && algo!=Training::OptimizationAlgorithm_SDG_with_inverse) {
+			Util::warningOk(this, tr("Only SDG algorithm is currently implemented"));
+			paramOptimizationAlgorithmComboBox.setCurrentIndex(0);
+		}
 	});
 	connect(&verifyDerivativesButton, &QAbstractButton::pressed, [this,model,modelPendingTrainingDerivativesCoefficient,topLevelWidget]() {
 		auto msg = Training::verifyDerivatives(
@@ -461,6 +494,7 @@ TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginI
 			trainingThread.reset(new TrainingThread(this,
 				model, modelPendingTrainingDerivativesCoefficient,
 				paramBatchSizeSpinBox.value(), paramLearningRateSpinBox.value(), paramMaxBatchesSpinBox.value(),
+				(Training::OptimizationAlgorithm)paramOptimizationAlgorithmComboBox.currentData().toUInt(),
 				&threadStopFlag,
 				[this](bool validation) -> std::array<std::vector<float>,2> { // data is pulled through a synchronous callback from the training thread
 					return getData(validation);

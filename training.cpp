@@ -561,6 +561,16 @@ bool runTrainingLoop(
 		tensorData->data()[tid].reset(tensor);
 		std::copy(data, data+size, tensor);
 	};
+	auto transposeParameterTensors = [trainingModel,numTensors,&trainingIO]() {
+		// update the transposed parameters when exists
+		for (PI::TensorId parameterTid = 0; parameterTid<numTensors; parameterTid++)
+			if (trainingIO.parameterToTranspose[parameterTid] != -1)
+				Tensor::transposeMatrixIndices1and2of2(
+					trainingModel->getTensorShape(parameterTid),
+					(float*)trainingModel->getTensorDataWr(parameterTid),
+					(float*)trainingModel->getTensorDataWr(trainingIO.parameterToTranspose[parameterTid])
+				);
+	};
 
 	// allocate the tensor derivative accumulator
 	std::unique_ptr<std::tuple<std::unique_ptr<float>,unsigned>> derivativeAccumulator(new std::tuple<std::unique_ptr<float>,unsigned>[numTensors]);
@@ -615,14 +625,9 @@ bool runTrainingLoop(
 		iterateThroughModelParameters([&](PI::TensorId derivativeTid, PI::TensorId parameterTid, float *derivatives, float *staticTensorInModel, unsigned sz) {
 			// update the original weights
 			addArraysWithMultiplication(staticTensorInModel, derivatives, -learningRate*(1./batchSize)*pendingTrainingDerivativesCoefficient, sz);
-			// update the transposed parameters when exists
-			if (trainingIO.parameterToTranspose[parameterTid] != -1)
-				Tensor::transposeMatrixIndices1and2of2(
-					trainingModel->getTensorShape(parameterTid),
-					staticTensorInModel,
-					(float*)trainingModel->getTensorDataWr(trainingIO.parameterToTranspose[parameterTid])
-				);
 		});
+		// update the transposed parameters when exists
+		transposeParameterTensors();
 		// zero accumulators
 		for (PI::TensorId tid = 0; tid<numTensors; tid++) {
 			auto &arr = derivativeAccumulator.get()[tid];

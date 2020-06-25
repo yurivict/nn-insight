@@ -17,6 +17,9 @@ OptionsDialog::OptionsDialog(Options &options_, QWidget *parent)
 , nearZeroCoefficientEditBox(this)
 , buttonBox(QDialogButtonBox::Ok, Qt::Horizontal, this)
 {
+	// title
+	setWindowTitle(QString("nn-insight: %1").arg(tr("Options")));
+
 	// add widgets to layouts
 	layout.addWidget(&closeModelForTrainingModelLabel,           0/*row*/, 0/*col*/, 1/*rowSpan*/, 1/*columnSpan*/);
 	layout.addWidget(&closeModelForTrainingModelCheckBox,        0/*row*/, 1/*col*/, 1/*rowSpan*/, 1/*columnSpan*/);

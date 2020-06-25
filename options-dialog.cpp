@@ -30,7 +30,7 @@ OptionsDialog::OptionsDialog(Options &options_, QWidget *parent)
 
 	// tooltips
 	for (auto w : {(QWidget*)&closeModelForTrainingModelLabel,(QWidget*)&closeModelForTrainingModelCheckBox})
-		w->setToolTip(tr("Close the model window whan the training model is generated."));
+		w->setToolTip(tr("Close the trained model window when the training model is generated."));
 	for (auto w : {(QWidget*)&nearZeroCoefficientLabel,(QWidget*)&nearZeroCoefficientEditBox})
 		w->setToolTip(tr("Coefficient determining what values are considered to be near-zero. It is multiplied by a maximum of the absolute values of the value range."));
 

@@ -519,7 +519,7 @@ TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginI
 				// restore widgets to their normal state
 				trainButton.setText(tr("Start Training"));
 				enableOtherWidgets(true);
-				trainingStats.hide();
+				//trainingStats.hide();
 			}, Qt::QueuedConnection);
 			trainButton.setText(tr("Stop Training"));
 			trainingThread->start();

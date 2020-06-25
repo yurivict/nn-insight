@@ -37,6 +37,7 @@
 #include <QPushButton>
 #include <QSettings>
 #include <QScrollBar>
+#include <QTimer>
 #include <QVariant>
 #include <QWheelEvent>
 
@@ -833,6 +834,9 @@ MainWindow::MainWindow()
 				w->loadInMemoryModel(std::get<0>(modelWithCoefficient), "Training model");
 				w->modelPendingTrainingDerivativesCoefficient = std::get<1>(modelWithCoefficient);
 				w->show();
+				// close the model if chosen in options
+				if (Options::get().getCloseModelForTrainingModel())
+					QTimer::singleShot(0, this, SLOT(close()));
 			});
 
 	auto actionsMenu = menuBar.addMenu(tr("&Actions"));

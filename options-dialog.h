@@ -9,6 +9,7 @@
 
 #include "options.h"
 
+#include <QCheckBox>
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QLineEdit>
@@ -21,6 +22,8 @@ class OptionsDialog : public QDialog {
 	Options                           &options; // structure that we edit
 
 	QGridLayout                       layout;
+	QLabel                            closeModelForTrainingModelLabel;
+	QCheckBox                         closeModelForTrainingModelCheckBox;
 	QLabel                            nearZeroCoefficientLabel;
 	QLineEdit                         nearZeroCoefficientEditBox;
 	QDialogButtonBox                  buttonBox;

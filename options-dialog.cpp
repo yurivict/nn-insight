@@ -11,19 +11,26 @@ OptionsDialog::OptionsDialog(Options &options_, QWidget *parent)
 : QDialog(parent)
 , options(options_)
 , layout(this)
+, closeModelForTrainingModelLabel(tr("Close Model For Training Model"), this)
+, closeModelForTrainingModelCheckBox(this)
 , nearZeroCoefficientLabel(tr("Near Zero Coefficient"), this)
 , nearZeroCoefficientEditBox(this)
 , buttonBox(QDialogButtonBox::Ok, Qt::Horizontal, this)
 {
 	// add widgets to layouts
-	layout.addWidget(&nearZeroCoefficientLabel,                  0/*row*/, 0/*col*/, 1/*rowSpan*/, 1/*columnSpan*/);
-	layout.addWidget(&nearZeroCoefficientEditBox,                0/*row*/, 1/*col*/, 1/*rowSpan*/, 1/*columnSpan*/);
-	layout.addWidget(&buttonBox,                                 1/*row*/, 1/*col*/, 1/*rowSpan*/, 2/*columnSpan*/);
+	layout.addWidget(&closeModelForTrainingModelLabel,           0/*row*/, 0/*col*/, 1/*rowSpan*/, 1/*columnSpan*/);
+	layout.addWidget(&closeModelForTrainingModelCheckBox,        0/*row*/, 1/*col*/, 1/*rowSpan*/, 1/*columnSpan*/);
+	layout.addWidget(&nearZeroCoefficientLabel,                  1/*row*/, 0/*col*/, 1/*rowSpan*/, 1/*columnSpan*/);
+	layout.addWidget(&nearZeroCoefficientEditBox,                1/*row*/, 1/*col*/, 1/*rowSpan*/, 1/*columnSpan*/);
+	layout.addWidget(&buttonBox,                                 2/*row*/, 1/*col*/, 1/*rowSpan*/, 2/*columnSpan*/);
 
 	// set values
+	closeModelForTrainingModelCheckBox.setCheckState(options.getCloseModelForTrainingModel() ? Qt::Checked : Qt::Unchecked);
 	nearZeroCoefficientEditBox.setText(QString("%1").arg(options.getNearZeroCoefficient()));
 
 	// tooltips
+	for (auto w : {(QWidget*)&closeModelForTrainingModelLabel,(QWidget*)&closeModelForTrainingModelCheckBox})
+		w->setToolTip(tr("Close the model window whan the training model is generated."));
 	for (auto w : {(QWidget*)&nearZeroCoefficientLabel,(QWidget*)&nearZeroCoefficientEditBox})
 		w->setToolTip(tr("Coefficient determining what values are considered to be near-zero. It is multiplied by a maximum of the absolute values of the value range."));
 
@@ -31,6 +38,9 @@ OptionsDialog::OptionsDialog(Options &options_, QWidget *parent)
 	nearZeroCoefficientEditBox.setValidator(new QDoubleValidator(std::numeric_limits<double>::min(), std::numeric_limits<double>::max(), 3/*decimals*/, this));
 
 	// connect signals
+	connect(&closeModelForTrainingModelCheckBox, &QCheckBox::stateChanged, [this](int state) {
+		options.setCloseModelForTrainingModel(state != 0);
+	});
 	connect(&nearZeroCoefficientEditBox, &QLineEdit::textChanged, [this](const QString &text) {
 		options.setNearZeroCoefficient(text.toDouble());
 	});

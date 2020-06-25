@@ -8,7 +8,8 @@
 /// constr
 
 Options::Options()
-: nearZeroCoefficient(appSettings.value("Options.nearZeroCoefficient", 0.000001).toFloat())
+: closeModelForTrainingModel(appSettings.value("Options.closeModelForTrainingModel", true).toBool())
+, nearZeroCoefficient(appSettings.value("Options.nearZeroCoefficient", 0.000001).toFloat())
 {
 }
 
@@ -20,6 +21,11 @@ Options& Options::get() {
 }
 
 /// set-interface
+
+void Options::setCloseModelForTrainingModel(bool val) {
+	closeModelForTrainingModel = val;
+	appSettings.setValue(QString("Options.closeModelForTrainingModel"), val);
+}
 
 void Options::setNearZeroCoefficient(float val) {
 	nearZeroCoefficient = val;

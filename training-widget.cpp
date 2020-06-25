@@ -11,6 +11,7 @@
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QLineEdit>
+#include <QIntValidator>
 #include <QDoubleValidator>
 #include <QGridLayout>
 #include <QHBoxLayout>
@@ -336,11 +337,11 @@ TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginI
 , parametersGroupBox(tr("Training Parameters"), this)
 ,   parametersLayout(&parametersGroupBox)
 ,   paramBatchSizeLabel(tr("Batch Size"), &parametersGroupBox)
-,   paramBatchSizeSpinBox(&parametersGroupBox)
+,   paramBatchSizeEditBox(&parametersGroupBox)
 ,   paramLearningRateLabel(tr("Learning Rate"), &parametersGroupBox)
-,   paramLearningRateSpinBox(&parametersGroupBox)
+,   paramLearningRateEditBox(&parametersGroupBox)
 ,   paramMaxBatchesLabel(tr("Max Batches"), &parametersGroupBox)
-,   paramMaxBatchesSpinBox(&parametersGroupBox)
+,   paramMaxBatchesEditBox(&parametersGroupBox)
 ,   paramOptimizationAlgorithmLabel(tr("Optimization"), &parametersGroupBox)
 ,   paramOptimizationAlgorithmComboBox(&parametersGroupBox)
 , verifyDerivativesButton(tr("Verify Derivatives"), this)
@@ -357,15 +358,6 @@ TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginI
 		for (auto w : {(QWidget*)&trainingTypeLabel,(QWidget*)&trainingTypeComboBox,(QWidget*)&dataSetGroupBox,(QWidget*)&parametersGroupBox,(QWidget*)&verifyDerivativesButton})
 			w->setEnabled(enable);
 	};
-	auto updateLearningRateSpinBoxStep = [this]() {
-		auto val = paramLearningRateSpinBox.value();
-		if (val <= 0.015)
-			paramLearningRateSpinBox.setSingleStep(0.0001);
-		else if (val <= 0.15)
-			paramLearningRateSpinBox.setSingleStep(0.001);
-		else
-			paramLearningRateSpinBox.setSingleStep(0.01);
-	};
 
 	// add widgets to layouts
 	layout.addWidget(&trainingTypeLabel,       0,   0/*column*/);
@@ -373,11 +365,11 @@ TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginI
 	layout.addWidget(&dataSetGroupBox,         1,   0/*column*/,  1/*rowSpan*/, 2/*columnSpan*/);
 	layout.addWidget(&parametersGroupBox,      2,   0/*column*/,  1/*rowSpan*/, 2/*columnSpan*/);
 	  parametersLayout.addWidget(&paramBatchSizeLabel);
-	  parametersLayout.addWidget(&paramBatchSizeSpinBox);
+	  parametersLayout.addWidget(&paramBatchSizeEditBox);
 	  parametersLayout.addWidget(&paramLearningRateLabel);
-	  parametersLayout.addWidget(&paramLearningRateSpinBox);
+	  parametersLayout.addWidget(&paramLearningRateEditBox);
 	  parametersLayout.addWidget(&paramMaxBatchesLabel);
-	  parametersLayout.addWidget(&paramMaxBatchesSpinBox);
+	  parametersLayout.addWidget(&paramMaxBatchesEditBox);
 	  parametersLayout.addWidget(&paramOptimizationAlgorithmLabel);
 	  parametersLayout.addWidget(&paramOptimizationAlgorithmComboBox);
 	layout.addWidget(&verifyDerivativesButton, 3,   0/*column*/,  1/*rowSpan*/, 2/*columnSpan*/);
@@ -400,20 +392,18 @@ TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginI
 		l->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
 
 	// validation
-	paramBatchSizeSpinBox   .setRange(1, std::numeric_limits<int>::max());
-	paramLearningRateSpinBox.setRange(0, 0.5);
-	paramLearningRateSpinBox.setDecimals(4);
-	paramMaxBatchesSpinBox  .setRange(1, std::numeric_limits<int>::max());
+	paramBatchSizeEditBox   .setValidator(new QIntValidator(1, std::numeric_limits<unsigned>::max(), &paramBatchSizeEditBox));
+	paramLearningRateEditBox.setValidator(new QDoubleValidator(0, std::numeric_limits<float>::max(), 5/*decimals*/, &paramLearningRateEditBox));
+	paramMaxBatchesEditBox  .setValidator(new QIntValidator(1, std::numeric_limits<unsigned>::max(), &paramMaxBatchesEditBox));
 
 	// initialize values
-	paramBatchSizeSpinBox   .setValue(appSettings.value("TrainingWidget.Options.BatchSize", 100).toUInt());
-	paramLearningRateSpinBox.setValue(appSettings.value("TrainingWidget.Options.LearningRate", 0.01).toDouble());
-	paramMaxBatchesSpinBox  .setValue(appSettings.value("TrainingWidget.Options.MaxBatches", 1000).toUInt());
+	paramBatchSizeEditBox   .setText(appSettings.value("TrainingWidget.Options.BatchSize", 100).toString());
+	paramLearningRateEditBox.setText(appSettings.value("TrainingWidget.Options.LearningRate", 0.01).toString());
+	paramMaxBatchesEditBox  .setText(appSettings.value("TrainingWidget.Options.MaxBatches", 1000).toString());
 
 
 	// widget states
 	trainingTypeComboBox.setCurrentIndex(trainingTypeComboBox.findData(trainingType));
-	updateLearningRateSpinBoxStep();
 	trainingStats.hide();
 
 	// policies
@@ -424,11 +414,11 @@ TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginI
 	// tooltips
 	for (auto l : {(QWidget*)&trainingTypeLabel,(QWidget*)&trainingTypeComboBox})
 		l->setToolTip(tr("Choose the training type to perform"));
-	for (auto l : {(QWidget*)&paramBatchSizeLabel,(QWidget*)&paramBatchSizeSpinBox})
+	for (auto l : {(QWidget*)&paramBatchSizeLabel,(QWidget*)&paramBatchSizeEditBox})
 		l->setToolTip(tr("Choose the batch size for the training process. Batch size is how many training iterations to perform between weight updates."));
-	for (auto l : {(QWidget*)&paramLearningRateLabel,(QWidget*)&paramLearningRateSpinBox})
+	for (auto l : {(QWidget*)&paramLearningRateLabel,(QWidget*)&paramLearningRateEditBox})
 		l->setToolTip(tr("Choose the learning rate for the training process. Learning rate is a coefficient telling how much to update model weights after each batch."));
-	for (auto l : {(QWidget*)&paramMaxBatchesLabel,(QWidget*)&paramMaxBatchesSpinBox})
+	for (auto l : {(QWidget*)&paramMaxBatchesLabel,(QWidget*)&paramMaxBatchesEditBox})
 		l->setToolTip(tr("Choose the maximum number of batches before the training stops."));
 	for (auto l : {(QWidget*)&paramOptimizationAlgorithmLabel,(QWidget*)&paramOptimizationAlgorithmComboBox})
 		l->setToolTip(tr("Optimization algorithm to use during training."));
@@ -437,9 +427,6 @@ TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginI
 	connect(&trainingTypeComboBox, QOverload<int>::of(&QComboBox::activated), [this](int index) {
 		trainingType = (TrainingType)trainingTypeComboBox.itemData(index).toUInt();
 		updateTrainingType();
-	});
-	connect(&paramLearningRateSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), [updateLearningRateSpinBoxStep](double) {
-		updateLearningRateSpinBoxStep();
 	});
 	connect(&paramOptimizationAlgorithmComboBox, QOverload<int>::of(&QComboBox::activated), [this](int index) {
 		auto algo = (Training::OptimizationAlgorithm)paramOptimizationAlgorithmComboBox.currentData().toUInt();
@@ -493,7 +480,7 @@ TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginI
 			updateStats(0,0,0,0);
 			trainingThread.reset(new TrainingThread(this,
 				model, modelPendingTrainingDerivativesCoefficient,
-				paramBatchSizeSpinBox.value(), paramLearningRateSpinBox.value(), paramMaxBatchesSpinBox.value(),
+				paramBatchSizeEditBox.text().toUInt(), paramLearningRateEditBox.text().toDouble(), paramMaxBatchesEditBox.text().toUInt(),
 				(Training::OptimizationAlgorithm)paramOptimizationAlgorithmComboBox.currentData().toUInt(),
 				&threadStopFlag,
 				[this](bool validation) -> std::array<std::vector<float>,2> { // data is pulled through a synchronous callback from the training thread
@@ -506,7 +493,7 @@ TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginI
 						minLoss = avgLoss;
 					if (maxLoss<avgLoss) {
 						maxLoss = avgLoss;
-						trainingProgressWidget.setRanges(paramMaxBatchesSpinBox.value()/*epochMax*/, maxLoss*1.3); // 1.3 is a margin for the loss values in graph
+						trainingProgressWidget.setRanges(paramMaxBatchesEditBox.text().toUInt()/*epochMax*/, maxLoss*1.3); // 1.3 is a margin for the loss values in graph
 					}
 					updateStats(batchNo, avgLoss, minLoss, maxLoss);
 					trainingProgressWidget.addDataPoint(batchNo/*epoch*/, avgLoss);
@@ -534,9 +521,9 @@ TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginI
 
 TrainingWidget::~TrainingWidget() {
 	appSettings.setValue("TrainingWidget.trainingType", trainingType);
-	appSettings.setValue("TrainingWidget.Options.BatchSize", paramBatchSizeSpinBox.value());
-	appSettings.setValue("TrainingWidget.Options.LearningRate", paramLearningRateSpinBox.value());
-	appSettings.setValue("TrainingWidget.Options.MaxBatches", paramMaxBatchesSpinBox.value());
+	appSettings.setValue("TrainingWidget.Options.BatchSize", paramBatchSizeEditBox.text().toUInt());
+	appSettings.setValue("TrainingWidget.Options.LearningRate", paramLearningRateEditBox.text().toDouble());
+	appSettings.setValue("TrainingWidget.Options.MaxBatches", paramMaxBatchesEditBox.text().toUInt());
 }
 
 // privates

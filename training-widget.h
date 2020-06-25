@@ -12,7 +12,6 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
-#include <QSpinBox>
 #include <QThread>
 #include <QVBoxLayout>
 #include <QWidget>
@@ -41,11 +40,11 @@ class TrainingWidget : public QWidget {
 	QGroupBox                   parametersGroupBox;
 	QHBoxLayout                   parametersLayout;
 	QLabel                        paramBatchSizeLabel;
-	QSpinBox                      paramBatchSizeSpinBox;
+	QLineEdit                     paramBatchSizeEditBox;
 	QLabel                        paramLearningRateLabel;
-	QDoubleSpinBox                paramLearningRateSpinBox;
+	QLineEdit                     paramLearningRateEditBox;
 	QLabel                        paramMaxBatchesLabel;
-	QSpinBox                      paramMaxBatchesSpinBox;
+	QLineEdit                     paramMaxBatchesEditBox;
 	QLabel                        paramOptimizationAlgorithmLabel;
 	QComboBox                     paramOptimizationAlgorithmComboBox;
 	QPushButton                 verifyDerivativesButton;

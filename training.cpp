@@ -556,6 +556,27 @@ bool runTrainingLoop(
 		for (auto ae = a+sz; a<ae; a++, d++) // TODO SIMD-optimize
 			*a += M*(*d);
 	};
+	auto addArraysWithCutOff = [](float *a, const float *d, float C, unsigned sz) {
+		auto one = [C](float Large, float Delta) {
+			float Change = std::abs(Delta/Large);
+			if (Change <= C)
+				return Delta;
+			else
+				return Delta*(C/Change);
+		};
+		for (auto ae = a+sz; a<ae; a++, d++) // TODO SIMD-optimize
+			*a += one(*a, *d);
+	};
+	auto multiplyInvertAndReplaceInfsWithZerosInArray = [](float *d, float M, unsigned sz) {
+		auto one = [M](float f) {
+			auto r = 1./(f*M);
+			if (r==std::numeric_limits<double>::infinity() || r==-std::numeric_limits<double>::infinity())
+				r = 0;
+			return r;
+		};
+		for (auto de = d+sz; d<de; d++) // TODO SIMD-optimize
+			*d = one(*d);
+	};
 	auto assignTensor = [&tensorData](PI::TensorId tid, const float *data, unsigned size) {
 		auto tensor = new float[size];
 		tensorData->data()[tid].reset(tensor);
@@ -622,10 +643,25 @@ bool runTrainingLoop(
 				}
 			}
 		};
-		iterateThroughModelParameters([&](PI::TensorId derivativeTid, PI::TensorId parameterTid, float *derivatives, float *staticTensorInModel, unsigned sz) {
-			// update the original weights
-			addArraysWithMultiplication(staticTensorInModel, derivatives, -learningRate*(1./batchSize)*pendingTrainingDerivativesCoefficient, sz);
-		});
+		switch (algo) {
+		case OptimizationAlgorithm_SDG_straight: {
+			iterateThroughModelParameters([&](PI::TensorId derivativeTid, PI::TensorId parameterTid, float *derivatives, float *staticTensorInModel, unsigned sz) {
+				// update the original weights
+				addArraysWithMultiplication(staticTensorInModel, derivatives, -learningRate*(1./batchSize)*pendingTrainingDerivativesCoefficient, sz);
+			});
+			break;
+		} case OptimizationAlgorithm_SDG_with_inverse: {
+			float M = -pendingTrainingDerivativesCoefficient/batchSize/avgLoss/learningRate; // multiply derivative by this coefficient => ∂Parameter
+			iterateThroughModelParameters([=](PI::TensorId derivativeTid, PI::TensorId parameterTid, float *derivatives, float *staticTensorInModel, unsigned sz) {
+				// invert the derivative, scale it, eliminate infs
+				multiplyInvertAndReplaceInfsWithZerosInArray(derivatives, M, sz);
+				// update the original weights
+				addArraysWithCutOff(staticTensorInModel, derivatives, 0.1/*no more than 10% change*/, sz);
+			});
+			break;
+		} default:
+			assert(false); // not yet implemented
+		}
 		// update the transposed parameters when exists
 		transposeParameterTensors();
 		// zero accumulators

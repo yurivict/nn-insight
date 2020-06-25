@@ -24,6 +24,10 @@ OptionsDialog::OptionsDialog(Options &options_, QWidget *parent)
 	layout.addWidget(&nearZeroCoefficientEditBox,                1/*row*/, 1/*col*/, 1/*rowSpan*/, 1/*columnSpan*/);
 	layout.addWidget(&buttonBox,                                 2/*row*/, 1/*col*/, 1/*rowSpan*/, 2/*columnSpan*/);
 
+	// alignment
+	for (auto l : {&closeModelForTrainingModelLabel,&nearZeroCoefficientLabel})
+		l->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
+
 	// set values
 	closeModelForTrainingModelCheckBox.setCheckState(options.getCloseModelForTrainingModel() ? Qt::Checked : Qt::Unchecked);
 	nearZeroCoefficientEditBox.setText(QString("%1").arg(options.getNearZeroCoefficient()));

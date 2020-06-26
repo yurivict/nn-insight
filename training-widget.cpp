@@ -400,6 +400,8 @@ TrainingWidget::TrainingWidget(QWidget *parent, QWidget *topLevelWidget, PluginI
 	paramBatchSizeEditBox   .setText(appSettings.value("TrainingWidget.Options.BatchSize", 100).toString());
 	paramLearningRateEditBox.setText(appSettings.value("TrainingWidget.Options.LearningRate", 0.01).toString());
 	paramMaxBatchesEditBox  .setText(appSettings.value("TrainingWidget.Options.MaxBatches", 1000).toString());
+	paramOptimizationAlgorithmComboBox.setCurrentIndex(
+		paramOptimizationAlgorithmComboBox.findData(appSettings.value("TrainingWidget.Options.OptimizationAlgorithm", Training::OptimizationAlgorithm_SDG_straight).toUInt()));
 
 
 	// widget states
@@ -524,6 +526,7 @@ TrainingWidget::~TrainingWidget() {
 	appSettings.setValue("TrainingWidget.Options.BatchSize", paramBatchSizeEditBox.text().toUInt());
 	appSettings.setValue("TrainingWidget.Options.LearningRate", paramLearningRateEditBox.text().toDouble());
 	appSettings.setValue("TrainingWidget.Options.MaxBatches", paramMaxBatchesEditBox.text().toUInt());
+	appSettings.setValue("TrainingWidget.Options.OptimizationAlgorithm", paramOptimizationAlgorithmComboBox.currentData().toUInt());
 }
 
 // privates

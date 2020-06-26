@@ -248,7 +248,30 @@ std::tuple<PluginInterface::Model*,float> constructTrainingModel(const PI::Model
 
 		// by operator kind
 		switch (model->getOperatorKind(oid)) {
-		case PI::KindTanh: {
+		case PI::KindRelu: {
+			// find input tensor
+			PI::TensorId inputTid = GetOperatorSingleInput(model, oid);
+			if (!frozenLayers[inputTid]) { // ∂relu(x)/∂x = (sign(x)+1)/2
+				auto derivativeOverReluInput = Dual(
+					PI::KindMul,
+					Dual(
+						PI::KindAdd,
+						Single(
+							PI::KindSign,
+							inputTid
+						),
+						StaticFloat32(1)
+					),
+					StaticFloat32(0.5)
+				);
+				if (derivatives[inputTid] == -1) {
+					derivatives[inputTid] = derivativeOverReluInput;
+					tensorsToDo.insert(inputTid);
+				} else
+					derivatives[inputTid] = Dual(PI::KindAdd, derivatives[inputTid], derivativeOverReluInput);
+			}
+			break;
+		} case PI::KindTanh: {
 			assert(derivatives[tid] != -1);
 			// find input tensor
 			PI::TensorId inputTid = GetOperatorSingleInput(model, oid);

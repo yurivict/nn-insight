@@ -16,7 +16,7 @@
 #include <assert.h>
 #include <errno.h>
 
-#include "tflite_schema_generated.h" // a complete definition of TF Lite format based on the .fbs file from the TD Lite source tree
+#include "schema_v3b_generated.h" // a complete definition of TF Lite format based on the .fbs file from the TD Lite source tree
 
 namespace Helpers {
 	template<class C1, class C2>

@@ -1,4 +1,4 @@
-# Copyright (C) 2020 by Yuri Victorovich. All rights reserved.
+# Copyright (C) 2022 by Yuri Victorovich. All rights reserved.
 
 cmake_minimum_required(VERSION 3.1.0)
 

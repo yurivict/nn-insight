@@ -1,4 +1,4 @@
-// Copyright (C) 2020 by Yuri Victorovich. All rights reserved.
+// Copyright (C) 2022 by Yuri Victorovich. All rights reserved.
 
 //
 // tflite-reference-implementation.cpp contains portions of the Apache 2.0 licensed code from the TensorFlow source tree

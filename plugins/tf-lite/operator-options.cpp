@@ -1,4 +1,4 @@
-// Copyright (C) 2020 by Yuri Victorovich. All rights reserved.
+// Copyright (C) 2022 by Yuri Victorovich. All rights reserved.
 
 // corresponds to https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/schema/schema.fbs 58719c1 Dec 17, 2019
 

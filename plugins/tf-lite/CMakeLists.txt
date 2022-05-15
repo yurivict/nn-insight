@@ -4,6 +4,7 @@ set(SCHEMA_DEFINITION ${CMAKE_CURRENT_SOURCE_DIR}/../../3rdparty/tensorflow/lite
 
 add_custom_target(schema_header
 	COMMAND flatc --cpp ${SCHEMA_DEFINITION}
+	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 add_library(tf-lite-plugin SHARED

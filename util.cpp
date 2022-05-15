@@ -153,7 +153,7 @@ QStringList readListFromFile(const char *fileName) {
 		FAIL("failed to open the file " << fileName)
 	data = file.readAll();
 	file.close();
-	return data.split("\n", QString::SkipEmptyParts);
+	return data.split("\n", Qt::SkipEmptyParts);
 }
 
 std::string getMyOwnExecutablePath() {
